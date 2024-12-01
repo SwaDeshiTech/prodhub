@@ -7,18 +7,13 @@ import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
-
 import com.swadeshitech.prodhub.dto.DepartmentRequest;
 import com.swadeshitech.prodhub.dto.DepartmentResponse;
-import com.swadeshitech.prodhub.dto.UserResponse;
 import com.swadeshitech.prodhub.entity.Department;
-import com.swadeshitech.prodhub.entity.User;
 import com.swadeshitech.prodhub.enums.ErrorCode;
 import com.swadeshitech.prodhub.exception.CustomException;
 import com.swadeshitech.prodhub.repository.DepartmentRepository;
 import com.swadeshitech.prodhub.services.DepartmentService;
-import com.swadeshitech.utils.UUIDUtil;
-
 import io.micrometer.common.util.StringUtils;
 import jakarta.persistence.PersistenceException;
 import lombok.extern.log4j.Log4j2;
@@ -41,7 +36,6 @@ public class DepartmentServiceImpl implements DepartmentService {
             throw new CustomException(ErrorCode.DEPARTMENT_NOT_FOUND);
         }
         
-        department.setUuid(UUIDUtil.generateUUID());
         department.setActive(Boolean.TRUE);
 
         saveDepartmentDetailToRepository(department);
@@ -58,7 +52,7 @@ public class DepartmentServiceImpl implements DepartmentService {
             throw new CustomException(ErrorCode.DEPARTMENT_UUID_NOT_FOUND);
         }
 
-        Optional<Department> department = departmentRepository.findByUuid(departmentUUID);
+        Optional<Department> department = departmentRepository.findById(departmentUUID);
         if (department.isEmpty()) {
             log.error("department not found");
             throw new CustomException(ErrorCode.DEPARTMENT_NOT_FOUND);

@@ -1,4 +1,4 @@
-package com.swadeshitech.utils;
+package com.swadeshitech.prodhub.config.utils;
 
 import java.time.LocalDateTime;
 import java.util.Random;

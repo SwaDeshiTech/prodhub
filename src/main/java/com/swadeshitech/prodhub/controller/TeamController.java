@@ -7,45 +7,47 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import com.swadeshitech.prodhub.dto.DepartmentRequest;
-import com.swadeshitech.prodhub.dto.DepartmentResponse;
 import com.swadeshitech.prodhub.dto.Response;
-import com.swadeshitech.prodhub.services.DepartmentService;
+import com.swadeshitech.prodhub.dto.TeamRequest;
+import com.swadeshitech.prodhub.dto.TeamResponse;
+import com.swadeshitech.prodhub.services.TeamService;
 
 @RestController
-@RequestMapping("/department")
-public class DepartmentController {
-    
+@RequestMapping("/team")
+public class TeamController {
+
     @Autowired
-    private DepartmentService departmentService;
+    private TeamService teamService;
 
     @GetMapping("/{id}")
-    public ResponseEntity<Response> department(@PathVariable("id") String uuid) {
+    public ResponseEntity<Response> team(@PathVariable("id") String uuid) {
         
-        DepartmentResponse departmentResponse = departmentService.getDepartmentDetail(uuid);
+        TeamResponse teamResponse = teamService.getTeamDetail(uuid);
         
         Response response = Response.builder()
             .httpStatus(HttpStatus.OK)
-            .message("Department detail has been fetched successfully")
-            .response(departmentResponse)
+            .message("Team Detail has been fetched successfully")
+            .response(teamResponse)
             .build();
 
         return ResponseEntity.ok().body(response);
     }
 
     @PostMapping
-    public ResponseEntity<Response> department(@RequestBody DepartmentRequest departmentRequest) {
+    public ResponseEntity<Response> team(@RequestBody TeamRequest teamRequest) {
         
-        DepartmentResponse departmentResponse = departmentService.addDepartment(departmentRequest);
+        TeamResponse teamResponse = teamService.addTeam(teamRequest);
 
         Response response = Response.builder()
             .httpStatus(HttpStatus.CREATED)
-            .message("Department has been created")
-            .response(departmentResponse)
+            .message("Team has been created")
+            .response(teamResponse)
             .build();
 
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
+    
 }
