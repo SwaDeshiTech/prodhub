@@ -2,7 +2,6 @@ package com.swadeshitech.prodhub.exception;
 
 import java.util.ArrayList;
 import java.util.List;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
@@ -87,6 +86,6 @@ public class CustomExceptionHandler {
                 .httpStatus(errorCode.getStatus())
                 .message(errorCode.getDescription())
                 .build(),
-                HttpStatus.INTERNAL_SERVER_ERROR);
+                errorCode.getStatus());
     }
 }
