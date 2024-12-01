@@ -5,12 +5,15 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import java.io.Serializable;
 import java.time.LocalDate;
+import java.util.HashSet;
+import java.util.Set;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.ManyToMany;
 
 @Data
 @Entity
@@ -39,4 +42,10 @@ public class User extends BaseEntity implements Serializable {
     private Boolean isActive;
 
     private LocalDate dob;
+
+    @ManyToMany
+    private Set<Team> teams = new HashSet<>();
+
+    @ManyToMany
+    private Set<Department> departments = new HashSet<>();
 }

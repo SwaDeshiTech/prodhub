@@ -15,7 +15,11 @@ public enum ErrorCode {
     
     DEPARTMENT_UPDATE_FAILED("PH-2001", "Department could not be updated", HttpStatus.INTERNAL_SERVER_ERROR),
     DEPARTMENT_NOT_FOUND("PH-2002", "Department not found", HttpStatus.NOT_FOUND),
-    DEPARTMENT_UUID_NOT_FOUND("PH-2003", "Department uuid not found", HttpStatus.BAD_REQUEST);
+    DEPARTMENT_UUID_NOT_FOUND("PH-2003", "Department uuid not found", HttpStatus.BAD_REQUEST),
+    
+    TEAM_UPDATE_FAILED("PH-3001", "Team could not be updated", HttpStatus.INTERNAL_SERVER_ERROR),
+    TEAM_NOT_FOUND("PH-3002", "Team not found", HttpStatus.NOT_FOUND),
+    TEAM_UUID_NOT_FOUND("PH-3003", "Team uuid not found", HttpStatus.BAD_REQUEST);
 
     private final String code;
     private final String description;

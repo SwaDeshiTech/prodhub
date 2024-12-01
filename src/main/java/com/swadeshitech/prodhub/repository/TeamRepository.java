@@ -6,11 +6,11 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.stereotype.Repository;
-import com.swadeshitech.prodhub.entity.Department;
+import com.swadeshitech.prodhub.entity.Team;
 
 @Repository
 @EnableJpaRepositories
-public interface DepartmentRepository extends JpaRepository<Department, String>, JpaSpecificationExecutor<Department> {
+public interface TeamRepository extends JpaRepository<Team, String>, JpaSpecificationExecutor<Team> {
 
-    Optional<Department> findById(Long id);
+    Optional<Team> findById(String id);
 }
