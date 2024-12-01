@@ -19,7 +19,7 @@ public class UserResponse {
     private String userName;
     private String emailId;
     private String phoneNumber;
-    private Boolean isActive;
+    private boolean isActive;
 
     @JsonFormat(pattern="yyyy-MM-dd")
     private LocalDate dob;

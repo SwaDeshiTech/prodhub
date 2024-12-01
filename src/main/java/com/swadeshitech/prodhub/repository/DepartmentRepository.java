@@ -6,12 +6,11 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.stereotype.Repository;
-
-import com.swadeshitech.prodhub.entity.User;
+import com.swadeshitech.prodhub.entity.Department;
 
 @Repository
 @EnableJpaRepositories
-public interface UserRepository extends JpaRepository<User, String>, JpaSpecificationExecutor<User> {
+public interface DepartmentRepository extends JpaRepository<Department, String>, JpaSpecificationExecutor<Department> {
 
-    Optional<User> findByUuid(String uid);
+    Optional<Department> findByUuid(String uid);
 }

@@ -1,6 +1,8 @@
 package com.swadeshitech.prodhub.services.impl;
 
 import java.util.Objects;
+import java.util.Optional;
+
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -34,13 +36,13 @@ public class UserServiceImpl implements UserService {
             throw new CustomException(ErrorCode.USER_UUID_NOT_FOUND);
         }
 
-        User user = userRepository.findByUuid(uuid);
-        if (Objects.isNull(user)) {
+        Optional<User> user = userRepository.findByUuid(uuid);
+        if (user.isEmpty()) {
             log.error("user not found");
             throw new CustomException(ErrorCode.USER_NOT_FOUND);
         }
 
-        UserResponse userResponse = modelMapper.map(user, UserResponse.class);
+        UserResponse userResponse = modelMapper.map(user.get(), UserResponse.class);
 
         return userResponse;
     }
@@ -55,13 +57,13 @@ public class UserServiceImpl implements UserService {
         
         user.setIsActive(Boolean.TRUE);
 
-        saveUserDetailsToRepository(user);
+        saveUserDetailToRepository(user);
         UserResponse userResponse = modelMapper.map(user, UserResponse.class);
 
         return userResponse;
     }
 
-    private User saveUserDetailsToRepository(User user) {
+    private User saveUserDetailToRepository(User user) {
         try {
             return userRepository.save(user);
         } catch (DataIntegrityViolationException ex) {

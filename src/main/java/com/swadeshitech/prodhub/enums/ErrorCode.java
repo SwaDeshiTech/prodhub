@@ -11,7 +11,11 @@ public enum ErrorCode {
 
     USER_UPDATE_FAILED("PH-1001", "User could not be updated", HttpStatus.INTERNAL_SERVER_ERROR),
     USER_NOT_FOUND("PH-1002", "User not found", HttpStatus.NOT_FOUND),
-    USER_UUID_NOT_FOUND("PH-1003", "User uuid not found", HttpStatus.NOT_FOUND);
+    USER_UUID_NOT_FOUND("PH-1003", "User uuid not found", HttpStatus.BAD_REQUEST),
+    
+    DEPARTMENT_UPDATE_FAILED("PH-2001", "Department could not be updated", HttpStatus.INTERNAL_SERVER_ERROR),
+    DEPARTMENT_NOT_FOUND("PH-2002", "Department not found", HttpStatus.NOT_FOUND),
+    DEPARTMENT_UUID_NOT_FOUND("PH-2003", "Department uuid not found", HttpStatus.BAD_REQUEST);
 
     private final String code;
     private final String description;
