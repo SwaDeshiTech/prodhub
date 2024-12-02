@@ -19,7 +19,10 @@ public enum ErrorCode {
     
     TEAM_UPDATE_FAILED("PH-3001", "Team could not be updated", HttpStatus.INTERNAL_SERVER_ERROR),
     TEAM_NOT_FOUND("PH-3002", "Team not found", HttpStatus.NOT_FOUND),
-    TEAM_UUID_NOT_FOUND("PH-3003", "Team uuid not found", HttpStatus.BAD_REQUEST);
+    TEAM_UUID_NOT_FOUND("PH-3003", "Team uuid not found", HttpStatus.BAD_REQUEST),
+    
+    APPLICATION_UPDATE_FAILED("PH-4001", "Application could not be updated", HttpStatus.INTERNAL_SERVER_ERROR),
+    APPLICATION_NOT_FOUND("PH-4002", "Application not found", HttpStatus.NOT_FOUND);
 
     private final String code;
     private final String description;
