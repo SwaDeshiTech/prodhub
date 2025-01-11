@@ -22,7 +22,10 @@ public enum ErrorCode {
     TEAM_UUID_NOT_FOUND("PH-3003", "Team uuid not found", HttpStatus.BAD_REQUEST),
     
     APPLICATION_UPDATE_FAILED("PH-4001", "Application could not be updated", HttpStatus.INTERNAL_SERVER_ERROR),
-    APPLICATION_NOT_FOUND("PH-4002", "Application not found", HttpStatus.NOT_FOUND);
+    APPLICATION_NOT_FOUND("PH-4002", "Application not found", HttpStatus.NOT_FOUND),
+    
+    EPHEMERAL_ENVIRONMENT_ID_NOT_FOUND("PH-5001", "Ephemeral Environment could not be found", HttpStatus.NOT_FOUND),
+    EPHEMERAL_ENVIRONMENT_UPDATE_FAILED("PH-5002", "Ephemeral Environment could not be updated", HttpStatus.INTERNAL_SERVER_ERROR);
 
     private final String code;
     private final String description;
