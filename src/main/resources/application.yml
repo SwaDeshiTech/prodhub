@@ -4,6 +4,13 @@ server:
   port: 8081
   shutdown: graceful  
 
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /api-docs
+    enabled: true
+
 spring:
   data:
     mongodb:
