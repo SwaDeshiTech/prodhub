@@ -1,4 +1,4 @@
-package com.swadeshitech.prodhub.config.mongo;
+package com.swadeshitech.prodhub.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -7,7 +7,7 @@ import org.springframework.data.mongodb.config.EnableMongoAuditing;
 
 @EnableMongoAuditing
 @Configuration
-public class MongoConfig {
+public class Mongo {
 
     @Bean
     public AuditorAware<String> springSecurityAuditorAware() {

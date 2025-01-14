@@ -1,4 +1,4 @@
-package com.swadeshitech.prodhub.config.swagger;
+package com.swadeshitech.prodhub.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
