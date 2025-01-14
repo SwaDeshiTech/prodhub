@@ -4,50 +4,49 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
 import com.swadeshitech.prodhub.dto.Response;
-import com.swadeshitech.prodhub.dto.TeamRequest;
-import com.swadeshitech.prodhub.dto.TeamResponse;
-import com.swadeshitech.prodhub.services.TeamService;
+import com.swadeshitech.prodhub.dto.UserRequest;
+import com.swadeshitech.prodhub.dto.UserResponse;
+import com.swadeshitech.prodhub.services.UserService;
 
 @RestController
-@RequestMapping("/team")
-public class TeamController {
+@RequestMapping("/user")
+public class User {
 
     @Autowired
-    private TeamService teamService;
-
-    @GetMapping("/{id}")
-    public ResponseEntity<Response> team(@PathVariable("id") String uuid) {
+    private UserService userService;
+    
+    @GetMapping
+    public ResponseEntity<Response> user(@RequestHeader(name = "uuid") String uuid) {
         
-        TeamResponse teamResponse = teamService.getTeamDetail(uuid);
+        UserResponse userResponse = userService.getUserDetail(uuid);
         
         Response response = Response.builder()
             .httpStatus(HttpStatus.OK)
-            .message("Team Detail has been fetched successfully")
-            .response(teamResponse)
+            .message("User Detail has been fetched successfully")
+            .response(userResponse)
             .build();
 
         return ResponseEntity.ok().body(response);
     }
 
     @PostMapping
-    public ResponseEntity<Response> team(@RequestBody TeamRequest teamRequest) {
+    public ResponseEntity<Response> user(@RequestBody UserRequest userRequest) {
         
-        TeamResponse teamResponse = teamService.addTeam(teamRequest);
+        UserResponse userResponse = userService.addUser(userRequest);
 
         Response response = Response.builder()
             .httpStatus(HttpStatus.CREATED)
-            .message("Team has been created")
-            .response(teamResponse)
+            .message("User has been created")
+            .response(userResponse)
             .build();
 
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
-    
 }

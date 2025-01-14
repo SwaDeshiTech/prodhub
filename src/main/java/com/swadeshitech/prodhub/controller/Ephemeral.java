@@ -17,7 +17,7 @@ import com.swadeshitech.prodhub.services.EphemeralEnvironmentService;
 
 @RestController
 @RequestMapping("/ephemeralEnvironment")
-public class EphemeralEnvironment {
+public class Ephemeral {
     
     @Autowired
     private EphemeralEnvironmentService environmentService;

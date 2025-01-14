@@ -1,4 +1,4 @@
-package com.swadeshitech.prodhub.config.mongo;
+package com.swadeshitech.prodhub.config;
 
 import java.util.Optional;
 

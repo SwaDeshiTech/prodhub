@@ -17,7 +17,7 @@ import com.swadeshitech.prodhub.services.ApplicationService;
 
 @RestController
 @RequestMapping("/application")
-public class ApplicationController {
+public class Application {
     
     @Autowired
     private ApplicationService applicationService;

@@ -4,47 +4,47 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.swadeshitech.prodhub.dto.DepartmentRequest;
+import com.swadeshitech.prodhub.dto.DepartmentResponse;
 import com.swadeshitech.prodhub.dto.Response;
-import com.swadeshitech.prodhub.dto.UserRequest;
-import com.swadeshitech.prodhub.dto.UserResponse;
-import com.swadeshitech.prodhub.services.UserService;
+import com.swadeshitech.prodhub.services.DepartmentService;
 
 @RestController
-@RequestMapping("/user")
-public class UserController {
-
-    @Autowired
-    private UserService userService;
+@RequestMapping("/department")
+public class Department {
     
-    @GetMapping
-    public ResponseEntity<Response> user(@RequestHeader(name = "uuid") String uuid) {
+    @Autowired
+    private DepartmentService departmentService;
+
+    @GetMapping("/{id}")
+    public ResponseEntity<Response> department(@PathVariable("id") String uuid) {
         
-        UserResponse userResponse = userService.getUserDetail(uuid);
+        DepartmentResponse departmentResponse = departmentService.getDepartmentDetail(uuid);
         
         Response response = Response.builder()
             .httpStatus(HttpStatus.OK)
-            .message("User Detail has been fetched successfully")
-            .response(userResponse)
+            .message("Department detail has been fetched successfully")
+            .response(departmentResponse)
             .build();
 
         return ResponseEntity.ok().body(response);
     }
 
     @PostMapping
-    public ResponseEntity<Response> user(@RequestBody UserRequest userRequest) {
+    public ResponseEntity<Response> department(@RequestBody DepartmentRequest departmentRequest) {
         
-        UserResponse userResponse = userService.addUser(userRequest);
+        DepartmentResponse departmentResponse = departmentService.addDepartment(departmentRequest);
 
         Response response = Response.builder()
             .httpStatus(HttpStatus.CREATED)
-            .message("User has been created")
-            .response(userResponse)
+            .message("Department has been created")
+            .response(departmentResponse)
             .build();
 
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
