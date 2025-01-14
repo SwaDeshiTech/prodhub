@@ -1,17 +1,16 @@
-package com.swadeshitech.prodhub.config.jpa;
+package com.swadeshitech.prodhub.config.mongo;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.domain.AuditorAware;
-import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
+import org.springframework.data.mongodb.config.EnableMongoAuditing;
 
+@EnableMongoAuditing
 @Configuration
-@EnableJpaAuditing
-public class AuditConfig {
+public class MongoConfig {
 
     @Bean
-    public AuditorAware<String> auditorAware() {
+    public AuditorAware<String> springSecurityAuditorAware() {
         return new AuditorAwareImpl();
     }
-
 }

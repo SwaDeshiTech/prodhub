@@ -1,41 +1,32 @@
 package com.swadeshitech.prodhub.entity;
 
-import java.io.Serializable;
 import java.util.Set;
-
-import jakarta.persistence.CascadeType;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToMany;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.DBRef;
+import org.springframework.data.mongodb.core.mapping.Document;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Data
-@Entity
 @NoArgsConstructor
 @AllArgsConstructor
-public class Application extends BaseEntity implements Serializable {
-
-    @Id
-    @GeneratedValue(strategy= GenerationType.AUTO, generator = "native")
-    private Long id;
+@Document(collection = "applications")
+public class Application extends BaseEntity {
     
+    @Id
     private String name;
 
     private String description;
 
-    @ManyToOne
-    private Team team;
-
-    @ManyToOne
-    private Department department;
-
     private boolean isActive;
 
-    @OneToMany(cascade = CascadeType.PERSIST)
+    @DBRef
+    private Team team;
+
+    @DBRef
+    private Department department;
+
+    @DBRef
     private Set<Metadata> profiles;
 }

@@ -7,6 +7,7 @@ import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+
 import com.swadeshitech.prodhub.dto.UserRequest;
 import com.swadeshitech.prodhub.dto.UserResponse;
 import com.swadeshitech.prodhub.entity.User;
@@ -14,8 +15,8 @@ import com.swadeshitech.prodhub.enums.ErrorCode;
 import com.swadeshitech.prodhub.exception.CustomException;
 import com.swadeshitech.prodhub.repository.UserRepository;
 import com.swadeshitech.prodhub.services.UserService;
+
 import io.micrometer.common.util.StringUtils;
-import jakarta.persistence.PersistenceException;
 import lombok.extern.slf4j.Slf4j;
 
 @Service
@@ -69,7 +70,7 @@ public class UserServiceImpl implements UserService {
         } catch (DataIntegrityViolationException ex) {
             log.error("DataIntegrity error ", ex);
             throw new CustomException(ErrorCode.DATA_INTEGRITY_FAILURE);
-        } catch (PersistenceException ex) {
+        } catch (Exception ex) {
             log.error("Failed to save data ", ex);
             throw new CustomException(ErrorCode.USER_UPDATE_FAILED);
         }

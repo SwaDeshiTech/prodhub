@@ -4,26 +4,21 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.Set;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.ManyToMany;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.DBRef;
+import org.springframework.data.mongodb.core.mapping.Document;
+
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Data
-@Entity
 @NoArgsConstructor
 @AllArgsConstructor
+@Document(collection = "ephemeralEnvironments")
 public class EphemeralEnvironment extends BaseEntity implements Serializable {
 
     @Id
-    @GeneratedValue(strategy= GenerationType.AUTO, generator = "native")
-    private Long id;
-    
     private String name;
 
     private String description;
@@ -32,11 +27,12 @@ public class EphemeralEnvironment extends BaseEntity implements Serializable {
 
     private boolean isActive;
 
+    @DBRef
     private User owner;
 
-    @ManyToMany
+    @DBRef
     private Set<User> sharedWith;
 
-    @ManyToMany
+    @DBRef
     private Set<Application> applications;
 }
