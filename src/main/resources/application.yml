@@ -2,25 +2,23 @@ server:
   servlet:
     context-path: /prodhub
   port: 8081
-  shutdown: graceful
+  shutdown: graceful  
 
 spring:
-  jpa:
-    hibernate:
-      ddl-auto: update
-  application:
-    name: prodhub
-  datasource:
-    url: jdbc:mysql://localhost:3306/prodhub
-    username: root
-    password: password
-    hikari:
-      maximum-pool-size: 10
-      connection-timeout: 36000
-      max-lifetime: 1800000
-      idle-timeout: 60000
-      validation-timeout: 3000
-      leak-detection-threshold: 240000
+  data:
+    mongodb:
+      host: localhost
+      port: 27017
+      database: prodhub
+      pool:
+        max-wait-queue-size: 1000
+        min-size: 5
+        max-size: 20
+        max-life-time: 1000
+        max-wait-time: 30
+        maintenance-initial-delay: 1000
+        maintenance-frequency: 1000
+        max-connection-idle-time: 5
 
 management:
   endpoints:

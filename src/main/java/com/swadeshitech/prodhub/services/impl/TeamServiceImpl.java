@@ -1,12 +1,16 @@
 package com.swadeshitech.prodhub.services.impl;
 
+import java.util.HashSet;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.swadeshitech.prodhub.dto.TeamRequest;
 import com.swadeshitech.prodhub.dto.TeamResponse;
 import com.swadeshitech.prodhub.entity.Department;
@@ -18,9 +22,8 @@ import com.swadeshitech.prodhub.repository.DepartmentRepository;
 import com.swadeshitech.prodhub.repository.TeamRepository;
 import com.swadeshitech.prodhub.repository.UserRepository;
 import com.swadeshitech.prodhub.services.TeamService;
+
 import io.micrometer.common.util.StringUtils;
-import jakarta.persistence.PersistenceException;
-import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 
 @Service
@@ -50,18 +53,22 @@ public class TeamServiceImpl implements TeamService {
         
         team.setActive(Boolean.TRUE);
 
+        Set<User> users = new HashSet();
+
         for(String employee : teamRequest.getEmployeeList()) {
-            Optional<User> user = userRepository.findById(employee);
+            Optional<User> user = userRepository.findByEmailId(employee);
             if(user.isPresent()) {
-                team.getEmployees().add(user.get());
+                users.add(user.get());
             }
         }
 
-        Optional<Department> department = departmentRepository.findById(teamRequest.getDepartmentId());
+        team.setEmployees(users);
+
+        Optional<Department> department = departmentRepository.findByName(teamRequest.getDepartmentName());
         if(department.isPresent()) {
-            team.getDepartments().add(department.get());
+            team.setDepartments(Set.of(department.get()));
         } else {
-            log.error("failed to get department", teamRequest.getDepartmentId());
+            log.error("failed to get department", teamRequest.getDepartmentName());
             throw new CustomException(ErrorCode.DEPARTMENT_NOT_FOUND);
         }
 
@@ -94,7 +101,7 @@ public class TeamServiceImpl implements TeamService {
         } catch (DataIntegrityViolationException ex) {
             log.error("DataIntegrity error ", ex);
             throw new CustomException(ErrorCode.DATA_INTEGRITY_FAILURE);
-        } catch (PersistenceException ex) {
+        } catch (Exception ex) {
             log.error("Failed to save data ", ex);
             throw new CustomException(ErrorCode.USER_UPDATE_FAILED);
         }

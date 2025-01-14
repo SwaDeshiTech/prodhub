@@ -1,16 +1,12 @@
 package com.swadeshitech.prodhub.repository;
 
 import java.util.Optional;
-
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
-import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
+import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
 import com.swadeshitech.prodhub.entity.Application;
 
 @Repository
-@EnableJpaRepositories
-public interface ApplicationRepository extends JpaRepository<Application, String>, JpaSpecificationExecutor<Application> {
+public interface ApplicationRepository extends MongoRepository<Application, String> {
 
     public Optional<Application> findByName(String name);
 }

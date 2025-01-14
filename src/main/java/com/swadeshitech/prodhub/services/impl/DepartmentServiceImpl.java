@@ -15,7 +15,6 @@ import com.swadeshitech.prodhub.exception.CustomException;
 import com.swadeshitech.prodhub.repository.DepartmentRepository;
 import com.swadeshitech.prodhub.services.DepartmentService;
 import io.micrometer.common.util.StringUtils;
-import jakarta.persistence.PersistenceException;
 import lombok.extern.log4j.Log4j2;
 
 @Service
@@ -69,7 +68,7 @@ public class DepartmentServiceImpl implements DepartmentService {
         } catch (DataIntegrityViolationException ex) {
             log.error("DataIntegrity error ", ex);
             throw new CustomException(ErrorCode.DATA_INTEGRITY_FAILURE);
-        } catch (PersistenceException ex) {
+        } catch (Exception ex) {
             log.error("Failed to save data ", ex);
             throw new CustomException(ErrorCode.USER_UPDATE_FAILED);
         }

@@ -7,6 +7,7 @@ import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+
 import com.swadeshitech.prodhub.dto.ApplicationRequest;
 import com.swadeshitech.prodhub.dto.ApplicationResponse;
 import com.swadeshitech.prodhub.entity.Application;
@@ -22,7 +23,6 @@ import com.swadeshitech.prodhub.services.ApplicationService;
 import com.swadeshitech.prodhub.utils.Base64Util;
 
 import io.micrometer.common.util.StringUtils;
-import jakarta.persistence.PersistenceException;
 import lombok.extern.slf4j.Slf4j;
 
 @Service
@@ -50,13 +50,13 @@ public class ApplicationServiceImpl implements ApplicationService {
             throw new CustomException(ErrorCode.BAD_REQUEST);
         }
 
-        Optional<Team> team = teamRepository.findById(applicationRequest.getTeamId());
+        Optional<Team> team = teamRepository.findByName(applicationRequest.getTeamId());
         if(team.isEmpty()) {
             log.error("team could not be found", team);
             throw new CustomException(ErrorCode.TEAM_NOT_FOUND);
         }
 
-        Optional<Department> department = departmentRepository.findById(applicationRequest.getDepartmentId());
+        Optional<Department> department = departmentRepository.findByName(applicationRequest.getDepartmentId());
         if(department.isEmpty()) {
             log.error("department could not be found", team);
             throw new CustomException(ErrorCode.DEPARTMENT_NOT_FOUND);
@@ -101,7 +101,7 @@ public class ApplicationServiceImpl implements ApplicationService {
         } catch (DataIntegrityViolationException ex) {
             log.error("DataIntegrity error ", ex);
             throw new CustomException(ErrorCode.DATA_INTEGRITY_FAILURE);
-        } catch (PersistenceException ex) {
+        } catch (Exception ex) {
             log.error("Failed to save data ", ex);
             throw new CustomException(ErrorCode.USER_UPDATE_FAILED);
         }

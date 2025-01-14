@@ -10,6 +10,6 @@ public class ApplicationRequest {
     private String name;
     private String description;
     private Long teamId;
-    private Long departmentId;
+    private String departmentId;
     private Set<MetaDataRequest> profiles;
 }

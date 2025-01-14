@@ -3,12 +3,14 @@ package com.swadeshitech.prodhub.repository;
 import java.util.List;
 import java.util.Optional;
 
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.mongodb.repository.MongoRepository;
+import org.springframework.stereotype.Repository;
+
 import com.swadeshitech.prodhub.entity.EphemeralEnvironment;
 
-public interface EphemeralEnvironmentRepository extends JpaRepository<EphemeralEnvironment, String>, JpaSpecificationExecutor<EphemeralEnvironment> {
+@Repository
+public interface EphemeralEnvironmentRepository extends MongoRepository<EphemeralEnvironment, String> {
     
-    public Optional<List<EphemeralEnvironment>> findByUuid(String uuid);
+    public Optional<List<EphemeralEnvironment>> findByName(String uuid);
 
 }

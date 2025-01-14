@@ -15,7 +15,6 @@ import com.swadeshitech.prodhub.dto.EphemeralEnvironmentRequest;
 import com.swadeshitech.prodhub.dto.EphemeralEnvironmentResponse;
 import com.swadeshitech.prodhub.entity.Application;
 import com.swadeshitech.prodhub.entity.EphemeralEnvironment;
-import com.swadeshitech.prodhub.entity.Team;
 import com.swadeshitech.prodhub.entity.User;
 import com.swadeshitech.prodhub.enums.ErrorCode;
 import com.swadeshitech.prodhub.exception.CustomException;
@@ -24,7 +23,6 @@ import com.swadeshitech.prodhub.repository.EphemeralEnvironmentRepository;
 import com.swadeshitech.prodhub.repository.UserRepository;
 import com.swadeshitech.prodhub.services.EphemeralEnvironmentService;
 
-import jakarta.persistence.PersistenceException;
 import lombok.extern.log4j.Log4j2;
 
 @Service
@@ -88,7 +86,7 @@ public class EphemeralEnvironmentImpl implements EphemeralEnvironmentService {
         } catch (DataIntegrityViolationException ex) {
             log.error("DataIntegrity error ", ex);
             throw new CustomException(ErrorCode.DATA_INTEGRITY_FAILURE);
-        } catch (PersistenceException ex) {
+        } catch (Exception ex) {
             log.error("Failed to save data ", ex);
             throw new CustomException(ErrorCode.USER_UPDATE_FAILED);
         }
