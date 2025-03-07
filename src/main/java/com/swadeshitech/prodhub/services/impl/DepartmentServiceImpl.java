@@ -44,14 +44,14 @@ public class DepartmentServiceImpl implements DepartmentService {
     }
 
     @Override
-    public DepartmentResponse getDepartmentDetail(String departmentUUID) {
+    public DepartmentResponse getDepartmentDetail(String name) {
 
-        if (StringUtils.isEmpty(departmentUUID)) {
-            log.error("department uuid is empty/null");
-            throw new CustomException(ErrorCode.DEPARTMENT_UUID_NOT_FOUND);
+        if (StringUtils.isEmpty(name)) {
+            log.error("department name is empty/null");
+            throw new CustomException(ErrorCode.DEPARTMENT_NOT_FOUND);
         }
 
-        Optional<Department> department = departmentRepository.findById(departmentUUID);
+        Optional<Department> department = departmentRepository.findByName(name);
         if (department.isEmpty()) {
             log.error("department not found");
             throw new CustomException(ErrorCode.DEPARTMENT_NOT_FOUND);

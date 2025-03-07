@@ -10,5 +10,5 @@ import com.swadeshitech.prodhub.entity.Team;
 @Repository
 public interface TeamRepository extends MongoRepository<Team, String> {
 
-    Optional<Team> findByName(Long id);
+    Optional<Team> findByName(String name);
 }

@@ -1,7 +1,6 @@
 package com.swadeshitech.prodhub.dto;
 
-import java.time.LocalDateTime;
-
+import java.util.Date;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
@@ -23,8 +22,11 @@ public class UserResponse {
     private boolean isActive;
 
     @JsonFormat(pattern="yyyy-MM-dd hh:mm:ss")
-    private LocalDateTime createdTime;
+    private Date createdTime;
+
+    @JsonFormat(pattern="yyyy-MM-dd hh:mm:ss")
+    private Date lastModifiedTime;
 
     private String createdBy;
-    private String modifiedBy;
+    private String lastModifiedBy;
 }
