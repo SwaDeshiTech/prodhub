@@ -53,7 +53,7 @@ public class TeamServiceImpl implements TeamService {
         
         team.setActive(Boolean.TRUE);
 
-        Set<User> users = new HashSet();
+        Set<User> users = new HashSet<>();
 
         for(String employee : teamRequest.getEmployeeList()) {
             Optional<User> user = userRepository.findByEmailId(employee);

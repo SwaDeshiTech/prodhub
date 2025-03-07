@@ -22,6 +22,7 @@ public enum ErrorCode {
     
     APPLICATION_UPDATE_FAILED("PH-4001", "Application could not be updated", HttpStatus.INTERNAL_SERVER_ERROR),
     APPLICATION_NOT_FOUND("PH-4002", "Application not found", HttpStatus.NOT_FOUND),
+    APPLICATION_LIST_NOT_FOUND("PH-4003", "Application list not found", HttpStatus.BAD_REQUEST),
     
     EPHEMERAL_ENVIRONMENT_ID_NOT_FOUND("PH-5001", "Ephemeral Environment could not be found", HttpStatus.NOT_FOUND),
     EPHEMERAL_ENVIRONMENT_UPDATE_FAILED("PH-5002", "Ephemeral Environment could not be updated", HttpStatus.INTERNAL_SERVER_ERROR);
