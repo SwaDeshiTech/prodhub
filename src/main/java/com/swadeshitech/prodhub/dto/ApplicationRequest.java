@@ -9,7 +9,7 @@ public class ApplicationRequest {
     
     private String name;
     private String description;
-    private Long teamId;
+    private String teamId;
     private String departmentId;
     private Set<MetaDataRequest> profiles;
 }

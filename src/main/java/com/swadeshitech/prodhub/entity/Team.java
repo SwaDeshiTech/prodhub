@@ -17,6 +17,9 @@ import lombok.NoArgsConstructor;
 public class Team extends BaseEntity implements Serializable {
     
     @Id
+    private String id;
+
+    @Indexed
     private String name;
 
     private String description;

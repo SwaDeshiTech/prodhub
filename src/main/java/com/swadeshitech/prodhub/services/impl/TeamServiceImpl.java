@@ -85,7 +85,7 @@ public class TeamServiceImpl implements TeamService {
             throw new CustomException(ErrorCode.TEAM_UUID_NOT_FOUND);
         }
 
-        Optional<Team> team = teamRepository.findById(teamUUID);
+        Optional<Team> team = teamRepository.findByName(teamUUID);
         if (team.isEmpty()) {
             log.error("team not found");
             throw new CustomException(ErrorCode.TEAM_NOT_FOUND);

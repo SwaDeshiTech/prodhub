@@ -1,6 +1,6 @@
 package com.swadeshitech.prodhub.dto;
 
-import java.time.LocalDateTime;
+import java.util.Date;
 import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
@@ -17,11 +17,11 @@ public class TeamResponse {
     private List<UserResponse> employees;
 
     @JsonFormat(pattern="yyyy-MM-dd hh:mm:ss")
-    private LocalDateTime createTime;
+    private Date createdTime;
 
     @JsonFormat(pattern="yyyy-MM-dd hh:mm:ss")
-    private LocalDateTime updateTime;
+    private Date lastModifiedTime;
 
     private String createdBy;
-    private String modifiedBy;
+    private String lastModifiedBy;
 }
