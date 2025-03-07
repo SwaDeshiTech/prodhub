@@ -54,6 +54,8 @@ public class EphemeralEnvironmentImpl implements EphemeralEnvironmentService {
 
         setOwnerDetail(environment, "123-123-123");
 
+        setApplications(environment, request.getApplications());
+
         saveEphemeralEnvironmentToRepository(environment);
 
         EphemeralEnvironmentResponse ephemeralEnvironmentResponse = modelMapper.map(environment, EphemeralEnvironmentResponse.class);
@@ -107,7 +109,14 @@ public class EphemeralEnvironmentImpl implements EphemeralEnvironmentService {
         
         List<Application> applicationList = applicationRepository.findAllById(applications);
 
+        if (applicationList.isEmpty()) {
+            log.error("applications could not be found", applications);
+            throw new CustomException(ErrorCode.APPLICATION_LIST_NOT_FOUND);
+        }
         
+        Set<Application> applicationSet = Set.copyOf(applicationList);
+
+        environment.setApplications(applicationSet);
     }
     
 }
