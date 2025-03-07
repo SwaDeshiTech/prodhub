@@ -22,7 +22,7 @@ import com.swadeshitech.prodhub.repository.ApplicationRepository;
 import com.swadeshitech.prodhub.repository.EphemeralEnvironmentRepository;
 import com.swadeshitech.prodhub.repository.UserRepository;
 import com.swadeshitech.prodhub.services.EphemeralEnvironmentService;
-
+import com.swadeshitech.prodhub.utils.UserContextUtil;
 import lombok.extern.log4j.Log4j2;
 
 @Service
@@ -46,13 +46,19 @@ public class EphemeralEnvironmentImpl implements EphemeralEnvironmentService {
      
         EphemeralEnvironment environment = modelMapper.map(request, EphemeralEnvironment.class);
 
-        if(Objects.isNull(environment)) {
+        if (Objects.isNull(environment)) {
             throw new CustomException(ErrorCode.BAD_REQUEST);
+        }
+        
+        String userId = UserContextUtil.getUserIdFromRequestContext();
+        if (Objects.isNull(userId)) {
+            log.error("user id is not present");
+            throw new CustomException(ErrorCode.USER_UUID_NOT_FOUND);
         }
         
         environment.setActive(true);
 
-        setOwnerDetail(environment, "123-123-123");
+        setOwnerDetail(environment, userId);
 
         setApplications(environment, request.getApplications());
 
