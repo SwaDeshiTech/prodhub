@@ -24,8 +24,9 @@ hs_err_pid*
 replay_pid*
 
 .gradle
+.idea/
 build/
 
 .DS_Store
 
-.vscode
+.vscode/

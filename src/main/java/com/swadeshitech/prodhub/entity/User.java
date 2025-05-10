@@ -33,6 +33,8 @@ public class User extends BaseEntity implements Serializable {
 
     private Boolean isActive;
 
+    private String profilePicture;
+
     @DBRef
     private Set<Team> teams;
 

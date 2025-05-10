@@ -5,11 +5,8 @@ import java.util.Set;
 import lombok.Data;
 
 @Data
-public class TeamRequest {
-
-    private String name;
+public class TeamEmployeeUpdateRequest {
     private String description;
-    private String departmentId;
     private Set<String> employeeList;
-    private Set<String> managerList;
+    private Set<String> managerList;// List of email IDs to set as team employees
 }

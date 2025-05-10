@@ -1,6 +1,8 @@
 package com.swadeshitech.prodhub.dto;
 
 import java.util.Date;
+import java.util.Set;
+
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
@@ -19,12 +21,16 @@ public class UserResponse {
     private String userName;
     private String emailId;
     private String phoneNumber;
-    private boolean isActive;
+    private Boolean isActive;
+    private String profilePicture;
 
-    @JsonFormat(pattern="yyyy-MM-dd hh:mm:ss")
+    private Set<String> teams;
+    private Set<String> departments;
+
+    @JsonFormat(pattern = "yyyy-MM-dd hh:mm:ss")
     private Date createdTime;
 
-    @JsonFormat(pattern="yyyy-MM-dd hh:mm:ss")
+    @JsonFormat(pattern = "yyyy-MM-dd hh:mm:ss")
     private Date lastModifiedTime;
 
     private String createdBy;

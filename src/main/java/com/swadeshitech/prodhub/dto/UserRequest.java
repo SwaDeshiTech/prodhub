@@ -16,5 +16,6 @@ public class UserRequest implements Serializable {
     private String userName;
     private String emailId;
     private String phoneNumber;
+    private String profilePicture;
     private LocalDate dob;
 }

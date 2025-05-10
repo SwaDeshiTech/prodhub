@@ -15,11 +15,12 @@ public class TeamResponse {
     private boolean isActive;
     private List<DepartmentResponse> departments;
     private List<UserResponse> employees;
+    private List<UserResponse> managers;
 
-    @JsonFormat(pattern="yyyy-MM-dd hh:mm:ss")
+    @JsonFormat(pattern = "yyyy-MM-dd hh:mm:ss")
     private Date createdTime;
 
-    @JsonFormat(pattern="yyyy-MM-dd hh:mm:ss")
+    @JsonFormat(pattern = "yyyy-MM-dd hh:mm:ss")
     private Date lastModifiedTime;
 
     private String createdBy;
