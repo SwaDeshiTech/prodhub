@@ -27,7 +27,8 @@ public enum ErrorCode {
 
     EPHEMERAL_ENVIRONMENT_ID_NOT_FOUND("PH-5001", "Ephemeral Environment could not be found", HttpStatus.NOT_FOUND),
     EPHEMERAL_ENVIRONMENT_UPDATE_FAILED("PH-5002", "Ephemeral Environment could not be updated",
-            HttpStatus.INTERNAL_SERVER_ERROR);
+            HttpStatus.INTERNAL_SERVER_ERROR),
+    EPHEMERAL_ENVIRONMENT_LIST_NOT_FOUND("PH-5003", "Ephemeral Environment list not found", HttpStatus.NOT_FOUND);
 
     private final String code;
     private final String description;

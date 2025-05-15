@@ -1,6 +1,6 @@
 package com.swadeshitech.prodhub.entity;
 
-import java.util.Date;
+import java.time.LocalDateTime;
 
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.CreatedDate;
@@ -15,7 +15,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class BaseEntity {
-    
+
     @CreatedBy
     private String createdBy;
 
@@ -23,9 +23,9 @@ public class BaseEntity {
     private String lastModifiedBy;
 
     @CreatedDate
-    private Date createdTime;
+    private LocalDateTime createdTime;
 
     @LastModifiedDate
-    private Date lastModifiedTime;
+    private LocalDateTime lastModifiedTime;
 
 }

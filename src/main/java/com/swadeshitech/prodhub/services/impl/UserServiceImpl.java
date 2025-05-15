@@ -24,6 +24,7 @@ import com.swadeshitech.prodhub.enums.ErrorCode;
 import com.swadeshitech.prodhub.exception.CustomException;
 import com.swadeshitech.prodhub.repository.UserRepository;
 import com.swadeshitech.prodhub.services.UserService;
+import com.swadeshitech.prodhub.utils.UserContextUtil;
 
 import io.micrometer.common.util.StringUtils;
 import lombok.extern.slf4j.Slf4j;
@@ -40,7 +41,6 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public UserResponse getUserDetail(String uuid) {
-        log.info("printing {}", uuid);
         if (StringUtils.isEmpty(uuid)) {
             log.error("user uuid is empty/null");
             throw new CustomException(ErrorCode.USER_UUID_NOT_FOUND);
@@ -125,7 +125,13 @@ public class UserServiceImpl implements UserService {
     @Override
     public List<DropdownDTO> getAllUsersForDropdown() {
         List<User> users = userRepository.findAll();
+        String userId = UserContextUtil.getUserIdFromRequestContext();
+        if (Objects.isNull(userId)) {
+            log.error("user id is not present");
+            throw new CustomException(ErrorCode.USER_UUID_NOT_FOUND);
+        }
         return users.stream()
+                .filter(user -> !userId.equals(user.getUuid()))
                 .map(user -> new DropdownDTO(
                         user.getUuid(),
                         user.getName() + " (" + user.getEmailId() + ")"))

@@ -5,8 +5,11 @@ import java.time.LocalDateTime;
 import java.util.Set;
 
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.DBRef;
 import org.springframework.data.mongodb.core.mapping.Document;
+
+import com.swadeshitech.prodhub.enums.EphemeralEnvrionmentStatus;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -19,13 +22,14 @@ import lombok.NoArgsConstructor;
 public class EphemeralEnvironment extends BaseEntity implements Serializable {
 
     @Id
-    private String name;
+    private String id;
 
-    private String description;
+    @Indexed(unique = true)
+    private String name;
 
     private LocalDateTime expiryOn;
 
-    private boolean isActive;
+    private EphemeralEnvrionmentStatus status;
 
     @DBRef
     private User owner;
@@ -34,5 +38,5 @@ public class EphemeralEnvironment extends BaseEntity implements Serializable {
     private Set<User> sharedWith;
 
     @DBRef
-    private Set<Application> applications;
+    private transient Set<Application> applications;
 }

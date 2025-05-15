@@ -1,4 +1,51 @@
 {
-    "java.compile.nullAnalysis.mode": "automatic",
-    "java.configuration.updateBuildConfiguration": "automatic"
+    "java.home": "/Library/Java/JavaVirtualMachines/jdk-24.jdk/Contents/Home",
+    "java.configuration.updateBuildConfiguration": "automatic",
+    "java.codeGeneration.generateComments": true,
+    "java.completion.enabled": true,
+    "java.errors.incompleteClasspath.severity": "warning",
+    "java.format.enabled": true,
+    "java.format.settings.url": "",
+    "java.import.exclusions": [
+        "**/node_modules/**"
+    ],
+    "java.maven.downloadSources": true,
+    "java.maven.updateSnapshots": false,
+    "java.test.defaultConfig": {
+        "vmargs": []
+    },
+    "java.project.referencedLibraries": [
+        "lib/**/*.jar"
+    ],
+    "gradle.autoBuild": false,
+    "gradle.jvmArguments": "",
+    "gradle.userHome": "",
+    "gradle.buildEnvironment": [],
+    "gradle.daemonMaxIdleTimeValue": 60,
+    "gradle.daemonMaxIdleTimeUnit": "minutes",
+    "gradle.debugPort": 5005,
+    "gradle.enableBuildScans": false,
+    "gradle.enableTestCaching": false,
+    "gradle.offline": false,
+    "gradle.showBuildOutput": "always",
+    "gradle.showDaemonLog": false,
+    "gradle.showExecutionProgress": "always",
+    "gradle.statusBar.showBusy": "always",
+    "gradle.taskExecution.cwd": "${workspaceFolder}",
+    "gradle.tasks.allCommands": "",
+    "gradle.tasks.customCommands": "",
+    "gradle.view.autoReveal": false,
+    "gradle.view.showConfiguration": false,
+    "gradle.view.showDependencies": false,
+    "gradle.view.showProjectFolder": true,
+    "gradle.view.showTaskDescription": true,
+    "gradle.view.sortOrder": "alphabetical",
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "[java]": {
+        "editor.defaultFormatter": "redhat.java"
+    },
+    "prettier.tabWidth": 4,
+    "prettier.useTabs": false,
+    "java.compile.nullAnalysis.mode": "automatic"
 }
