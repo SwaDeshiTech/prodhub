@@ -15,4 +15,8 @@ public interface EphemeralEnvironmentRepository extends MongoRepository<Ephemera
     public Optional<List<EphemeralEnvironment>> findByName(String uuid);
 
     public Optional<List<EphemeralEnvironment>> findByOwner(User owner);
+
+    public Optional<EphemeralEnvironment> findByIdAndOwner(String id, User owner);
+
+    // public Optional<EphemeralEnvironment> findByIdAnd
 }

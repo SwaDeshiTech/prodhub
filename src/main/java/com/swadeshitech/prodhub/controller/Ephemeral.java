@@ -17,6 +17,7 @@ import com.swadeshitech.prodhub.dto.EphemeralEnvironmentRequest;
 import com.swadeshitech.prodhub.dto.EphemeralEnvironmentResponse;
 import com.swadeshitech.prodhub.dto.Response;
 import com.swadeshitech.prodhub.services.EphemeralEnvironmentService;
+import org.springframework.web.bind.annotation.PutMapping;
 
 @RestController
 @RequestMapping("/ephemeralEnvironment")
@@ -67,6 +68,21 @@ public class Ephemeral {
         return ResponseEntity.ok().body(response);
     }
 
+    @GetMapping("/{id}/{applicationId}")
+    public ResponseEntity<Response> ephemeralEnvironmentApplicationDetails(@PathVariable("id") String id,
+            @PathVariable("applicationId") String applicationId) {
+
+        EphemeralEnvironmentResponse environmentResponse = environmentService.getEphemeralEnvironmentDetail(id);
+
+        Response response = Response.builder()
+                .httpStatus(HttpStatus.ACCEPTED)
+                .message("Ephemeral Environment has been fetched successfully")
+                .response(environmentResponse)
+                .build();
+
+        return ResponseEntity.ok().body(response);
+    }
+
     @PostMapping
     public ResponseEntity<Response> ephemeralEnvironmentDetail(@RequestBody EphemeralEnvironmentRequest request) {
 
@@ -79,5 +95,20 @@ public class Ephemeral {
                 .build();
 
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<Response> updateEphemeralEnvironmentDetail(@PathVariable String id,
+            @RequestBody EphemeralEnvironmentRequest request) {
+
+        EphemeralEnvironmentResponse environmentResponse = environmentService.updateEphemeralEnvironment(id, request);
+
+        Response response = Response.builder()
+                .httpStatus(HttpStatus.OK)
+                .message("Ephemeral Environment has been updated successfully")
+                .response(environmentResponse)
+                .build();
+
+        return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 }

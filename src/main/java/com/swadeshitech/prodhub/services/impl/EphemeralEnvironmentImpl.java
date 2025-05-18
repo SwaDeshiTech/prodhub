@@ -2,7 +2,10 @@ package com.swadeshitech.prodhub.services.impl;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -11,6 +14,7 @@ import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
 import com.swadeshitech.prodhub.dto.DropdownDTO;
@@ -121,9 +125,13 @@ public class EphemeralEnvironmentImpl implements EphemeralEnvironmentService {
             throw new CustomException(ErrorCode.APPLICATION_LIST_NOT_FOUND);
         }
 
-        Set<Application> applicationSet = Set.copyOf(applicationList);
+        Map<String, Object> applicationsMap = new HashMap<>();
 
-        environment.setApplications(applicationSet);
+        for (Application application : applicationList) {
+            applicationsMap.put(application.getId(), application);
+        }
+
+        environment.setApplications(applicationsMap);
     }
 
     @Override
@@ -171,6 +179,46 @@ public class EphemeralEnvironmentImpl implements EphemeralEnvironmentService {
         return responseList;
     }
 
+    @Override
+    public EphemeralEnvironmentResponse updateEphemeralEnvironment(String environmentId,
+            EphemeralEnvironmentRequest request) {
+
+        String userId = UserContextUtil.getUserIdFromRequestContext();
+        if (Objects.isNull(userId)) {
+            log.error("user id is not present");
+            throw new CustomException(ErrorCode.USER_UUID_NOT_FOUND);
+        }
+
+        Optional<User> user = userRepository.findByUuid(userId);
+        if (user.isEmpty()) {
+            throw new CustomException(ErrorCode.USER_NOT_FOUND);
+        }
+
+        Optional<EphemeralEnvironment> environment = environmentRepository.findByIdAndOwner(environmentId, user.get());
+
+        if (environment.isEmpty()) {
+            throw new CustomException(ErrorCode.EPHEMERAL_ENVIRONMENT_NOT_FOUND);
+        }
+
+        if (Objects.nonNull(request.getSharedWith())) {
+            Set<User> users = new HashSet<>();
+            for (String id : request.getSharedWith()) {
+                Optional<User> sharedUserOpt = userRepository.findByUuid(id);
+                if (sharedUserOpt.isEmpty()) {
+                    throw new CustomException(ErrorCode.USER_NOT_FOUND);
+                }
+                users.add(sharedUserOpt.get());
+            }
+            environment.get().setSharedWith(users);
+        }
+
+        setApplications(environment.get(), request.getApplications());
+
+        saveEphemeralEnvironmentToRepository(environment.get());
+
+        return mapEntityToResponse(environment.get());
+    }
+
     private EphemeralEnvironmentResponse mapEntityToResponse(EphemeralEnvironment environment) {
 
         EphemeralEnvironmentResponse environmentResponse = new EphemeralEnvironmentResponse();
@@ -182,7 +230,35 @@ public class EphemeralEnvironmentImpl implements EphemeralEnvironmentService {
         environmentResponse.setCreatedTime(environment.getCreatedTime());
         environmentResponse.setExpiryOn(environment.getExpiryOn());
 
+        if (!CollectionUtils.isEmpty(environment.getApplications())) {
+            Set<DropdownDTO> applications = new HashSet<>();
+            for (Map.Entry<String, Object> itr : environment.getApplications().entrySet()) {
+                Application application = (Application) itr.getValue();
+                applications.add(DropdownDTO.builder()
+                        .key(application.getId())
+                        .value(application.getName())
+                        .build());
+            }
+            environmentResponse.setApplications(applications);
+        }
+
+        if (!CollectionUtils.isEmpty(environment.getSharedWith())) {
+            Set<DropdownDTO> sharedWith = environment.getSharedWith().stream()
+                    .map(user -> DropdownDTO.builder()
+                            .key(user.getUuid())
+                            .value(user.getEmailId())
+                            .build())
+                    .collect(java.util.stream.Collectors.toSet());
+            environmentResponse.setSharedWith(sharedWith);
+        }
         return environmentResponse;
     }
 
+    @Override
+    public EphemeralEnvironmentResponse getEphemeralEnvironmentApplicationDetails(String id, String applicationId) {
+
+        // Optional<EphemeralEnvironment> ephemeralEnvironmentOptional =
+        // environmentRepository.findByIdAndOwner
+        return new EphemeralEnvironmentResponse();
+    }
 }

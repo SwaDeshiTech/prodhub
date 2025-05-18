@@ -1,12 +1,12 @@
 package com.swadeshitech.prodhub.enums;
 
 public enum ProfileType {
-    
-    BUILD("Build"),
-    DEPLOYMENT("Deployment"),
-    LOGGING("Logging"),
-    DATASTORE("Data Store"),
-    QUEUE("Queue");
+
+    BUILD("build"),
+    DEPLOYMENT("deployment"),
+    LOGGING("logging"),
+    DATASTORE("dataStore"),
+    QUEUE("queue");
 
     private String value;
 

@@ -5,20 +5,27 @@ import java.io.Serializable;
 import org.bson.BsonType;
 import org.bson.codecs.pojo.annotations.BsonRepresentation;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.DBRef;
+import org.springframework.data.mongodb.core.mapping.Document;
+
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.swadeshitech.prodhub.enums.ProfileType;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-@NoArgsConstructor
-@AllArgsConstructor
 @Data
+@AllArgsConstructor
+@NoArgsConstructor
+@JsonIgnoreProperties(ignoreUnknown = true)
+@Document(collection = "metadata")
 public class Metadata extends BaseEntity implements Serializable {
 
     @Id
-    private Long id;
-    
+    private String id;
+
+    @Indexed
     private String name;
 
     @BsonRepresentation(BsonType.STRING)
@@ -29,5 +36,5 @@ public class Metadata extends BaseEntity implements Serializable {
     private boolean isActive;
 
     @DBRef
-    private Application application;
+    private transient Application application;
 }

@@ -2,6 +2,7 @@ package com.swadeshitech.prodhub.entity;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.Set;
 
 import org.springframework.data.annotation.Id;
@@ -37,6 +38,5 @@ public class EphemeralEnvironment extends BaseEntity implements Serializable {
     @DBRef
     private Set<User> sharedWith;
 
-    @DBRef
-    private transient Set<Application> applications;
+    private transient Map<String, Object> applications;
 }

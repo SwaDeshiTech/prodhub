@@ -15,8 +15,12 @@ public interface EphemeralEnvironmentService {
 
     public EphemeralEnvironmentResponse getEphemeralEnvironmentDetail(String id);
 
+    public EphemeralEnvironmentResponse getEphemeralEnvironmentApplicationDetails(String id, String applicationId);
+
     public List<DropdownDTO> getEphemeralEnvironmentDropdownList();
 
     public List<EphemeralEnvironmentResponse> getEphemeralEnvironmentList();
 
+    public EphemeralEnvironmentResponse updateEphemeralEnvironment(String environmentId,
+            EphemeralEnvironmentRequest request);
 }

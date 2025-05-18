@@ -1,6 +1,7 @@
 package com.swadeshitech.prodhub.dto;
 
 import java.time.LocalDateTime;
+import java.util.Set;
 
 import com.swadeshitech.prodhub.enums.EphemeralEnvrionmentStatus;
 
@@ -12,6 +13,8 @@ public class EphemeralEnvironmentResponse {
     private String name;
     private String owner;
     private EphemeralEnvrionmentStatus status;
+    private Set<DropdownDTO> applications;
+    private Set<DropdownDTO> sharedWith;
     private LocalDateTime expiryOn;
     private LocalDateTime createdTime;
 }

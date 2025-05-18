@@ -116,18 +116,27 @@ public class ApplicationServiceImpl implements ApplicationService {
     }
 
     private void generateBase64String(Application application) {
+        if (Objects.isNull(application.getProfiles())) {
+            return;
+        }
         for (Metadata metadata : application.getProfiles()) {
             metadata.setData(Base64Util.generateBase64Encoded(metadata.getData()));
         }
     }
 
     private void decodeProfleMetaData(Application application) {
+        if (Objects.isNull(application.getProfiles())) {
+            return;
+        }
         for (Metadata metadata : application.getProfiles()) {
             metadata.setData(Base64Util.convertToPlainText(metadata.getData()));
         }
     }
 
     private void setProfilesToActive(Application application) {
+        if (Objects.isNull(application.getProfiles())) {
+            return;
+        }
         for (Metadata metadata : application.getProfiles()) {
             metadata.setActive(true);
         }

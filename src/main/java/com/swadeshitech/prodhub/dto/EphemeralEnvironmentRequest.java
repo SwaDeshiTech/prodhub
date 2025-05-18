@@ -8,7 +8,7 @@ import lombok.Data;
 public class EphemeralEnvironmentRequest {
 
     private String name;
-    private String description;
     private int expiryDuration;
     private Set<String> applications;
+    private Set<String> sharedWith;
 }
