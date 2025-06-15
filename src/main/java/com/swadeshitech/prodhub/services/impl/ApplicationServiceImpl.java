@@ -1,5 +1,6 @@
 package com.swadeshitech.prodhub.services.impl;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -17,7 +18,6 @@ import com.swadeshitech.prodhub.entity.Department;
 import com.swadeshitech.prodhub.entity.Metadata;
 import com.swadeshitech.prodhub.entity.Team;
 import com.swadeshitech.prodhub.enums.ErrorCode;
-import com.swadeshitech.prodhub.enums.ProfileType;
 import com.swadeshitech.prodhub.exception.CustomException;
 import com.swadeshitech.prodhub.repository.ApplicationRepository;
 import com.swadeshitech.prodhub.repository.DepartmentRepository;
@@ -73,9 +73,7 @@ public class ApplicationServiceImpl implements ApplicationService {
         application.setDepartment(department.get());
         application.setTeam(team.get());
         application.setActive(true);
-
-        // generateBase64String(application);
-        // setProfilesToActive(application);
+        application.setProfiles(new HashSet<>());
 
         saveApplicationToRepository(application);
 
@@ -103,7 +101,7 @@ public class ApplicationServiceImpl implements ApplicationService {
         return applicationResponse;
     }
 
-    private Application saveApplicationToRepository(Application application) {
+    protected Application saveApplicationToRepository(Application application) {
         try {
             return applicationRepository.save(application);
         } catch (DataIntegrityViolationException ex) {
@@ -115,30 +113,12 @@ public class ApplicationServiceImpl implements ApplicationService {
         }
     }
 
-    private void generateBase64String(Application application) {
-        if (Objects.isNull(application.getProfiles())) {
-            return;
-        }
-        for (Metadata metadata : application.getProfiles()) {
-            metadata.setData(Base64Util.generateBase64Encoded(metadata.getData()));
-        }
-    }
-
     private void decodeProfleMetaData(Application application) {
         if (Objects.isNull(application.getProfiles())) {
             return;
         }
         for (Metadata metadata : application.getProfiles()) {
             metadata.setData(Base64Util.convertToPlainText(metadata.getData()));
-        }
-    }
-
-    private void setProfilesToActive(Application application) {
-        if (Objects.isNull(application.getProfiles())) {
-            return;
-        }
-        for (Metadata metadata : application.getProfiles()) {
-            metadata.setActive(true);
         }
     }
 

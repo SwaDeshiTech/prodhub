@@ -18,5 +18,5 @@ public interface OnboardingService {
 
     MetaDataResponse updateProfile(ApplicationProfileRequest request);
 
-    MetaDataResponse getProfileDetails(String profileId);
+    ApplicationProfileResponse getProfileDetails(String profileId);
 }

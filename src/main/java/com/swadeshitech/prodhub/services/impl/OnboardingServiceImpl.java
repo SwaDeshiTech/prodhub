@@ -19,6 +19,8 @@ import com.swadeshitech.prodhub.exception.CustomException;
 import com.swadeshitech.prodhub.repository.ApplicationRepository;
 import com.swadeshitech.prodhub.repository.MetaDataRepository;
 import com.swadeshitech.prodhub.services.OnboardingService;
+import com.swadeshitech.prodhub.transaction.write.WriteTransactionService;
+import com.swadeshitech.prodhub.utils.Base64Util;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -31,6 +33,9 @@ public class OnboardingServiceImpl implements OnboardingService {
 
     @Autowired
     private MetaDataRepository metaDataRepository;
+
+    @Autowired
+    private WriteTransactionService writeTransactionService;
 
     @Override
     public Set<DropdownDTO> getProfilesForDropdown(String onboardingType, String applicationId) {
@@ -73,9 +78,16 @@ public class OnboardingServiceImpl implements OnboardingService {
         metadata.setName(request.getProfile().getName());
         metadata.setProfileType(request.getProfile().getProfileType());
         metadata.setApplication(aOptional.get());
-        metadata.setData(request.getProfile().getData());
+        metadata.setData(Base64Util.generateBase64Encoded(request.getProfile().getData()));
 
-        saveMetaDataToRepository(metadata);
+        writeTransactionService.saveMetaDataToRepository(metadata);
+
+        if (aOptional.get().getProfiles() == null) {
+            aOptional.get().setProfiles(new HashSet<>());
+        }
+
+        aOptional.get().getProfiles().add(metadata);
+        writeTransactionService.saveApplicationToRepository(aOptional.get());
 
         MetaDataResponse dataResponse = mapEntityDataResponse(metadata);
 
@@ -93,22 +105,10 @@ public class OnboardingServiceImpl implements OnboardingService {
 
         response.setActive(metadata.isActive());
         response.setName(metadata.getName());
-        response.setData(metadata.getData());
+        response.setData(Base64Util.convertToPlainText(metadata.getData()));
         response.setProfileType(metadata.getProfileType());
 
         return response;
-    }
-
-    private void saveMetaDataToRepository(Metadata metadata) {
-        try {
-            metaDataRepository.save(metadata);
-        } catch (DataIntegrityViolationException ex) {
-            log.error("DataIntegrity error ", ex);
-            throw new CustomException(ErrorCode.DATA_INTEGRITY_FAILURE);
-        } catch (Exception ex) {
-            log.error("Failed to save data ", ex);
-            throw new CustomException(ErrorCode.USER_UPDATE_FAILED);
-        }
     }
 
     @Override
@@ -120,32 +120,34 @@ public class OnboardingServiceImpl implements OnboardingService {
         }
 
         Optional<Metadata> optionalMetaData = metaDataRepository.findById(request.getProfile().getId());
-        if (optionalMetaData.isPresent()) {
-            throw new CustomException(ErrorCode.METADATA_PROFILE_ALREADY_EXISTS);
+        if (optionalMetaData.isEmpty()) {
+            throw new CustomException(ErrorCode.METADATA_PROFILE_NOT_FOUND);
         }
 
         Metadata metadata = optionalMetaData.get();
 
         metadata.setActive(request.getProfile().isActive());
-        metadata.setName(request.getProfile().getName());
-        metadata.setProfileType(request.getProfile().getProfileType());
-        metadata.setApplication(aOptional.get());
-        metadata.setData(request.getProfile().getData());
+        metadata.setData(Base64Util.generateBase64Encoded(request.getProfile().getData()));
 
-        saveMetaDataToRepository(metadata);
+        writeTransactionService.saveMetaDataToRepository(metadata);
 
         return mapEntityDataResponse(metadata);
     }
 
     @Override
-    public MetaDataResponse getProfileDetails(String profileId) {
+    public ApplicationProfileResponse getProfileDetails(String profileId) {
 
         Optional<Metadata> meOptional = metaDataRepository.findById(profileId);
         if (meOptional.isEmpty()) {
             throw new CustomException(ErrorCode.APPLICATION_NOT_FOUND);
         }
 
-        return mapEntityDataResponse(meOptional.get());
+        ApplicationProfileResponse applicationProfileResponse = new ApplicationProfileResponse();
+        applicationProfileResponse.setApplicationId(meOptional.get().getApplication().getId());
+        MetaDataResponse metaDataResponse = mapEntityDataResponse(meOptional.get());
+        applicationProfileResponse.setProfile(metaDataResponse);
+
+        return applicationProfileResponse;
     }
 
 }

@@ -32,6 +32,7 @@ public enum ErrorCode {
     EPHEMERAL_ENVIRONMENT_NOT_FOUND("PH-5004", "Ephemeral Environment could not be found", HttpStatus.NOT_FOUND),
 
     METADATA_PROFILE_ALREADY_EXISTS("PH-6001", "Meta data profile already exists", HttpStatus.BAD_REQUEST),
+    METADATA_PROFILE_NOT_FOUND("PH-6002", "Meta data profile could not found", HttpStatus.BAD_REQUEST),
 
     CONSTANTS_NOT_FOUND("PH-7001", "Constants could not found", HttpStatus.NOT_FOUND);
 

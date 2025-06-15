@@ -1,5 +1,6 @@
 package com.swadeshitech.prodhub.controller;
 
+import java.util.List;
 import java.util.Set;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,8 +29,8 @@ public class Onboarding {
     private OnboardingService onboardingService;
 
     @GetMapping("/{onboardingType}/{id}")
-    public ResponseEntity<Response> getOnboardingType(@PathVariable("onboardingType") String onboardingType,
-            @PathVariable("id") String id) {
+    public ResponseEntity<Response> getOnboardingType(@PathVariable String onboardingType,
+            @PathVariable String id) {
 
         Set<DropdownDTO> dropdownDTOs = onboardingService.getProfilesForDropdown(onboardingType, id);
 
@@ -45,12 +46,27 @@ public class Onboarding {
     @GetMapping("/{id}/details")
     public ResponseEntity<Response> getOnboardingTypeDetails(@PathVariable String id) {
 
-        MetaDataResponse metaDataResponse = onboardingService.getProfileDetails(id);
+        ApplicationProfileResponse applicationProfileResponse = onboardingService.getProfileDetails(id);
 
         Response response = Response.builder()
                 .httpStatus(HttpStatus.ACCEPTED)
-                .message("Profile has been fetched successfully")
-                .response(metaDataResponse)
+                .message("Profile details has been fetched successfully")
+                .response(applicationProfileResponse)
+                .build();
+
+        return ResponseEntity.ok().body(response);
+    }
+
+    @GetMapping("/dropdown/{onboardingType}/{id}")
+    public ResponseEntity<Response> getProfilesDropdown(@PathVariable(name = "onboardingType") String onboardingType,
+            @PathVariable(name = "id") String id) {
+
+        Set<DropdownDTO> dropdownDTOs = onboardingService.getProfilesForDropdown(onboardingType, id);
+
+        Response response = Response.builder()
+                .httpStatus(HttpStatus.ACCEPTED)
+                .message("Profiles has been fetched successfully")
+                .response(dropdownDTOs)
                 .build();
 
         return ResponseEntity.ok().body(response);
