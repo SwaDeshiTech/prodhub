@@ -34,7 +34,10 @@ public enum ErrorCode {
     METADATA_PROFILE_ALREADY_EXISTS("PH-6001", "Meta data profile already exists", HttpStatus.BAD_REQUEST),
     METADATA_PROFILE_NOT_FOUND("PH-6002", "Meta data profile could not found", HttpStatus.BAD_REQUEST),
 
-    CONSTANTS_NOT_FOUND("PH-7001", "Constants could not found", HttpStatus.NOT_FOUND);
+    CONSTANTS_NOT_FOUND("PH-7001", "Constants could not found", HttpStatus.NOT_FOUND),
+
+    CLOUD_PROVIDERS_NOT_FOUND("PH-8001", "Cloud providers list could not found", HttpStatus.NOT_FOUND),
+    CLOUD_PROVIDER_NOT_FOUND("PH-8002", "Cloud provider could not found", HttpStatus.NOT_FOUND);
 
     private final String code;
     private final String description;
