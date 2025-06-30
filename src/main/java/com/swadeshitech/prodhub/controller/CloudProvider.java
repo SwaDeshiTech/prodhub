@@ -70,7 +70,7 @@ public class CloudProvider {
     }
 
     @GetMapping("/details/:id")
-    public ResponseEntity<Response> getMethodName(@PathVariable String id) {
+    public ResponseEntity<Response> getRegisteredCloudProviderDetails(@PathVariable String id) {
 
         CloudProviderDetailsResponse cloudProviderResponses = cloudProviderService.getCloudProviderDetails(id);
 
