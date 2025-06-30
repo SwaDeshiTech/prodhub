@@ -33,7 +33,7 @@ public class CloudProvider {
                 .registerCloudProvider(registerRequest);
 
         Response response = Response.builder()
-                .httpStatus(HttpStatus.ACCEPTED)
+                .httpStatus(HttpStatus.CREATED)
                 .message("Successfully onboarded cloud provider")
                 .response(cloudProviderRegisterResponse)
                 .build();
