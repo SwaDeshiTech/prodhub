@@ -40,7 +40,11 @@ public class CloudProviderServiceImpl implements CloudProviderService {
         Constants constants = readTransactionService.getConstantByName("cloudProvider");
         List<CloudProviderResponse> cloudProviderResponses = new ArrayList<>();
         for (String provider : constants.getValues()) {
-            cloudProviderResponses.add(CloudProviderResponse.builder().name(provider).build());
+            cloudProviderResponses.add(
+                    CloudProviderResponse.builder()
+                            .name(provider)
+                            .location("/dashboard/connect/onboarding/" + provider)
+                            .build());
         }
         return cloudProviderResponses;
     }

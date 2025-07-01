@@ -40,7 +40,7 @@ public class Resource {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @GetMapping("/list/provider/:provider")
+    @GetMapping("/list/provider/:id")
     public ResponseEntity<Response> getResourceList(@PathVariable String provider) {
 
         List<ResourceDetailsResponse> resourceDetailsList = resourceService.getResourceListByProvider(provider);
