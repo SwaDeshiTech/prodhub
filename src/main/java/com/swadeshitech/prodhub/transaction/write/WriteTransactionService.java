@@ -80,4 +80,13 @@ public class WriteTransactionService {
             throw new CustomException(ErrorCode.USER_UPDATE_FAILED);
         }
     }
+
+    public void removeCloudProviderFromRepository(String id) {
+        try {
+            cloudProviderRepository.deleteById(id);
+        } catch (Exception ex) {
+            log.error("Failed to delete CloudProvider with id: {}", id, ex);
+            throw new CustomException(ErrorCode.CLOUD_PROVIDER_COULD_NOT_DELETED);
+        }
+    }
 }

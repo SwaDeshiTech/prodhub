@@ -84,7 +84,9 @@ public class CloudProviderServiceImpl implements CloudProviderService {
 
         for (CloudProvider cloudProvider : providers) {
             cloudProviderResponses.add(CloudProviderResponse.builder().id(cloudProvider.getId())
-                    .name(cloudProvider.getName()).build());
+                    .name(cloudProvider.getName())
+                    .description(cloudProvider.getDescription())
+                    .build());
         }
 
         return cloudProviderResponses;
@@ -105,6 +107,13 @@ public class CloudProviderServiceImpl implements CloudProviderService {
                 .description(providers.get(0).getDescription())
                 .id(providers.get(0).getId())
                 .name(providers.get(0).getName())
+                .metaData(providers.get(0).getMetaData())
                 .build();
+    }
+
+    @Override
+    public String deleteCloudProvider(String id) {
+        writeTransactionService.removeCloudProviderFromRepository(id);
+        return "Successfully deleted the cloud provider";
     }
 }

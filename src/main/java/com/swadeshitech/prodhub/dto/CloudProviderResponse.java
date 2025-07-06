@@ -9,4 +9,5 @@ public class CloudProviderResponse {
     private String id;
     private String name;
     private String location;
+    private String description;
 }

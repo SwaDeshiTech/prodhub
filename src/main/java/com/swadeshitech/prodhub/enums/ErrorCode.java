@@ -37,7 +37,8 @@ public enum ErrorCode {
     CONSTANTS_NOT_FOUND("PH-7001", "Constants could not found", HttpStatus.NOT_FOUND),
 
     CLOUD_PROVIDERS_NOT_FOUND("PH-8001", "Cloud providers list could not found", HttpStatus.NOT_FOUND),
-    CLOUD_PROVIDER_NOT_FOUND("PH-8002", "Cloud provider could not found", HttpStatus.NOT_FOUND);
+    CLOUD_PROVIDER_NOT_FOUND("PH-8002", "Cloud provider could not found", HttpStatus.NOT_FOUND),
+    CLOUD_PROVIDER_COULD_NOT_DELETED("PH-8003", "Cloud provider could not be deleted", HttpStatus.BAD_REQUEST);
 
     private final String code;
     private final String description;

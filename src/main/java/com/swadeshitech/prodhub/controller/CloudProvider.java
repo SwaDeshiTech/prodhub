@@ -5,6 +5,7 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -25,6 +26,34 @@ public class CloudProvider {
 
     @Autowired
     private CloudProviderService cloudProviderService;
+
+    @GetMapping("/onboarded")
+    public ResponseEntity<Response> getRegisteredCloudProviders() {
+
+        List<CloudProviderResponse> cloudProviderResponses = cloudProviderService.registeredCloudProviderList();
+
+        Response response = Response.builder()
+                .httpStatus(HttpStatus.ACCEPTED)
+                .message("Successfully fetched registered cloud providers")
+                .response(cloudProviderResponses)
+                .build();
+
+        return ResponseEntity.ok().body(response);
+    }
+
+    @GetMapping("/details/{id}")
+    public ResponseEntity<Response> getRegisteredCloudProviderDetails(@PathVariable String id) {
+
+        CloudProviderDetailsResponse cloudProviderResponses = cloudProviderService.getCloudProviderDetails(id);
+
+        Response response = Response.builder()
+                .httpStatus(HttpStatus.ACCEPTED)
+                .message("Successfully fetched registered cloud provider details")
+                .response(cloudProviderResponses)
+                .build();
+
+        return ResponseEntity.ok().body(response);
+    }
 
     @PostMapping
     public ResponseEntity<Response> registerCloudProvider(@RequestBody CloudProviderRegisterRequest registerRequest) {
@@ -55,29 +84,15 @@ public class CloudProvider {
         return ResponseEntity.ok().body(response);
     }
 
-    @GetMapping("/onboarded")
-    public ResponseEntity<Response> getRegisteredCloudProviders() {
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Response> removeCloudProvider(@PathVariable String id) {
 
-        List<CloudProviderResponse> cloudProviderResponses = cloudProviderService.registeredCloudProviderList();
-
-        Response response = Response.builder()
-                .httpStatus(HttpStatus.ACCEPTED)
-                .message("Successfully fetched registered cloud providers")
-                .response(cloudProviderResponses)
-                .build();
-
-        return ResponseEntity.ok().body(response);
-    }
-
-    @GetMapping("/details/:id")
-    public ResponseEntity<Response> getRegisteredCloudProviderDetails(@PathVariable String id) {
-
-        CloudProviderDetailsResponse cloudProviderResponses = cloudProviderService.getCloudProviderDetails(id);
+        String deletedResponse = cloudProviderService.deleteCloudProvider(id);
 
         Response response = Response.builder()
                 .httpStatus(HttpStatus.ACCEPTED)
-                .message("Successfully fetched registered cloud provider details")
-                .response(cloudProviderResponses)
+                .message("Successfully deregistered cloud provider")
+                .response(deletedResponse)
                 .build();
 
         return ResponseEntity.ok().body(response);

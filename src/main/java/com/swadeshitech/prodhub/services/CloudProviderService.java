@@ -19,4 +19,6 @@ public interface CloudProviderService {
     public List<CloudProviderResponse> registeredCloudProviderList();
 
     public CloudProviderDetailsResponse getCloudProviderDetails(String id);
+
+    public String deleteCloudProvider(String id);
 }
