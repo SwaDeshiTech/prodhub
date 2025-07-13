@@ -40,4 +40,7 @@ public class User extends BaseEntity implements Serializable {
 
     @DBRef
     private Set<Department> departments;
+
+    @DBRef
+    private Set<Role> roles;
 }

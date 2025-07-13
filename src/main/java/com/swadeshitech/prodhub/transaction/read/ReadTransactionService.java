@@ -9,9 +9,9 @@ import org.springframework.stereotype.Service;
 import com.swadeshitech.prodhub.entity.CloudProvider;
 import com.swadeshitech.prodhub.entity.Constants;
 import com.swadeshitech.prodhub.entity.ResourceDetails;
+import com.swadeshitech.prodhub.entity.Role;
 import com.swadeshitech.prodhub.enums.ErrorCode;
 import com.swadeshitech.prodhub.exception.CustomException;
-import com.swadeshitech.prodhub.repository.CloudProviderRepository;
 import com.swadeshitech.prodhub.repository.ConstantsRepository;
 
 import lombok.extern.slf4j.Slf4j;
@@ -25,9 +25,6 @@ public class ReadTransactionService {
 
     @Autowired
     private ConstantsRepository constantsRepository;
-
-    @Autowired
-    private CloudProviderRepository cloudProviderRepository;
 
     @Autowired
     private MongoTemplate mongoTemplate;
@@ -58,5 +55,15 @@ public class ReadTransactionService {
             }
         });
         return mongoTemplate.find(query, ResourceDetails.class);
+    }
+
+    public List<Role> findRoleDetailsByFilters(Map<String, Object> filters) {
+        Query query = new Query();
+        filters.forEach((key, value) -> {
+            if (value != null) {
+                query.addCriteria(Criteria.where(key).is(value));
+            }
+        });
+        return mongoTemplate.find(query, Role.class);
     }
 }
