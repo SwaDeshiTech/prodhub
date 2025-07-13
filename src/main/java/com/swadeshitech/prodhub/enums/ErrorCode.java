@@ -38,7 +38,9 @@ public enum ErrorCode {
 
     CLOUD_PROVIDERS_NOT_FOUND("PH-8001", "Cloud providers list could not found", HttpStatus.NOT_FOUND),
     CLOUD_PROVIDER_NOT_FOUND("PH-8002", "Cloud provider could not found", HttpStatus.NOT_FOUND),
-    CLOUD_PROVIDER_COULD_NOT_DELETED("PH-8003", "Cloud provider could not be deleted", HttpStatus.BAD_REQUEST);
+    CLOUD_PROVIDER_COULD_NOT_DELETED("PH-8003", "Cloud provider could not be deleted", HttpStatus.BAD_REQUEST),
+
+    ROLE_NOT_FOUND("PH-9001", "Role could not be found", HttpStatus.NOT_FOUND);
 
     private final String code;
     private final String description;
