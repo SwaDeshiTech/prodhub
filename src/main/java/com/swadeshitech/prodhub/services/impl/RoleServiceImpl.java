@@ -84,8 +84,13 @@ public class RoleServiceImpl implements RoleService {
 
     private RoleResponse mapEntityToDTO(Role role) {
         return RoleResponse.builder()
+                .id(role.getId())
                 .isDefault(role.isDefault())
                 .name(role.getName())
+                .createdBy(role.getCreatedBy())
+                .createdTime(role.getCreatedTime())
+                .lastModifiedBy(role.getLastModifiedBy())
+                .lastModifiedTime(role.getLastModifiedTime())
                 .build();
     }
 }

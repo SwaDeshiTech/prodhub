@@ -9,6 +9,7 @@ import com.swadeshitech.prodhub.entity.CloudProvider;
 import com.swadeshitech.prodhub.entity.Metadata;
 import com.swadeshitech.prodhub.entity.ResourceDetails;
 import com.swadeshitech.prodhub.entity.Role;
+import com.swadeshitech.prodhub.entity.Tab;
 import com.swadeshitech.prodhub.enums.ErrorCode;
 import com.swadeshitech.prodhub.exception.CustomException;
 import com.swadeshitech.prodhub.repository.ApplicationRepository;
@@ -16,6 +17,7 @@ import com.swadeshitech.prodhub.repository.CloudProviderRepository;
 import com.swadeshitech.prodhub.repository.MetaDataRepository;
 import com.swadeshitech.prodhub.repository.ResourceRepository;
 import com.swadeshitech.prodhub.repository.RoleRepository;
+import com.swadeshitech.prodhub.repository.TabRepository;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -37,6 +39,9 @@ public class WriteTransactionService {
 
     @Autowired
     private RoleRepository roleRepository;
+
+    @Autowired
+    private TabRepository tabRepository;
 
     public Application saveApplicationToRepository(Application application) {
         try {
@@ -98,6 +103,18 @@ public class WriteTransactionService {
     public Role saveRoleToRepository(Role role) {
         try {
             return roleRepository.save(role);
+        } catch (DataIntegrityViolationException ex) {
+            log.error("DataIntegrity error ", ex);
+            throw new CustomException(ErrorCode.DATA_INTEGRITY_FAILURE);
+        } catch (Exception ex) {
+            log.error("Failed to update metadata ", ex);
+            throw new CustomException(ErrorCode.USER_UPDATE_FAILED);
+        }
+    }
+
+    public Tab saveTabToRepository(Tab tab) {
+        try {
+            return tabRepository.save(tab);
         } catch (DataIntegrityViolationException ex) {
             log.error("DataIntegrity error ", ex);
             throw new CustomException(ErrorCode.DATA_INTEGRITY_FAILURE);

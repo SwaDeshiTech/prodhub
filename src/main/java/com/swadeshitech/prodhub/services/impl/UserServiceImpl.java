@@ -1,10 +1,12 @@
 package com.swadeshitech.prodhub.services.impl;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.Set;
+import java.util.HashMap;
 import java.util.HashSet;
 
 import org.apache.logging.log4j.util.Strings;
@@ -12,18 +14,21 @@ import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 
 import com.swadeshitech.prodhub.dto.UserRequest;
 import com.swadeshitech.prodhub.dto.UserResponse;
 import com.swadeshitech.prodhub.dto.UserUpdateRequest;
 import com.swadeshitech.prodhub.dto.DropdownDTO;
 import com.swadeshitech.prodhub.entity.Department;
+import com.swadeshitech.prodhub.entity.Role;
 import com.swadeshitech.prodhub.entity.Team;
 import com.swadeshitech.prodhub.entity.User;
 import com.swadeshitech.prodhub.enums.ErrorCode;
 import com.swadeshitech.prodhub.exception.CustomException;
 import com.swadeshitech.prodhub.repository.UserRepository;
 import com.swadeshitech.prodhub.services.UserService;
+import com.swadeshitech.prodhub.transaction.read.ReadTransactionService;
 import com.swadeshitech.prodhub.utils.UserContextUtil;
 
 import io.micrometer.common.util.StringUtils;
@@ -38,6 +43,9 @@ public class UserServiceImpl implements UserService {
 
     @Autowired
     ModelMapper modelMapper;
+
+    @Autowired
+    private ReadTransactionService readTransactionService;
 
     @Override
     public UserResponse getUserDetail(String uuid) {
@@ -136,6 +144,20 @@ public class UserServiceImpl implements UserService {
                         user.getUuid(),
                         user.getName() + " (" + user.getEmailId() + ")"))
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public Set<Role> getUserRoles(String uuid) {
+
+        Map<String, Object> filters = new HashMap<>();
+        filters.put("uuid", uuid);
+
+        List<User> users = readTransactionService.findUserDetailsByFilters(filters);
+        if (CollectionUtils.isEmpty(users) && users.size() > 1) {
+            throw new CustomException(ErrorCode.USER_NOT_FOUND);
+        }
+
+        return users.get(0).getRoles();
     }
 
     private User saveUserDetailToRepository(User user) {

@@ -10,6 +10,8 @@ import com.swadeshitech.prodhub.entity.CloudProvider;
 import com.swadeshitech.prodhub.entity.Constants;
 import com.swadeshitech.prodhub.entity.ResourceDetails;
 import com.swadeshitech.prodhub.entity.Role;
+import com.swadeshitech.prodhub.entity.Tab;
+import com.swadeshitech.prodhub.entity.User;
 import com.swadeshitech.prodhub.enums.ErrorCode;
 import com.swadeshitech.prodhub.exception.CustomException;
 import com.swadeshitech.prodhub.repository.ConstantsRepository;
@@ -65,5 +67,25 @@ public class ReadTransactionService {
             }
         });
         return mongoTemplate.find(query, Role.class);
+    }
+
+    public List<Tab> findTabDetailsByFilters(Map<String, Object> filters) {
+        Query query = new Query();
+        filters.forEach((key, value) -> {
+            if (value != null) {
+                query.addCriteria(Criteria.where(key).is(value));
+            }
+        });
+        return mongoTemplate.find(query, Tab.class);
+    }
+
+    public List<User> findUserDetailsByFilters(Map<String, Object> filters) {
+        Query query = new Query();
+        filters.forEach((key, value) -> {
+            if (value != null) {
+                query.addCriteria(Criteria.where(key).is(value));
+            }
+        });
+        return mongoTemplate.find(query, User.class);
     }
 }
