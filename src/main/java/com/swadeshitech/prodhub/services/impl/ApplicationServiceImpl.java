@@ -97,8 +97,7 @@ public class ApplicationServiceImpl implements ApplicationService {
 
         decodeProfleMetaData(application.get());
 
-        ApplicationResponse applicationResponse = modelMapper.map(application.get(), ApplicationResponse.class);
-        return applicationResponse;
+        return modelMapper.map(application.get(), ApplicationResponse.class);
     }
 
     protected Application saveApplicationToRepository(Application application) {

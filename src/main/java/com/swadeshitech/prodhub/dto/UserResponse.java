@@ -14,7 +14,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class UserResponse {
+public class UserResponse extends BaseResponse {
 
     private String uuid;
     private String name;
@@ -26,13 +26,4 @@ public class UserResponse {
 
     private Set<String> teams;
     private Set<String> departments;
-
-    @JsonFormat(pattern = "yyyy-MM-dd hh:mm:ss")
-    private Date createdTime;
-
-    @JsonFormat(pattern = "yyyy-MM-dd hh:mm:ss")
-    private Date lastModifiedTime;
-
-    private String createdBy;
-    private String lastModifiedBy;
 }

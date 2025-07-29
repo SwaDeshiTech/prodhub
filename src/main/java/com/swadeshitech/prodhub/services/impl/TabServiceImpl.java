@@ -5,8 +5,10 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
+import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
@@ -40,8 +42,18 @@ public class TabServiceImpl implements TabService {
     @Override
     public TabResponse addTab(TabRequest request) {
 
+        log.info("tab request {}", request);
+
+        List<ObjectId> ids = new ArrayList<>();
+
+        if (Objects.nonNull(request.getRoles())) {
+            for (String role : request.getRoles()) {
+                ids.add(new ObjectId(role));
+            }
+        }
+
         Map<String, Object> filters = new HashMap<>();
-        filters.put("id", request.getRoles());
+        filters.put("_id", ids);
 
         List<Role> roles = readTransactionService.findRoleDetailsByFilters(filters);
         if (CollectionUtils.isEmpty(roles)) {
@@ -54,18 +66,19 @@ public class TabServiceImpl implements TabService {
         tab.setName(request.getName());
         tab.setRoles(new HashSet<>(roles));
 
-        Set<Tab> children = new HashSet<>();
-
-        for (TabRequest tabRequest : request.getChildren()) {
-            Tab child = new Tab();
-            child.setActive(true);
-            child.setLink(tabRequest.getLink());
-            child.setName(tabRequest.getName());
-            child.setRoles(new HashSet<>(roles));
-            children.add(child);
+        if (Objects.nonNull(request) && Objects.nonNull(request.getChildren())) {
+            Set<Tab> children = new HashSet<>();
+            for (TabRequest tabRequest : request.getChildren()) {
+                Tab child = new Tab();
+                child.setActive(true);
+                child.setLink(tabRequest.getLink());
+                child.setName(tabRequest.getName());
+                child.setRoles(new HashSet<>(roles));
+                children.add(child);
+            }
+            log.info("printing children {}", children.size());
+            tab.setChildren(children);
         }
-
-        tab.setChildren(children);
 
         writeTransactionService.saveTabToRepository(tab);
 
@@ -77,8 +90,16 @@ public class TabServiceImpl implements TabService {
 
         Set<Role> roles = userService.getUserRoles(uuid);
 
+        List<ObjectId> ids = new ArrayList<>();
+
+        if (Objects.nonNull(roles)) {
+            for (Role role : roles) {
+                ids.add(new ObjectId(role.getId()));
+            }
+        }
+
         Map<String, Object> filters = new HashMap<>();
-        filters.put("roles", roles);
+        filters.put("roles._id", ids);
 
         List<Tab> tabs = readTransactionService.findTabDetailsByFilters(filters);
         if (CollectionUtils.isEmpty(tabs)) {
@@ -90,9 +111,12 @@ public class TabServiceImpl implements TabService {
         for (Tab tab : tabs) {
             TabResponse tabResponse = mapEntityToDTO(tab);
             tabResponse.setChildren(new ArrayList<>());
-            for (Tab child : tab.getChildren()) {
-                tabResponse.getChildren().add(mapEntityToDTO(child));
+            if (Objects.nonNull(tab.getChildren())) {
+                for (Tab child : tab.getChildren()) {
+                    tabResponse.getChildren().add(mapEntityToDTO(child));
+                }
             }
+            activeTabs.add(tabResponse);
         }
 
         return activeTabs;
