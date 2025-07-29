@@ -1,10 +1,12 @@
 package com.swadeshitech.prodhub.services.impl;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.Set;
+import java.util.HashMap;
 import java.util.HashSet;
 
 import org.apache.logging.log4j.util.Strings;
@@ -12,18 +14,21 @@ import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 
 import com.swadeshitech.prodhub.dto.UserRequest;
 import com.swadeshitech.prodhub.dto.UserResponse;
 import com.swadeshitech.prodhub.dto.UserUpdateRequest;
 import com.swadeshitech.prodhub.dto.DropdownDTO;
 import com.swadeshitech.prodhub.entity.Department;
+import com.swadeshitech.prodhub.entity.Role;
 import com.swadeshitech.prodhub.entity.Team;
 import com.swadeshitech.prodhub.entity.User;
 import com.swadeshitech.prodhub.enums.ErrorCode;
 import com.swadeshitech.prodhub.exception.CustomException;
 import com.swadeshitech.prodhub.repository.UserRepository;
 import com.swadeshitech.prodhub.services.UserService;
+import com.swadeshitech.prodhub.transaction.read.ReadTransactionService;
 import com.swadeshitech.prodhub.utils.UserContextUtil;
 
 import io.micrometer.common.util.StringUtils;
@@ -38,6 +43,9 @@ public class UserServiceImpl implements UserService {
 
     @Autowired
     ModelMapper modelMapper;
+
+    @Autowired
+    private ReadTransactionService readTransactionService;
 
     @Override
     public UserResponse getUserDetail(String uuid) {
@@ -70,6 +78,11 @@ public class UserServiceImpl implements UserService {
             userResponse.setDepartments(new HashSet<>());
         }
 
+        userResponse.setCreatedBy(user.get().getCreatedBy());
+        userResponse.setCreatedTime(user.get().getCreatedTime());
+        userResponse.setLastModifiedBy(user.get().getLastModifiedBy());
+        userResponse.setLastModifiedTime(user.get().getLastModifiedTime());
+
         return userResponse;
     }
 
@@ -87,11 +100,11 @@ public class UserServiceImpl implements UserService {
         }
 
         user.setIsActive(Boolean.TRUE);
-        log.info("user entity: {}", user);
-        saveUserDetailToRepository(user);
-        UserResponse userResponse = modelMapper.map(user, UserResponse.class);
+        user.setRoles(getDefaultRoles());
 
-        return userResponse;
+        saveUserDetailToRepository(user);
+
+        return modelMapper.map(user, UserResponse.class);
     }
 
     @Override
@@ -131,11 +144,43 @@ public class UserServiceImpl implements UserService {
             throw new CustomException(ErrorCode.USER_UUID_NOT_FOUND);
         }
         return users.stream()
-                .filter(user -> !userId.equals(user.getUuid()))
+                // .filter(user -> !userId.equals(user.getUuid()))
                 .map(user -> new DropdownDTO(
                         user.getUuid(),
                         user.getName() + " (" + user.getEmailId() + ")"))
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public Set<Role> getUserRoles(String uuid) {
+
+        Map<String, Object> filters = new HashMap<>();
+        filters.put("uuid", uuid);
+
+        List<User> users = readTransactionService.findUserDetailsByFilters(filters);
+        if (CollectionUtils.isEmpty(users) && users.size() > 1) {
+            throw new CustomException(ErrorCode.USER_NOT_FOUND);
+        }
+
+        return users.get(0).getRoles();
+    }
+
+    private Set<Role> getDefaultRoles() {
+
+        Map<String, Object> filters = new HashMap<>();
+        filters.put("isDefault", true);
+
+        List<Role> roles = readTransactionService.findRoleDetailsByFilters(filters);
+        if (CollectionUtils.isEmpty(roles)) {
+            throw new CustomException(ErrorCode.ROLE_NOT_FOUND);
+        }
+
+        Set<Role> defaultRoles = new HashSet<>();
+        for (Role role : roles) {
+            defaultRoles.add(role);
+        }
+
+        return defaultRoles;
     }
 
     private User saveUserDetailToRepository(User user) {

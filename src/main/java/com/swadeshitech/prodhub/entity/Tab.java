@@ -1,6 +1,7 @@
 package com.swadeshitech.prodhub.entity;
 
 import java.io.Serializable;
+import java.util.Set;
 
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
@@ -15,9 +16,9 @@ import lombok.Setter;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-@Document(collection = "roles")
+@Document(collection = "tabs")
 @EqualsAndHashCode(callSuper = true)
-public class Role extends BaseEntity implements Serializable {
+public class Tab extends BaseEntity implements Serializable {
 
     @Id
     private String id;
@@ -26,5 +27,9 @@ public class Role extends BaseEntity implements Serializable {
 
     private boolean isActive;
 
-    private boolean isDefault;
+    private String link;
+
+    private Set<Tab> children;
+
+    private Set<Role> roles;
 }

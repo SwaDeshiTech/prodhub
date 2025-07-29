@@ -10,11 +10,16 @@ import com.swadeshitech.prodhub.entity.CloudProvider;
 import com.swadeshitech.prodhub.entity.Constants;
 import com.swadeshitech.prodhub.entity.ResourceDetails;
 import com.swadeshitech.prodhub.entity.Role;
+import com.swadeshitech.prodhub.entity.Tab;
+import com.swadeshitech.prodhub.entity.User;
 import com.swadeshitech.prodhub.enums.ErrorCode;
 import com.swadeshitech.prodhub.exception.CustomException;
 import com.swadeshitech.prodhub.repository.ConstantsRepository;
 
 import lombok.extern.slf4j.Slf4j;
+
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -59,11 +64,67 @@ public class ReadTransactionService {
 
     public List<Role> findRoleDetailsByFilters(Map<String, Object> filters) {
         Query query = new Query();
+
+        filters.forEach((key, value) -> {
+            if (value != null) {
+                if (value instanceof Iterable) {
+                    Iterable<?> iterable = (Iterable<?>) value;
+                    // Convert Iterable to List and check emptiness
+                    List<Object> list = new ArrayList<>();
+                    iterable.forEach(list::add);
+                    if (!list.isEmpty()) {
+                        query.addCriteria(Criteria.where(key).in(list));
+                    }
+                } else if (value.getClass().isArray()) {
+                    // Convert array to List and check emptiness
+                    Object[] arr = (Object[]) value;
+                    if (arr.length > 0) {
+                        query.addCriteria(Criteria.where(key).in(Arrays.asList(arr)));
+                    }
+                } else {
+                    // Single value - use is()
+                    query.addCriteria(Criteria.where(key).is(value));
+                }
+            }
+        });
+        return mongoTemplate.find(query, Role.class);
+    }
+
+    public List<Tab> findTabDetailsByFilters(Map<String, Object> filters) {
+        Query query = new Query();
+
+        filters.forEach((key, value) -> {
+            if (value != null) {
+                if (value instanceof Iterable) {
+                    Iterable<?> iterable = (Iterable<?>) value;
+                    // Convert Iterable to List and check emptiness
+                    List<Object> list = new ArrayList<>();
+                    iterable.forEach(list::add);
+                    if (!list.isEmpty()) {
+                        query.addCriteria(Criteria.where(key).in(list));
+                    }
+                } else if (value.getClass().isArray()) {
+                    // Convert array to List and check emptiness
+                    Object[] arr = (Object[]) value;
+                    if (arr.length > 0) {
+                        query.addCriteria(Criteria.where(key).in(Arrays.asList(arr)));
+                    }
+                } else {
+                    // Single value - use is()
+                    query.addCriteria(Criteria.where(key).is(value));
+                }
+            }
+        });
+        return mongoTemplate.find(query, Tab.class);
+    }
+
+    public List<User> findUserDetailsByFilters(Map<String, Object> filters) {
+        Query query = new Query();
         filters.forEach((key, value) -> {
             if (value != null) {
                 query.addCriteria(Criteria.where(key).is(value));
             }
         });
-        return mongoTemplate.find(query, Role.class);
+        return mongoTemplate.find(query, User.class);
     }
 }
