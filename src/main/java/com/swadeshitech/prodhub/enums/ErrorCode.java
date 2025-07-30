@@ -42,7 +42,12 @@ public enum ErrorCode {
 
     ROLE_NOT_FOUND("PH-9001", "Role could not be found", HttpStatus.NOT_FOUND),
 
-    TAB_NOT_FOUND("PH-10001", "Tabs could not be found", HttpStatus.NOT_FOUND);
+    TAB_NOT_FOUND("PH-10001", "Tabs could not be found", HttpStatus.NOT_FOUND),
+
+    SCM_NOT_FOUND("PH-12001", "SCM could not be found", HttpStatus.NOT_FOUND),
+    SCM_COULD_NOT_BE_REGISTERED("PH-12002", "SCM could not be registered", HttpStatus.BAD_REQUEST),
+    SCM_COULD_NOT_BE_UPDATED("PH-12003", "SCM could not be updated", HttpStatus.BAD_REQUEST),
+    SCM_COULD_NOT_BE_DELETED("PH-12004", "SCM could not be deleted", HttpStatus.BAD_REQUEST);
 
     private final String code;
     private final String description;
