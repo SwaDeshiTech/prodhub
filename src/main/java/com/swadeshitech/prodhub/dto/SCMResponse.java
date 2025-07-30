@@ -1,14 +1,14 @@
 package com.swadeshitech.prodhub.dto;
 
-import lombok.Builder;
 import lombok.Data;
+import lombok.experimental.SuperBuilder;
 
 @Data
-@Builder
-public class CloudProviderResponse {
+@SuperBuilder
+public class SCMResponse extends BaseResponse {
     private String id;
     private String name;
-    private String location;
     private String description;
     private boolean isActive;
+    private String location;
 }

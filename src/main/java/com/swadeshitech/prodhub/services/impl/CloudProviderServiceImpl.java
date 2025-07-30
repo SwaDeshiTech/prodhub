@@ -40,11 +40,8 @@ public class CloudProviderServiceImpl implements CloudProviderService {
         Constants constants = readTransactionService.getConstantByName("cloudProvider");
         List<CloudProviderResponse> cloudProviderResponses = new ArrayList<>();
         for (String provider : constants.getValues()) {
-            cloudProviderResponses.add(
-                    CloudProviderResponse.builder()
-                            .name(provider)
-                            .location("/dashboard/connect/onboarding/" + provider)
-                            .build());
+            cloudProviderResponses.add(CloudProviderResponse.builder().name(provider)
+                    .location("/dashboard/connect/onboarding/" + provider).build());
         }
         return cloudProviderResponses;
     }
@@ -65,12 +62,8 @@ public class CloudProviderServiceImpl implements CloudProviderService {
     }
 
     private CloudProviderRegisterResponse mapEntityToDTO(CloudProvider cloudProvider) {
-        return CloudProviderRegisterResponse.builder()
-                .id(cloudProvider.getId())
-                .isActive(cloudProvider.isActive())
-                .name(cloudProvider.getName())
-                .state(cloudProvider.getState())
-                .build();
+        return CloudProviderRegisterResponse.builder().id(cloudProvider.getId()).isActive(cloudProvider.isActive())
+                .name(cloudProvider.getName()).state(cloudProvider.getState()).build();
     }
 
     @Override
@@ -83,10 +76,9 @@ public class CloudProviderServiceImpl implements CloudProviderService {
         List<CloudProviderResponse> cloudProviderResponses = new ArrayList<>();
 
         for (CloudProvider cloudProvider : providers) {
-            cloudProviderResponses.add(CloudProviderResponse.builder().id(cloudProvider.getId())
-                    .name(cloudProvider.getName())
-                    .description(cloudProvider.getDescription())
-                    .build());
+            cloudProviderResponses
+                    .add(CloudProviderResponse.builder().id(cloudProvider.getId()).name(cloudProvider.getName())
+                            .description(cloudProvider.getDescription()).isActive(cloudProvider.isActive()).build());
         }
 
         return cloudProviderResponses;
@@ -103,11 +95,8 @@ public class CloudProviderServiceImpl implements CloudProviderService {
             throw new CustomException(ErrorCode.CLOUD_PROVIDER_NOT_FOUND);
         }
 
-        return CloudProviderDetailsResponse.builder()
-                .description(providers.get(0).getDescription())
-                .id(providers.get(0).getId())
-                .name(providers.get(0).getName())
-                .metaData(providers.get(0).getMetaData())
+        return CloudProviderDetailsResponse.builder().description(providers.get(0).getDescription())
+                .id(providers.get(0).getId()).name(providers.get(0).getName()).metaData(providers.get(0).getMetaData())
                 .build();
     }
 

@@ -9,6 +9,7 @@ import com.swadeshitech.prodhub.entity.CloudProvider;
 import com.swadeshitech.prodhub.entity.Metadata;
 import com.swadeshitech.prodhub.entity.ResourceDetails;
 import com.swadeshitech.prodhub.entity.Role;
+import com.swadeshitech.prodhub.entity.SCM;
 import com.swadeshitech.prodhub.entity.Tab;
 import com.swadeshitech.prodhub.entity.User;
 import com.swadeshitech.prodhub.enums.ErrorCode;
@@ -18,6 +19,7 @@ import com.swadeshitech.prodhub.repository.CloudProviderRepository;
 import com.swadeshitech.prodhub.repository.MetaDataRepository;
 import com.swadeshitech.prodhub.repository.ResourceRepository;
 import com.swadeshitech.prodhub.repository.RoleRepository;
+import com.swadeshitech.prodhub.repository.SCMRepository;
 import com.swadeshitech.prodhub.repository.TabRepository;
 import com.swadeshitech.prodhub.repository.UserRepository;
 
@@ -48,6 +50,9 @@ public class WriteTransactionService {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private SCMRepository scmRepository;
+  
     public Application saveApplicationToRepository(Application application) {
         try {
             return applicationRepository.save(application);
@@ -138,6 +143,27 @@ public class WriteTransactionService {
         } catch (Exception ex) {
             log.error("Failed to update user ", ex);
             throw new CustomException(ErrorCode.USER_UPDATE_FAILED);
+        }
+    }
+
+    public SCM saveSCMToRepository(SCM scm) {
+        try {
+            return scmRepository.save(scm);
+        } catch (DataIntegrityViolationException ex) {
+            log.error("DataIntegrity error ", ex);
+            throw new CustomException(ErrorCode.DATA_INTEGRITY_FAILURE);
+        } catch (Exception ex) {
+            log.error("Failed to update SCM ", ex);
+            throw new CustomException(ErrorCode.USER_UPDATE_FAILED);
+        }
+    }
+
+    public void removeSCMFromRepository(String id) {
+        try {
+            scmRepository.deleteById(id);
+        } catch (Exception ex) {
+            log.error("Failed to delete SCM with id: {}", id, ex);
+            throw new CustomException(ErrorCode.SCM_COULD_NOT_BE_DELETED);
         }
     }
 }
