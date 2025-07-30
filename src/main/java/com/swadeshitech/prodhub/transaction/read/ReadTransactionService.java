@@ -10,7 +10,6 @@ import com.swadeshitech.prodhub.entity.CloudProvider;
 import com.swadeshitech.prodhub.entity.Constants;
 import com.swadeshitech.prodhub.entity.ResourceDetails;
 import com.swadeshitech.prodhub.entity.Role;
-import com.swadeshitech.prodhub.entity.SCM;
 import com.swadeshitech.prodhub.entity.Tab;
 import com.swadeshitech.prodhub.entity.User;
 import com.swadeshitech.prodhub.enums.ErrorCode;

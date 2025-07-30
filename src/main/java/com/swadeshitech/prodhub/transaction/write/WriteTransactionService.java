@@ -52,7 +52,7 @@ public class WriteTransactionService {
 
     @Autowired
     private SCMRepository scmRepository;
-
+  
     public Application saveApplicationToRepository(Application application) {
         try {
             return applicationRepository.save(application);
