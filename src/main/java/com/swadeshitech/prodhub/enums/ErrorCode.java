@@ -47,7 +47,13 @@ public enum ErrorCode {
     SCM_NOT_FOUND("PH-12001", "SCM could not be found", HttpStatus.NOT_FOUND),
     SCM_COULD_NOT_BE_REGISTERED("PH-12002", "SCM could not be registered", HttpStatus.BAD_REQUEST),
     SCM_COULD_NOT_BE_UPDATED("PH-12003", "SCM could not be updated", HttpStatus.BAD_REQUEST),
-    SCM_COULD_NOT_BE_DELETED("PH-12004", "SCM could not be deleted", HttpStatus.BAD_REQUEST);
+    SCM_COULD_NOT_BE_DELETED("PH-12004", "SCM could not be deleted", HttpStatus.BAD_REQUEST),
+
+    ORGANIZATION_NOT_FOUND("PH-13001", "Organization could not be found", HttpStatus.NOT_FOUND),
+    ORGANIZATION_ALREADY_EXISTS("PH-13002", "Organization already exists", HttpStatus.BAD_REQUEST),
+    ORGANIZATION_COULD_NOT_BE_REGISTERED("PH-13003", "Organization could not be registered", HttpStatus.BAD_REQUEST),
+    ORGANIZATION_COULD_NOT_BE_UPDATED("PH-13004", "Organization could not be updated", HttpStatus.BAD_REQUEST),
+    ORGANIZATION_COULD_NOT_BE_DELETED("PH-13005", "Organization could not be deleted", HttpStatus.BAD_REQUEST);
 
     private final String code;
     private final String description;

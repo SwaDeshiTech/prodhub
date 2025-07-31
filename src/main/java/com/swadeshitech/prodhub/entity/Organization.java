@@ -12,7 +12,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Document(collection = "organizations")
-public class Organization {
+public class Organization extends BaseEntity {
 
     @Id
     private String id;
