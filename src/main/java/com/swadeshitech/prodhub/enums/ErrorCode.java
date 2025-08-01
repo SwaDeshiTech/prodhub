@@ -53,7 +53,14 @@ public enum ErrorCode {
     ORGANIZATION_ALREADY_EXISTS("PH-13002", "Organization already exists", HttpStatus.BAD_REQUEST),
     ORGANIZATION_COULD_NOT_BE_REGISTERED("PH-13003", "Organization could not be registered", HttpStatus.BAD_REQUEST),
     ORGANIZATION_COULD_NOT_BE_UPDATED("PH-13004", "Organization could not be updated", HttpStatus.BAD_REQUEST),
-    ORGANIZATION_COULD_NOT_BE_DELETED("PH-13005", "Organization could not be deleted", HttpStatus.BAD_REQUEST);
+    ORGANIZATION_COULD_NOT_BE_DELETED("PH-13005", "Organization could not be deleted", HttpStatus.BAD_REQUEST),
+
+    BUILD_PROVIDER_COULD_NOT_BE_DELETED("PH-14001", "Build Provider could not be deleted", HttpStatus.BAD_REQUEST),
+    BUILD_PROVIDER_NOT_FOUND("PH-14002", "Build Provider could not be found", HttpStatus.NOT_FOUND),
+    BUILD_PROVIDER_ALREADY_EXISTS("PH-14003", "Build Provider already exists", HttpStatus.BAD_REQUEST),
+    BUILD_PROVIDER_COULD_NOT_BE_REGISTERED("PH-14004", "Build Provider could not be registered",
+            HttpStatus.BAD_REQUEST),
+    BUILD_PROVIDER_COULD_NOT_BE_UPDATED("PH-14005", "Build Provider could not be updated", HttpStatus.BAD_REQUEST);
 
     private final String code;
     private final String description;
