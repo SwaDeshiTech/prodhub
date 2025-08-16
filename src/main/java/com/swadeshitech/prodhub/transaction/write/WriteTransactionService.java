@@ -9,6 +9,7 @@ import com.swadeshitech.prodhub.entity.BuildProvider;
 import com.swadeshitech.prodhub.entity.CloudProvider;
 import com.swadeshitech.prodhub.entity.Metadata;
 import com.swadeshitech.prodhub.entity.Organization;
+import com.swadeshitech.prodhub.entity.ReleaseCandidate;
 import com.swadeshitech.prodhub.entity.ResourceDetails;
 import com.swadeshitech.prodhub.entity.Role;
 import com.swadeshitech.prodhub.entity.SCM;
@@ -21,6 +22,7 @@ import com.swadeshitech.prodhub.repository.BuildProviderRepository;
 import com.swadeshitech.prodhub.repository.CloudProviderRepository;
 import com.swadeshitech.prodhub.repository.MetaDataRepository;
 import com.swadeshitech.prodhub.repository.OrganizationRepository;
+import com.swadeshitech.prodhub.repository.ReleaseCandidateRepository;
 import com.swadeshitech.prodhub.repository.ResourceRepository;
 import com.swadeshitech.prodhub.repository.RoleRepository;
 import com.swadeshitech.prodhub.repository.SCMRepository;
@@ -62,6 +64,9 @@ public class WriteTransactionService {
 
     @Autowired
     private BuildProviderRepository buildProviderRepository;
+
+    @Autowired
+    private ReleaseCandidateRepository releaseCandidateRepository;
 
     public Application saveApplicationToRepository(Application application) {
         try {
@@ -216,6 +221,27 @@ public class WriteTransactionService {
         } catch (Exception ex) {
             log.error("Failed to delete Build Provider with id: {}", id, ex);
             throw new CustomException(ErrorCode.BUILD_PROVIDER_COULD_NOT_BE_DELETED);
+        }
+    }
+
+    public ReleaseCandidate saveReleaseCandidateToRepository(ReleaseCandidate releaseCandidate) {
+        try {
+            return releaseCandidateRepository.save(releaseCandidate);
+        } catch (DataIntegrityViolationException ex) {
+            log.error("DataIntegrity error ", ex);
+            throw new CustomException(ErrorCode.DATA_INTEGRITY_FAILURE);
+        } catch (Exception ex) {
+            log.error("Failed to update Release Candidate ", ex);
+            throw new CustomException(ErrorCode.USER_UPDATE_FAILED);
+        }
+    }
+
+    public void removeReleaseCandidateFromRepository(String id) {
+        try {
+            releaseCandidateRepository.deleteById(id);
+        } catch (Exception ex) {
+            log.error("Failed to delete Release Candidate with id: {}", id, ex);
+            throw new CustomException(ErrorCode.RELEASE_CANDIDATE_COULD_NOT_BE_DELETED);
         }
     }
 }

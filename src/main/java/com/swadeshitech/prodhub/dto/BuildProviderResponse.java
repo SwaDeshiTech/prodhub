@@ -12,4 +12,5 @@ public class BuildProviderResponse extends BaseResponse {
     private String location;
     private boolean isActive;
     private String metaData;
+    private String buildProviderType;
 }

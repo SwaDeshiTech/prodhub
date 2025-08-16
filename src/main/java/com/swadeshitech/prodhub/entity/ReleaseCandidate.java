@@ -1,10 +1,12 @@
 package com.swadeshitech.prodhub.entity;
 
 import java.io.Serializable;
+import java.util.Map;
 
 import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
+
+import com.swadeshitech.prodhub.enums.ReleaseCandidateStatus;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -18,19 +20,20 @@ import lombok.NoArgsConstructor;
 @Document(collection = "buildProviders")
 @EqualsAndHashCode(callSuper = true)
 @Builder
-public class BuildProvider extends BaseEntity implements Serializable {
+public class ReleaseCandidate extends BaseEntity implements Serializable {
 
     @Id
     private String id;
 
-    @Indexed(unique = true)
-    private String name;
+    private Map<String, String> metaData;
 
-    private String description;
+    private ReleaseCandidateStatus status;
 
-    private boolean isActive;
+    private User initiatedBy;
 
-    private String metaData;
+    private User certifiedBy;
 
-    private com.swadeshitech.prodhub.enums.BuildProvider buildProviderType;
+    private String serviceName;
+
+    private String buildProfile;
 }

@@ -60,7 +60,17 @@ public enum ErrorCode {
     BUILD_PROVIDER_ALREADY_EXISTS("PH-14003", "Build Provider already exists", HttpStatus.BAD_REQUEST),
     BUILD_PROVIDER_COULD_NOT_BE_REGISTERED("PH-14004", "Build Provider could not be registered",
             HttpStatus.BAD_REQUEST),
-    BUILD_PROVIDER_COULD_NOT_BE_UPDATED("PH-14005", "Build Provider could not be updated", HttpStatus.BAD_REQUEST);
+    BUILD_PROVIDER_COULD_NOT_BE_UPDATED("PH-14005", "Build Provider could not be updated", HttpStatus.BAD_REQUEST),
+    INVALID_BUILD_PROVIDER_NAME("PH-14006", "Invalid build provider name", HttpStatus.BAD_REQUEST),
+
+    RELEASE_CANDIDATE_NOT_FOUND("PH-15001", "Release Candidate not found", HttpStatus.NOT_FOUND),
+    RELEASE_CANDIDATE_ALREADY_EXISTS("PH-15002", "Release Candidate already exists", HttpStatus.BAD_REQUEST),
+    RELEASE_CANDIDATE_COULD_NOT_BE_CREATED("PH-15003", "Release Candidate could not be created",
+            HttpStatus.BAD_REQUEST),
+    RELEASE_CANDIDATE_COULD_NOT_BE_UPDATED("PH-15004", "Release Candidate could not be updated",
+            HttpStatus.BAD_REQUEST),
+    RELEASE_CANDIDATE_COULD_NOT_BE_DELETED("PH-15005", "Release Candidate could not be deleted",
+            HttpStatus.BAD_REQUEST);
 
     private final String code;
     private final String description;

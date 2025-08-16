@@ -35,11 +35,20 @@ public class BuildProviderServiceImpl implements BuildProviderService {
     @Override
     public BuildProviderResponse onboardBuildProvider(BuilderProviderRequest request) {
 
+        com.swadeshitech.prodhub.enums.BuildProvider providerEnum = com.swadeshitech.prodhub.enums.BuildProvider
+                .fromDisplayName(request.getName());
+
+        if (null == providerEnum) {
+            log.error("Invalid build provider name: {}", request.getName());
+            throw new CustomException(ErrorCode.INVALID_BUILD_PROVIDER_NAME);
+        }
+
         BuildProvider buildProvider = BuildProvider.builder()
                 .name(request.getName())
                 .description(request.getDescription())
                 .isActive(true)
                 .metaData(request.getMetaData())
+                .buildProviderType(providerEnum)
                 .build();
 
         buildProvider = writeTransactionService.saveBuildProviderToRepository(buildProvider);
@@ -120,6 +129,7 @@ public class BuildProviderServiceImpl implements BuildProviderService {
                 .createdTime(buildProvider.getCreatedTime())
                 .lastModifiedBy(buildProvider.getLastModifiedBy())
                 .lastModifiedTime(buildProvider.getLastModifiedTime())
+                .buildProviderType(buildProvider.getBuildProviderType().toString())
                 .build();
     }
 
