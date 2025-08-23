@@ -5,6 +5,7 @@ import java.util.List;
 import org.springframework.stereotype.Component;
 
 import com.swadeshitech.prodhub.dto.DropdownDTO;
+import com.swadeshitech.prodhub.dto.EphemeralEnvironmentApplicationResponse;
 import com.swadeshitech.prodhub.dto.EphemeralEnvironmentRequest;
 import com.swadeshitech.prodhub.dto.EphemeralEnvironmentResponse;
 
@@ -15,7 +16,8 @@ public interface EphemeralEnvironmentService {
 
     public EphemeralEnvironmentResponse getEphemeralEnvironmentDetail(String id);
 
-    public EphemeralEnvironmentResponse getEphemeralEnvironmentApplicationDetails(String id, String applicationId);
+    public EphemeralEnvironmentApplicationResponse getEphemeralEnvironmentApplicationDetails(String id,
+            String applicationId);
 
     public List<DropdownDTO> getEphemeralEnvironmentDropdownList();
 

@@ -4,6 +4,7 @@ import java.io.Serializable;
 import java.util.Map;
 
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.DBRef;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import com.swadeshitech.prodhub.enums.ReleaseCandidateStatus;
@@ -17,7 +18,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Document(collection = "buildProviders")
+@Document(collection = "release_candidates")
 @EqualsAndHashCode(callSuper = true)
 @Builder
 public class ReleaseCandidate extends BaseEntity implements Serializable {
@@ -29,8 +30,10 @@ public class ReleaseCandidate extends BaseEntity implements Serializable {
 
     private ReleaseCandidateStatus status;
 
+    @DBRef
     private User initiatedBy;
 
+    @DBRef
     private User certifiedBy;
 
     private String serviceName;

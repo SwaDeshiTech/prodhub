@@ -1,11 +1,8 @@
 package com.swadeshitech.prodhub.services.impl;
 
-import java.lang.foreign.Linker.Option;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -49,6 +46,7 @@ public class ReleaseCandidateServiceImpl implements ReleaseCandidateService {
         releaseCandidate.setBuildProfile(request.getBuildProfile());
         releaseCandidate.setStatus(ReleaseCandidateStatus.CREATED);
         releaseCandidate.setInitiatedBy(user);
+        releaseCandidate.setCertifiedBy(null);
 
         writeTransactionService.saveReleaseCandidateToRepository(releaseCandidate);
 
@@ -138,7 +136,7 @@ public class ReleaseCandidateServiceImpl implements ReleaseCandidateService {
     private ReleaseCandidateResponse buildResponse(ReleaseCandidate releaseCandidate) {
 
         String certifiedBy = "N/A";
-        if (!ObjectUtils.isEmpty(certifiedBy)) {
+        if (!ObjectUtils.isEmpty(releaseCandidate.getCertifiedBy())) {
             User certifiedUser = releaseCandidate.getCertifiedBy();
             certifiedBy = certifiedUser.getName() + " (" + certifiedUser.getEmailId() + ")";
         }

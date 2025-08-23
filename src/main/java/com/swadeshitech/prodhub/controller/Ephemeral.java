@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.swadeshitech.prodhub.dto.DropdownDTO;
+import com.swadeshitech.prodhub.dto.EphemeralEnvironmentApplicationResponse;
 import com.swadeshitech.prodhub.dto.EphemeralEnvironmentRequest;
 import com.swadeshitech.prodhub.dto.EphemeralEnvironmentResponse;
 import com.swadeshitech.prodhub.dto.Response;
@@ -72,11 +73,12 @@ public class Ephemeral {
     public ResponseEntity<Response> ephemeralEnvironmentApplicationDetails(@PathVariable("id") String id,
             @PathVariable("applicationId") String applicationId) {
 
-        EphemeralEnvironmentResponse environmentResponse = environmentService.getEphemeralEnvironmentDetail(id);
+        EphemeralEnvironmentApplicationResponse environmentResponse = environmentService
+                .getEphemeralEnvironmentApplicationDetails(id, applicationId);
 
         Response response = Response.builder()
                 .httpStatus(HttpStatus.ACCEPTED)
-                .message("Ephemeral Environment has been fetched successfully")
+                .message("Ephemeral Environment Service has been fetched successfully")
                 .response(environmentResponse)
                 .build();
 

@@ -18,10 +18,12 @@ import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
 import com.swadeshitech.prodhub.dto.DropdownDTO;
+import com.swadeshitech.prodhub.dto.EphemeralEnvironmentApplicationResponse;
 import com.swadeshitech.prodhub.dto.EphemeralEnvironmentRequest;
 import com.swadeshitech.prodhub.dto.EphemeralEnvironmentResponse;
 import com.swadeshitech.prodhub.entity.Application;
 import com.swadeshitech.prodhub.entity.EphemeralEnvironment;
+import com.swadeshitech.prodhub.entity.Metadata;
 import com.swadeshitech.prodhub.entity.User;
 import com.swadeshitech.prodhub.enums.EphemeralEnvrionmentStatus;
 import com.swadeshitech.prodhub.enums.ErrorCode;
@@ -30,6 +32,7 @@ import com.swadeshitech.prodhub.repository.ApplicationRepository;
 import com.swadeshitech.prodhub.repository.EphemeralEnvironmentRepository;
 import com.swadeshitech.prodhub.repository.UserRepository;
 import com.swadeshitech.prodhub.services.EphemeralEnvironmentService;
+import com.swadeshitech.prodhub.utils.Base64Util;
 import com.swadeshitech.prodhub.utils.UserContextUtil;
 import lombok.extern.log4j.Log4j2;
 
@@ -128,7 +131,15 @@ public class EphemeralEnvironmentImpl implements EphemeralEnvironmentService {
         Map<String, Object> applicationsMap = new HashMap<>();
 
         for (Application application : applicationList) {
-            applicationsMap.put(application.getId(), application);
+            Map<String, Object> addedApplication = new HashMap<>();
+
+            if (!CollectionUtils.isEmpty(application.getProfiles())) {
+                for (Metadata metadata : application.getProfiles()) {
+                    addedApplication.put(metadata.getName(), metadata.getData());
+                }
+            }
+
+            applicationsMap.put(application.getId(), addedApplication);
         }
 
         environment.setApplications(applicationsMap);
@@ -233,7 +244,10 @@ public class EphemeralEnvironmentImpl implements EphemeralEnvironmentService {
         if (!CollectionUtils.isEmpty(environment.getApplications())) {
             Set<DropdownDTO> applications = new HashSet<>();
             for (Map.Entry<String, Object> itr : environment.getApplications().entrySet()) {
-                Application application = (Application) itr.getValue();
+                Application application = applicationRepository.findById(itr.getKey()).orElse(null);
+                if (Objects.isNull(application)) {
+                    continue;
+                }
                 applications.add(DropdownDTO.builder()
                         .key(application.getId())
                         .value(application.getName())
@@ -255,10 +269,37 @@ public class EphemeralEnvironmentImpl implements EphemeralEnvironmentService {
     }
 
     @Override
-    public EphemeralEnvironmentResponse getEphemeralEnvironmentApplicationDetails(String id, String applicationId) {
+    public EphemeralEnvironmentApplicationResponse getEphemeralEnvironmentApplicationDetails(String id,
+            String applicationId) {
 
-        // Optional<EphemeralEnvironment> ephemeralEnvironmentOptional =
-        // environmentRepository.findByIdAndOwner
-        return new EphemeralEnvironmentResponse();
+        String userId = UserContextUtil.getUserIdFromRequestContext();
+        if (Objects.isNull(userId)) {
+            log.error("user id is not present");
+            throw new CustomException(ErrorCode.USER_UUID_NOT_FOUND);
+        }
+
+        Optional<User> user = userRepository.findByUuid(userId);
+        if (user.isEmpty()) {
+            throw new CustomException(ErrorCode.USER_NOT_FOUND);
+        }
+
+        EphemeralEnvironment environment = environmentRepository.findByIdAndOwner(id, user.get())
+                .orElseThrow(() -> new CustomException(ErrorCode.EPHEMERAL_ENVIRONMENT_NOT_FOUND));
+
+        EphemeralEnvironmentApplicationResponse response = new EphemeralEnvironmentApplicationResponse();
+        response.setEphemeralEnvironmentName(environment.getName());
+
+        for (Map.Entry<String, Object> itr : environment.getApplications().entrySet()) {
+            if (itr.getKey().equals(applicationId)) {
+                Map<String, Object> profileMetaData = (Map<String, Object>) itr.getValue();
+                for (Map.Entry<String, Object> profileItr : profileMetaData.entrySet()) {
+                    profileMetaData.put(profileItr.getKey(),
+                            Base64Util.convertToPlainText(profileItr.getValue().toString()));
+                }
+                response.setApplications(profileMetaData);
+            }
+        }
+
+        return response;
     }
 }
