@@ -11,4 +11,6 @@ public class MetaDataRequest {
     private String name;
     private String data;
     private ProfileType profileType;
+    private String description;
+    private String referencedProfileId;
 }

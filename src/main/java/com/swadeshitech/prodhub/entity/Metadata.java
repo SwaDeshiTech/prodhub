@@ -35,6 +35,11 @@ public class Metadata extends BaseEntity implements Serializable {
 
     private boolean isActive;
 
+    private String description;
+
+    @DBRef
+    private transient Metadata referencedProfile;
+
     @DBRef
     private transient Application application;
 }

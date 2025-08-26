@@ -68,6 +68,9 @@ public class WriteTransactionService {
     @Autowired
     private ReleaseCandidateRepository releaseCandidateRepository;
 
+    @Autowired
+    private MetaDataRepository metadataRepository;
+
     public Application saveApplicationToRepository(Application application) {
         try {
             return applicationRepository.save(application);
@@ -242,6 +245,18 @@ public class WriteTransactionService {
         } catch (Exception ex) {
             log.error("Failed to delete Release Candidate with id: {}", id, ex);
             throw new CustomException(ErrorCode.RELEASE_CANDIDATE_COULD_NOT_BE_DELETED);
+        }
+    }
+
+    public Metadata saveMetadataToRepository(Metadata metadata) {
+        try {
+            return metadataRepository.save(metadata);
+        } catch (DataIntegrityViolationException ex) {
+            log.error("DataIntegrity error ", ex);
+            throw new CustomException(ErrorCode.DATA_INTEGRITY_FAILURE);
+        } catch (Exception ex) {
+            log.error("Failed to update Metadata ", ex);
+            throw new CustomException(ErrorCode.METADATA_PROFILE_UPDATE_FAILED);
         }
     }
 }

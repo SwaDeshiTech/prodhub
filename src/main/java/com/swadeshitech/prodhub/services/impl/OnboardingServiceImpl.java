@@ -1,9 +1,13 @@
 package com.swadeshitech.prodhub.services.impl;
 
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
+import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -19,6 +23,7 @@ import com.swadeshitech.prodhub.exception.CustomException;
 import com.swadeshitech.prodhub.repository.ApplicationRepository;
 import com.swadeshitech.prodhub.repository.MetaDataRepository;
 import com.swadeshitech.prodhub.services.OnboardingService;
+import com.swadeshitech.prodhub.transaction.read.ReadTransactionService;
 import com.swadeshitech.prodhub.transaction.write.WriteTransactionService;
 import com.swadeshitech.prodhub.utils.Base64Util;
 
@@ -36,6 +41,9 @@ public class OnboardingServiceImpl implements OnboardingService {
 
     @Autowired
     private WriteTransactionService writeTransactionService;
+
+    @Autowired
+    private ReadTransactionService readTransactionService;
 
     @Override
     public Set<DropdownDTO> getProfilesForDropdown(String onboardingType, String applicationId) {
@@ -72,12 +80,21 @@ public class OnboardingServiceImpl implements OnboardingService {
             throw new CustomException(ErrorCode.METADATA_PROFILE_ALREADY_EXISTS);
         }
 
+        Map<String, Object> filters = new HashMap<>();
+        filters.put("_id", new ObjectId(request.getProfile().getReferencedProfileId()));
+        List<Metadata> optionalReferencedProfile = readTransactionService.findMetaDataByFilters(filters);
+        if (optionalReferencedProfile.isEmpty()) {
+            throw new CustomException(ErrorCode.METADATA_PROFILE_REFERENCED_NOT_FOUND);
+        }
+
         Metadata metadata = new Metadata();
 
         metadata.setActive(true);
         metadata.setName(request.getProfile().getName());
         metadata.setProfileType(request.getProfile().getProfileType());
+        metadata.setDescription(request.getProfile().getDescription());
         metadata.setApplication(aOptional.get());
+        metadata.setReferencedProfile(optionalReferencedProfile.get(0));
         metadata.setData(Base64Util.generateBase64Encoded(request.getProfile().getData()));
 
         writeTransactionService.saveMetaDataToRepository(metadata);
