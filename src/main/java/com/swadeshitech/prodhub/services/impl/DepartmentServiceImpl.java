@@ -102,6 +102,10 @@ public class DepartmentServiceImpl implements DepartmentService {
         DepartmentResponse departmentResponse = modelMapper.map(department.get(), DepartmentResponse.class);
         departmentResponse.setTeams(teams);
         departmentResponse.setHeadOfDepartment(headOfDepartment);
+        departmentResponse.setCreatedBy(department.get().getCreatedBy());
+        departmentResponse.setCreatedTime(department.get().getCreatedTime());
+        departmentResponse.setLastModifiedBy(department.get().getLastModifiedBy());
+        departmentResponse.setLastModifiedTime(department.get().getLastModifiedTime());
         return departmentResponse;
     }
 

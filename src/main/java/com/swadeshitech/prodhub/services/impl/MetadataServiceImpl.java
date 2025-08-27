@@ -1,6 +1,7 @@
 package com.swadeshitech.prodhub.services.impl;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -65,9 +66,12 @@ public class MetadataServiceImpl implements MetadataService {
             throw new CustomException(ErrorCode.APPLICATION_NOT_FOUND);
         }
 
-        Map<String, Object> filters = Map.of(
-                "application", applications.get(0),
-                "profileType", type);
+        Map<String, Object> filters = new HashMap<>();
+        filters.put("application", applications.get(0));
+
+        if (type != null) {
+            filters.put("profileType", type);
+        }
 
         List<Metadata> metadataList = readTransactionService.findMetaDataByFilters(filters);
         if (metadataList.isEmpty()) {
@@ -79,18 +83,14 @@ public class MetadataServiceImpl implements MetadataService {
 
         if (type != null) {
             metadataList.forEach(
-                    metadata -> dropdownDTOs.add(new DropdownDTO(metadata.getName(), metadata.getId().toString())));
+                    metadata -> dropdownDTOs.add(new DropdownDTO(metadata.getId().toString(), metadata.getName())));
         } else {
-            boolean isRecommended = true;
             for (Metadata metadata : metadataList) {
                 var referencedProfile = metadata.getReferencedProfile();
                 if (!ObjectUtils.isEmpty(referencedProfile)) {
-                    String label = metadata.getName() + " -> " + referencedProfile.getName();
-                    if (isRecommended) {
-                        label += " (Recommended)";
-                        isRecommended = false;
-                    }
-                    dropdownDTOs.add(new DropdownDTO(label, metadata.getId().toString()));
+                    String label = metadata.getName() + " (" + metadata.getProfileType() + " Profile) " + " -> "
+                            + referencedProfile.getName() + " (" + referencedProfile.getProfileType() + " Profile)";
+                    dropdownDTOs.add(new DropdownDTO(metadata.getId().toString(), label));
                 }
             }
         }
@@ -100,7 +100,7 @@ public class MetadataServiceImpl implements MetadataService {
 
     private MetaDataResponse mapToMetaDataResponse(Metadata metadata) {
         return MetaDataResponse.builder()
-                .id(metadata.getId().toString())
+                .id(metadata.getId())
                 .name(metadata.getName())
                 .isActive(metadata.isActive())
                 .data(metadata.getData())

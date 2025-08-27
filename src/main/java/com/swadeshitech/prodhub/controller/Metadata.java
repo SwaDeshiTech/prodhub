@@ -24,8 +24,9 @@ public class Metadata {
     private MetadataService metadataService;
 
     @GetMapping("/dropdown")
-    public ResponseEntity<Response> getMetadataForDropdown(@RequestParam(name = "applicationId") String applicationId,
-            @RequestParam(name = "type") String type) {
+    public ResponseEntity<Response> getMetadataForDropdown(
+            @RequestParam(name = "applicationId", required = true) String applicationId,
+            @RequestParam(name = "type", required = false) String type) {
 
         List<DropdownDTO> metadataList = metadataService.getAllMetadataNames(applicationId, type);
 

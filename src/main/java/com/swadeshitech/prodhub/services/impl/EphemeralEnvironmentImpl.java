@@ -237,7 +237,8 @@ public class EphemeralEnvironmentImpl implements EphemeralEnvironmentService {
         environmentResponse.setId(environment.getId());
         environmentResponse.setName(environment.getName());
         environmentResponse.setStatus(environment.getStatus());
-        environmentResponse.setOwner(environment.getOwner().getEmailId());
+        environmentResponse
+                .setOwner(environment.getOwner().getName() + " (" + environment.getOwner().getEmailId() + ")");
         environmentResponse.setCreatedTime(environment.getCreatedTime());
         environmentResponse.setExpiryOn(environment.getExpiryOn());
 

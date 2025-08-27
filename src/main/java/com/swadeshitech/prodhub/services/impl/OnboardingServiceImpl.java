@@ -9,7 +9,6 @@ import java.util.Set;
 
 import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
 import com.swadeshitech.prodhub.dto.ApplicationProfileRequest;
@@ -124,6 +123,9 @@ public class OnboardingServiceImpl implements OnboardingService {
         response.setName(metadata.getName());
         response.setData(Base64Util.convertToPlainText(metadata.getData()));
         response.setProfileType(metadata.getProfileType());
+        response.setDescription(metadata.getDescription());
+        response.setReferencedProfileId(
+                metadata.getReferencedProfile() != null ? metadata.getReferencedProfile().getId() : null);
 
         return response;
     }
@@ -141,10 +143,19 @@ public class OnboardingServiceImpl implements OnboardingService {
             throw new CustomException(ErrorCode.METADATA_PROFILE_NOT_FOUND);
         }
 
+        Map<String, Object> filters = new HashMap<>();
+        filters.put("_id", new ObjectId(request.getProfile().getReferencedProfileId()));
+        List<Metadata> optionalReferencedProfile = readTransactionService.findMetaDataByFilters(filters);
+        if (optionalReferencedProfile.isEmpty()) {
+            throw new CustomException(ErrorCode.METADATA_PROFILE_REFERENCED_NOT_FOUND);
+        }
+
         Metadata metadata = optionalMetaData.get();
 
         metadata.setActive(request.getProfile().isActive());
+        metadata.setDescription(request.getProfile().getDescription());
         metadata.setData(Base64Util.generateBase64Encoded(request.getProfile().getData()));
+        metadata.setReferencedProfile(optionalReferencedProfile.get(0));
 
         writeTransactionService.saveMetaDataToRepository(metadata);
 
