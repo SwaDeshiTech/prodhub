@@ -1,6 +1,6 @@
 package com.swadeshitech.prodhub.enums;
 
-public enum BuildProvider {
+public enum CredentialProvider {
     GITHUB_ACTIONS("GitHub Actions"),
     GITLAB_CI("GitLab CI"),
     BITBUCKET_PIPELINES("Bitbucket Pipelines"),
@@ -16,7 +16,7 @@ public enum BuildProvider {
 
     private final String displayName;
 
-    BuildProvider(String displayName) {
+    CredentialProvider(String displayName) {
         this.displayName = displayName;
     }
 
@@ -24,12 +24,12 @@ public enum BuildProvider {
         return displayName;
     }
 
-    public static BuildProvider fromDisplayName(String displayName) {
-        for (BuildProvider provider : BuildProvider.values()) {
+    public static CredentialProvider fromDisplayName(String displayName) {
+        for (CredentialProvider provider : CredentialProvider.values()) {
             if (provider.getDisplayName().equalsIgnoreCase(displayName)) {
                 return provider;
             }
         }
-        throw new IllegalArgumentException("No BuildProvider found for display name: " + displayName);
+        throw new IllegalArgumentException("No CredentialProvider found for display name: " + displayName);
     }
 }

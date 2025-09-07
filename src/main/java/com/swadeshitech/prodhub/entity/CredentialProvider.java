@@ -1,16 +1,12 @@
 package com.swadeshitech.prodhub.entity;
 
-import java.io.Serializable;
-
+import lombok.*;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.Indexed;
+import org.springframework.data.mongodb.core.mapping.DBRef;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.NoArgsConstructor;
+import java.io.Serializable;
 
 @Data
 @NoArgsConstructor
@@ -18,7 +14,7 @@ import lombok.NoArgsConstructor;
 @Document(collection = "buildProviders")
 @EqualsAndHashCode(callSuper = true)
 @Builder
-public class BuildProvider extends BaseEntity implements Serializable {
+public class CredentialProvider extends BaseEntity implements Serializable {
 
     @Id
     private String id;
@@ -30,7 +26,10 @@ public class BuildProvider extends BaseEntity implements Serializable {
 
     private boolean isActive;
 
-    private String metaData;
+    private String credentialPath;
 
-    private com.swadeshitech.prodhub.enums.BuildProvider buildProviderType;
+    private com.swadeshitech.prodhub.enums.CredentialProvider credentialProvider;
+
+    @DBRef
+    private Application application;
 }

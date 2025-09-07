@@ -45,9 +45,9 @@ public enum ErrorCode {
 
         CONSTANTS_NOT_FOUND("PH-7001", "Constants could not found", HttpStatus.NOT_FOUND),
 
-        CLOUD_PROVIDERS_NOT_FOUND("PH-8001", "Cloud providers list could not found", HttpStatus.NOT_FOUND),
-        CLOUD_PROVIDER_NOT_FOUND("PH-8002", "Cloud provider could not found", HttpStatus.NOT_FOUND),
-        CLOUD_PROVIDER_COULD_NOT_DELETED("PH-8003", "Cloud provider could not be deleted", HttpStatus.BAD_REQUEST),
+        CREDENTIAL_PROVIDER_NOT_FOUND("PH-8001", "Credentials could not found", HttpStatus.NOT_FOUND),
+        CREDENTIAL_PROVIDER_COULD_NOT_BE_UPDATED("PH-8002", "Credentials could not be updated", HttpStatus.BAD_REQUEST),
+        CREDENTIAL_PROVIDER_COULD_NOT_BE_DELETED("PH-8003", "Credentials could not be deleted", HttpStatus.BAD_REQUEST),
 
         ROLE_NOT_FOUND("PH-9001", "Role could not be found", HttpStatus.NOT_FOUND),
 
@@ -64,14 +64,6 @@ public enum ErrorCode {
                         HttpStatus.BAD_REQUEST),
         ORGANIZATION_COULD_NOT_BE_UPDATED("PH-13004", "Organization could not be updated", HttpStatus.BAD_REQUEST),
         ORGANIZATION_COULD_NOT_BE_DELETED("PH-13005", "Organization could not be deleted", HttpStatus.BAD_REQUEST),
-
-        BUILD_PROVIDER_COULD_NOT_BE_DELETED("PH-14001", "Build Provider could not be deleted", HttpStatus.BAD_REQUEST),
-        BUILD_PROVIDER_NOT_FOUND("PH-14002", "Build Provider could not be found", HttpStatus.NOT_FOUND),
-        BUILD_PROVIDER_ALREADY_EXISTS("PH-14003", "Build Provider already exists", HttpStatus.BAD_REQUEST),
-        BUILD_PROVIDER_COULD_NOT_BE_REGISTERED("PH-14004", "Build Provider could not be registered",
-                        HttpStatus.BAD_REQUEST),
-        BUILD_PROVIDER_COULD_NOT_BE_UPDATED("PH-14005", "Build Provider could not be updated", HttpStatus.BAD_REQUEST),
-        INVALID_BUILD_PROVIDER_NAME("PH-14006", "Invalid build provider name", HttpStatus.BAD_REQUEST),
 
         RELEASE_CANDIDATE_NOT_FOUND("PH-15001", "Release Candidate not found", HttpStatus.NOT_FOUND),
         RELEASE_CANDIDATE_ALREADY_EXISTS("PH-15002", "Release Candidate already exists", HttpStatus.BAD_REQUEST),
