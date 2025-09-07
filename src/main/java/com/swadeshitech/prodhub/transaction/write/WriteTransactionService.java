@@ -5,8 +5,6 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
 import com.swadeshitech.prodhub.entity.Application;
-import com.swadeshitech.prodhub.entity.BuildProvider;
-import com.swadeshitech.prodhub.entity.CloudProvider;
 import com.swadeshitech.prodhub.entity.Metadata;
 import com.swadeshitech.prodhub.entity.Organization;
 import com.swadeshitech.prodhub.entity.ReleaseCandidate;
@@ -18,8 +16,6 @@ import com.swadeshitech.prodhub.entity.User;
 import com.swadeshitech.prodhub.enums.ErrorCode;
 import com.swadeshitech.prodhub.exception.CustomException;
 import com.swadeshitech.prodhub.repository.ApplicationRepository;
-import com.swadeshitech.prodhub.repository.BuildProviderRepository;
-import com.swadeshitech.prodhub.repository.CloudProviderRepository;
 import com.swadeshitech.prodhub.repository.MetaDataRepository;
 import com.swadeshitech.prodhub.repository.OrganizationRepository;
 import com.swadeshitech.prodhub.repository.ReleaseCandidateRepository;
@@ -42,9 +38,6 @@ public class WriteTransactionService {
     private MetaDataRepository metaDataRepository;
 
     @Autowired
-    private CloudProviderRepository cloudProviderRepository;
-
-    @Autowired
     private ResourceRepository resourceRepository;
 
     @Autowired
@@ -61,9 +54,6 @@ public class WriteTransactionService {
 
     @Autowired
     private OrganizationRepository organizationRepository;
-
-    @Autowired
-    private BuildProviderRepository buildProviderRepository;
 
     @Autowired
     private ReleaseCandidateRepository releaseCandidateRepository;
@@ -95,18 +85,6 @@ public class WriteTransactionService {
         }
     }
 
-    public CloudProvider saveCloudProviderToRepository(CloudProvider cloudProvider) {
-        try {
-            return cloudProviderRepository.save(cloudProvider);
-        } catch (DataIntegrityViolationException ex) {
-            log.error("DataIntegrity error ", ex);
-            throw new CustomException(ErrorCode.DATA_INTEGRITY_FAILURE);
-        } catch (Exception ex) {
-            log.error("Failed to update metadata ", ex);
-            throw new CustomException(ErrorCode.USER_UPDATE_FAILED);
-        }
-    }
-
     public ResourceDetails saveResourceDetailsToRepository(ResourceDetails resourceDetails) {
         try {
             return resourceRepository.save(resourceDetails);
@@ -116,15 +94,6 @@ public class WriteTransactionService {
         } catch (Exception ex) {
             log.error("Failed to update metadata ", ex);
             throw new CustomException(ErrorCode.USER_UPDATE_FAILED);
-        }
-    }
-
-    public void removeCloudProviderFromRepository(String id) {
-        try {
-            cloudProviderRepository.deleteById(id);
-        } catch (Exception ex) {
-            log.error("Failed to delete CloudProvider with id: {}", id, ex);
-            throw new CustomException(ErrorCode.CLOUD_PROVIDER_COULD_NOT_DELETED);
         }
     }
 
@@ -203,27 +172,6 @@ public class WriteTransactionService {
         } catch (Exception ex) {
             log.error("Failed to delete Organization with id: {}", id, ex);
             throw new CustomException(ErrorCode.ORGANIZATION_COULD_NOT_BE_DELETED);
-        }
-    }
-
-    public BuildProvider saveBuildProviderToRepository(BuildProvider buildProvider) {
-        try {
-            return buildProviderRepository.save(buildProvider);
-        } catch (DataIntegrityViolationException ex) {
-            log.error("DataIntegrity error ", ex);
-            throw new CustomException(ErrorCode.DATA_INTEGRITY_FAILURE);
-        } catch (Exception ex) {
-            log.error("Failed to update Build Provider ", ex);
-            throw new CustomException(ErrorCode.USER_UPDATE_FAILED);
-        }
-    }
-
-    public void removeBuildProviderFromRepository(String id) {
-        try {
-            buildProviderRepository.deleteById(id);
-        } catch (Exception ex) {
-            log.error("Failed to delete Build Provider with id: {}", id, ex);
-            throw new CustomException(ErrorCode.BUILD_PROVIDER_COULD_NOT_BE_DELETED);
         }
     }
 
