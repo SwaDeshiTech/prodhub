@@ -35,3 +35,7 @@ management:
   endpoint:
     health:
       show-details: always
+
+vault:
+  uri: http://localhost:8200
+  token: myroot

@@ -1,29 +1,13 @@
 package com.swadeshitech.prodhub.transaction.write;
 
+import com.swadeshitech.prodhub.entity.*;
+import com.swadeshitech.prodhub.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
-import com.swadeshitech.prodhub.entity.Application;
-import com.swadeshitech.prodhub.entity.Metadata;
-import com.swadeshitech.prodhub.entity.Organization;
-import com.swadeshitech.prodhub.entity.ReleaseCandidate;
-import com.swadeshitech.prodhub.entity.ResourceDetails;
-import com.swadeshitech.prodhub.entity.Role;
-import com.swadeshitech.prodhub.entity.SCM;
-import com.swadeshitech.prodhub.entity.Tab;
-import com.swadeshitech.prodhub.entity.User;
 import com.swadeshitech.prodhub.enums.ErrorCode;
 import com.swadeshitech.prodhub.exception.CustomException;
-import com.swadeshitech.prodhub.repository.ApplicationRepository;
-import com.swadeshitech.prodhub.repository.MetaDataRepository;
-import com.swadeshitech.prodhub.repository.OrganizationRepository;
-import com.swadeshitech.prodhub.repository.ReleaseCandidateRepository;
-import com.swadeshitech.prodhub.repository.ResourceRepository;
-import com.swadeshitech.prodhub.repository.RoleRepository;
-import com.swadeshitech.prodhub.repository.SCMRepository;
-import com.swadeshitech.prodhub.repository.TabRepository;
-import com.swadeshitech.prodhub.repository.UserRepository;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -60,6 +44,9 @@ public class WriteTransactionService {
 
     @Autowired
     private MetaDataRepository metadataRepository;
+
+    @Autowired
+    private CredentialProviderRepository credentialProviderRepository;
 
     public Application saveApplicationToRepository(Application application) {
         try {
@@ -205,6 +192,18 @@ public class WriteTransactionService {
         } catch (Exception ex) {
             log.error("Failed to update Metadata ", ex);
             throw new CustomException(ErrorCode.METADATA_PROFILE_UPDATE_FAILED);
+        }
+    }
+
+    public CredentialProvider saveCredentialProviderToRepository(CredentialProvider credentialProvider) {
+        try {
+            return credentialProviderRepository.save(credentialProvider);
+        } catch (DataIntegrityViolationException ex) {
+            log.error("DataIntegrity error ", ex);
+            throw new CustomException(ErrorCode.DATA_INTEGRITY_FAILURE);
+        } catch (Exception ex) {
+            log.error("Failed to update Metadata ", ex);
+            throw new CustomException(ErrorCode.CREDENTIAL_PROVIDER_COULD_NOT_BE_UPDATED);
         }
     }
 }
