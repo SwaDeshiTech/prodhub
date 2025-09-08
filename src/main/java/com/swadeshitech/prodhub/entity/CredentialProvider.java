@@ -11,7 +11,7 @@ import java.io.Serializable;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Document(collection = "buildProviders")
+@Document(collection = "credentialProvider")
 @EqualsAndHashCode(callSuper = true)
 @Builder
 public class CredentialProvider extends BaseEntity implements Serializable {

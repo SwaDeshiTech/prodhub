@@ -1,5 +1,6 @@
 package com.swadeshitech.prodhub.services;
 
+import com.swadeshitech.prodhub.dto.CredentialProviderFilter;
 import com.swadeshitech.prodhub.dto.CredentialProviderRequest;
 import com.swadeshitech.prodhub.dto.CredentialProviderResponse;
 import org.springframework.stereotype.Component;
@@ -13,5 +14,5 @@ public interface CredentialProviderService {
 
     public CredentialProviderResponse credentialProviderDetails(String serviceId, String credentialId);
 
-    public List<CredentialProviderResponse> credentialProviders(String type);
+    public List<CredentialProviderResponse> credentialProviders(CredentialProviderFilter credentialProviderFilter);
 }

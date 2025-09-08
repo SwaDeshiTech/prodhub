@@ -48,6 +48,7 @@ public enum ErrorCode {
         CREDENTIAL_PROVIDER_NOT_FOUND("PH-8001", "Credentials could not found", HttpStatus.NOT_FOUND),
         CREDENTIAL_PROVIDER_COULD_NOT_BE_UPDATED("PH-8002", "Credentials could not be updated", HttpStatus.BAD_REQUEST),
         CREDENTIAL_PROVIDER_COULD_NOT_BE_DELETED("PH-8003", "Credentials could not be deleted", HttpStatus.BAD_REQUEST),
+        CREDENTIAL_PROVIDER_LIST_NOT_FOUND("PH-8004", "Credential list could not found", HttpStatus.NOT_FOUND),
 
         ROLE_NOT_FOUND("PH-9001", "Role could not be found", HttpStatus.NOT_FOUND),
 
