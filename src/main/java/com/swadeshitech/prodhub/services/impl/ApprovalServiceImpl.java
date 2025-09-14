@@ -6,6 +6,7 @@ import com.swadeshitech.prodhub.enums.ApprovalStatus;
 import com.swadeshitech.prodhub.enums.ErrorCode;
 import com.swadeshitech.prodhub.exception.CustomException;
 import com.swadeshitech.prodhub.services.ApprovalService;
+import com.swadeshitech.prodhub.services.MetadataService;
 import com.swadeshitech.prodhub.services.UserService;
 import com.swadeshitech.prodhub.transaction.read.ReadTransactionService;
 import com.swadeshitech.prodhub.transaction.write.WriteTransactionService;
@@ -32,6 +33,9 @@ public class ApprovalServiceImpl implements ApprovalService {
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private MetadataService metadataService;
 
     @Override
     public ApprovalResponse createApprovalRequest(ApprovalRequest request) {
@@ -102,6 +106,7 @@ public class ApprovalServiceImpl implements ApprovalService {
         }
 
         validateAndUpdateStatus(stage, request);
+        markRequestComplete(approvals);
 
         return true;
     }
@@ -268,5 +273,22 @@ public class ApprovalServiceImpl implements ApprovalService {
                 .description(approvalStage.getDescription())
                 .stageResponses(stageResponseList)
                 .build();
+    }
+
+    private void markRequestComplete(Approvals approvals) {
+        List<ApprovalStage.Stage> stages = approvals.getApprovalStage().getStages();
+        int total = 0, totalCompleted = 0;
+        for(ApprovalStage.Stage stage : stages) {
+            if(stage.isMandatory()) {
+                total++;
+                if(ApprovalStatus.APPROVED.equals(stage.getStatus())) {
+                    totalCompleted++;
+                }
+            }
+        }
+        if(total == totalCompleted) {
+            approvals.setApprovalStatus(ApprovalStatus.APPROVED);
+            writeTransactionService.saveApprovalsToRepository(approvals);
+        }
     }
 }
