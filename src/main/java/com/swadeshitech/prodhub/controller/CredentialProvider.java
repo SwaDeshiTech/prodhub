@@ -34,7 +34,7 @@ public class CredentialProvider {
     }
 
     @GetMapping("/{serviceId}/{credentialId}")
-    public ResponseEntity<Response> credentialProviderDetails(String serviceId, String credentialId) {
+    public ResponseEntity<Response> credentialProviderDetails(@PathVariable String serviceId, @PathVariable String credentialId) {
 
         CredentialProviderResponse credentialProviderResponse = credentialProviderService.credentialProviderDetails(serviceId, credentialId);
 

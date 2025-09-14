@@ -30,6 +30,8 @@ public class CredentialProvider extends BaseEntity implements Serializable {
 
     private com.swadeshitech.prodhub.enums.CredentialProvider credentialProvider;
 
+    private String credentialProviderType;
+
     @DBRef
     private Application application;
 }

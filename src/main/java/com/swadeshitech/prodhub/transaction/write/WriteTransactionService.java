@@ -48,6 +48,9 @@ public class WriteTransactionService {
     @Autowired
     private CredentialProviderRepository credentialProviderRepository;
 
+    @Autowired
+    private ApprovalsRepository approvalsRepository;
+
     public Application saveApplicationToRepository(Application application) {
         try {
             return applicationRepository.save(application);
@@ -204,6 +207,18 @@ public class WriteTransactionService {
         } catch (Exception ex) {
             log.error("Failed to update Metadata ", ex);
             throw new CustomException(ErrorCode.CREDENTIAL_PROVIDER_COULD_NOT_BE_UPDATED);
+        }
+    }
+
+    public Approvals saveApprovalsToRepository(Approvals approvals) {
+        try {
+            return approvalsRepository.save(approvals);
+        } catch (DataIntegrityViolationException ex) {
+            log.error("DataIntegrity error ", ex);
+            throw new CustomException(ErrorCode.DATA_INTEGRITY_FAILURE);
+        } catch (Exception ex) {
+            log.error("Failed to update Metadata ", ex);
+            throw new CustomException(ErrorCode.APPROVALS_UPDATE_FAILED);
         }
     }
 }

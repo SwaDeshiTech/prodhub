@@ -26,7 +26,7 @@ import java.util.Map;
 
 @Service
 @Slf4j
-public class CredentailProviderServiceImpl implements CredentialProviderService {
+public class CredentialProviderServiceImpl implements CredentialProviderService {
 
     @Autowired
     ReadTransactionService readTransactionService;
@@ -60,13 +60,16 @@ public class CredentailProviderServiceImpl implements CredentialProviderService 
 
         vaultService.storeSecret(vaultRequest);
 
+        com.swadeshitech.prodhub.enums.CredentialProvider credentialProviderType = com.swadeshitech.prodhub.enums.CredentialProvider.fromDisplayName(request.getProvider());
+
         CredentialProvider credentialProvider = CredentialProvider.builder()
                 .name(request.getName())
                 .description(request.getDescription())
                 .application(application)
                 .credentialPath(credentialPath)
                 .isActive(true)
-                .credentialProvider(com.swadeshitech.prodhub.enums.CredentialProvider.fromDisplayName(request.getProvider()))
+                .credentialProvider(credentialProviderType)
+                .credentialProviderType(credentialProviderType.getType())
                 .build();
 
         writeTransactionService.saveCredentialProviderToRepository(credentialProvider);
@@ -95,7 +98,13 @@ public class CredentailProviderServiceImpl implements CredentialProviderService 
 
         CredentialProvider credentialProvider = credentialProviders.getFirst();
 
-        return mapEntityToDTO(credentialProvider);
+        CredentialProviderResponse response = mapEntityToDTO(credentialProvider);
+
+        Map<String, Object> vaultResponse = vaultService.getSecret(credentialProvider.getCredentialPath());
+
+        response.setCredentialMetadata(vaultResponse != null ? vaultResponse.toString() : null);
+
+        return response;
     }
 
     @Override
@@ -141,7 +150,7 @@ public class CredentailProviderServiceImpl implements CredentialProviderService 
             filters.put("name", credentialProviderFilter.getName());
         }
 
-        //filters.put("isActive", credentialProviderFilter.isActive());
+        filters.put("isActive", true);
 
         return filters;
     }
@@ -149,11 +158,13 @@ public class CredentailProviderServiceImpl implements CredentialProviderService 
     private CredentialProviderResponse mapEntityToDTO(CredentialProvider credentialProvider) {
         return CredentialProviderResponse.builder()
                 .id(credentialProvider.getId())
+                .name(credentialProvider.getName())
                 .description(credentialProvider.getDescription())
                 .credentialPath(credentialProvider.getCredentialPath())
                 .isActive(credentialProvider.isActive())
                 .type(credentialProvider.getCredentialProvider().getDisplayName())
                 .serviceName(credentialProvider.getApplication().getName())
+                .serviceId(credentialProvider.getApplication().getId())
                 .createdBy(credentialProvider.getCreatedBy())
                 .createdTime(credentialProvider.getCreatedTime())
                 .lastModifiedBy(credentialProvider.getLastModifiedBy())

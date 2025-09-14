@@ -73,7 +73,14 @@ public enum ErrorCode {
         RELEASE_CANDIDATE_COULD_NOT_BE_UPDATED("PH-15004", "Release Candidate could not be updated",
                         HttpStatus.BAD_REQUEST),
         RELEASE_CANDIDATE_COULD_NOT_BE_DELETED("PH-15005", "Release Candidate could not be deleted",
-                        HttpStatus.BAD_REQUEST);
+                        HttpStatus.BAD_REQUEST),
+
+        APPROVALS_UPDATE_FAILED("PH-16001", "Approvals could not be updated", HttpStatus.INTERNAL_SERVER_ERROR),
+        APPROVALS_NOT_FOUND("PH-16002", "Approvals not found", HttpStatus.NOT_FOUND),
+        APPROVALS_LIST_NOT_FOUND("PH-16003", "Approvals list not found", HttpStatus.BAD_REQUEST),
+
+        APPROVALS_STAGE_UPDATE_FAILED("PH-17001", "Approvals stage could not be updated", HttpStatus.INTERNAL_SERVER_ERROR),
+        APPROVALS_STAGE_NOT_FOUND("PH-17002", "Approvals stage not found", HttpStatus.NOT_FOUND);
 
         private final String code;
         private final String description;
