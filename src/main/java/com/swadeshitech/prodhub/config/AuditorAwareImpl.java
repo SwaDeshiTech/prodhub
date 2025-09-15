@@ -17,10 +17,9 @@ public class AuditorAwareImpl implements AuditorAware<String> {
 
 	@Override
     public Optional<String> getCurrentAuditor() {
-        String uidx = UserContextUtil.getUserIdFromRequestContext();
-        if(!StringUtils.isEmpty(uidx)) {
-            UserResponse userResponse = userService.getUserDetail(uidx);
-
+        String uuid = UserContextUtil.getUserIdFromRequestContext();
+        if(!StringUtils.isEmpty(uuid)) {
+            UserResponse userResponse = userService.getUserDetail(uuid);
             if (userResponse != null && StringUtils.isNotBlank(userResponse.getEmailId())) {
                 return Optional.of(userResponse.getEmailId());
             }

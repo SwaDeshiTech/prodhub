@@ -6,7 +6,5 @@ import lombok.Data;
 public class ApprovalRequest {
     private String serviceId;
     private String comment;
-    private String profileType;
-    private String profileId;
-    private String metaData;
+    private MetaDataRequest metaDataRequest;
 }

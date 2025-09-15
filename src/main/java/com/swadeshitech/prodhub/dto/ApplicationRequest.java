@@ -1,10 +1,12 @@
 package com.swadeshitech.prodhub.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import lombok.Builder;
 import lombok.Data;
 
 @Data
 @JsonIgnoreProperties(ignoreUnknown = true)
+@Builder
 /**
  * ApplicationRequest is a DTO class that represents the request body for
  * creating or updating an application.

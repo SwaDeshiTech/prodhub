@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
+import com.swadeshitech.prodhub.config.AuditorContextHolder;
 import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -103,7 +104,14 @@ public class OnboardingServiceImpl implements OnboardingService {
         }
 
         aOptional.get().getProfiles().add(metadata);
+
+        String currentAuditor = AuditorContextHolder.get();
+        AuditorContextHolder.set(request.getInitiatedBy());
+
         writeTransactionService.saveApplicationToRepository(aOptional.get());
+
+        AuditorContextHolder.clear();
+        AuditorContextHolder.set(currentAuditor);
 
         MetaDataResponse dataResponse = mapEntityDataResponse(metadata);
 

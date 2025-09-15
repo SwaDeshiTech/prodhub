@@ -1,5 +1,8 @@
 package com.swadeshitech.prodhub.services.impl;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.swadeshitech.prodhub.config.AuditorContextHolder;
 import com.swadeshitech.prodhub.dto.*;
 import com.swadeshitech.prodhub.entity.*;
 import com.swadeshitech.prodhub.enums.ApprovalStatus;
@@ -7,11 +10,13 @@ import com.swadeshitech.prodhub.enums.ErrorCode;
 import com.swadeshitech.prodhub.exception.CustomException;
 import com.swadeshitech.prodhub.services.ApprovalService;
 import com.swadeshitech.prodhub.services.MetadataService;
+import com.swadeshitech.prodhub.services.OnboardingService;
 import com.swadeshitech.prodhub.services.UserService;
 import com.swadeshitech.prodhub.transaction.read.ReadTransactionService;
 import com.swadeshitech.prodhub.transaction.write.WriteTransactionService;
 import com.swadeshitech.prodhub.utils.Base64Util;
 import com.swadeshitech.prodhub.utils.UserContextUtil;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,6 +28,7 @@ import java.util.stream.Collectors;
 
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class ApprovalServiceImpl implements ApprovalService {
 
     @Autowired
@@ -37,6 +43,10 @@ public class ApprovalServiceImpl implements ApprovalService {
     @Autowired
     private MetadataService metadataService;
 
+    private final ObjectMapper objectMapper;
+
+    private final OnboardingService onboardingService;
+
     @Override
     public ApprovalResponse createApprovalRequest(ApprovalRequest request) {
 
@@ -48,9 +58,9 @@ public class ApprovalServiceImpl implements ApprovalService {
         }
 
         List<Metadata> metadataList = readTransactionService.findMetaDataByFilters(
-                Map.of("_id", new ObjectId(request.getProfileId())));
+                Map.of("_id", new ObjectId(request.getMetaDataRequest().getId())));
         if (metadataList.isEmpty()) {
-            log.error("No metadata found for id: {}", request.getProfileId());
+            log.error("No metadata found for id: {}", request.getMetaDataRequest().getId());
             throw new CustomException(ErrorCode.METADATA_PROFILE_NOT_FOUND);
         }
 
@@ -58,13 +68,20 @@ public class ApprovalServiceImpl implements ApprovalService {
         Metadata profile = metadataList.getFirst();
 
         ApprovalStage approvalStage = createApprovalStage(application, profile);
+        String metadataRequest;
+
+        try {
+            metadataRequest = objectMapper.writeValueAsString(request.getMetaDataRequest());
+        } catch (JsonProcessingException e) {
+            throw new CustomException(ErrorCode.METADATA_PROFILE_INVALID_DATA);
+        }
 
         Approvals approvals = new Approvals();
         approvals.setApprovalStatus(ApprovalStatus.PENDING);
         approvals.setApplication(application);
         approvals.setApprovalStage(approvalStage);
         approvals.setCurrentMetadata(profile);
-        approvals.setUpdatedMetaData(Base64Util.generateBase64Encoded(request.getMetaData()));
+        approvals.setUpdatedMetaData(Base64Util.generateBase64Encoded(metadataRequest));
         approvals.setProfileName(profile.getName());
         approvals.setProfileType(profile.getProfileType());
 
@@ -283,11 +300,21 @@ public class ApprovalServiceImpl implements ApprovalService {
                 total++;
                 if(ApprovalStatus.APPROVED.equals(stage.getStatus())) {
                     totalCompleted++;
+                } else {
+                    return;
                 }
             }
         }
         if(total == totalCompleted) {
             approvals.setApprovalStatus(ApprovalStatus.APPROVED);
+            String data = Base64Util.convertToPlainText(approvals.getUpdatedMetaData());
+            MetaDataRequest metaDataRequest = objectMapper.convertValue(data, MetaDataRequest.class);
+            ApplicationProfileRequest applicationRequest = ApplicationProfileRequest.builder()
+                    .applicationId(approvals.getApplication().getId())
+                    .profile(metaDataRequest)
+                    .initiatedBy(approvals.getCreatedBy())
+                    .build();
+            onboardingService.onboardProfile(applicationRequest);
             writeTransactionService.saveApprovalsToRepository(approvals);
         }
     }
