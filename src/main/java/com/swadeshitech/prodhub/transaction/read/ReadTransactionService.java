@@ -308,4 +308,32 @@ public class ReadTransactionService {
         });
         return mongoTemplate.find(query, Approvals.class);
     }
+
+    public List<CodeFreeze> findCodeFreezeByFilters(Map<String, Object> filters) {
+        Query query = new Query();
+
+        filters.forEach((key, value) -> {
+            if (value != null) {
+                if (value instanceof Iterable) {
+                    Iterable<?> iterable = (Iterable<?>) value;
+                    // Convert Iterable to List and check emptiness
+                    List<Object> list = new ArrayList<>();
+                    iterable.forEach(list::add);
+                    if (!list.isEmpty()) {
+                        query.addCriteria(Criteria.where(key).in(list));
+                    }
+                } else if (value.getClass().isArray()) {
+                    // Convert array to List and check emptiness
+                    Object[] arr = (Object[]) value;
+                    if (arr.length > 0) {
+                        query.addCriteria(Criteria.where(key).in(Arrays.asList(arr)));
+                    }
+                } else {
+                    // Single value - use is()
+                    query.addCriteria(Criteria.where(key).is(value));
+                }
+            }
+        });
+        return mongoTemplate.find(query, CodeFreeze.class);
+    }
 }

@@ -51,6 +51,9 @@ public class WriteTransactionService {
     @Autowired
     private ApprovalsRepository approvalsRepository;
 
+    @Autowired
+    private CodeFreezeRepository codeFreezeRepository;
+
     public Application saveApplicationToRepository(Application application) {
         try {
             return applicationRepository.save(application);
@@ -219,6 +222,18 @@ public class WriteTransactionService {
         } catch (Exception ex) {
             log.error("Failed to update Metadata ", ex);
             throw new CustomException(ErrorCode.APPROVALS_UPDATE_FAILED);
+        }
+    }
+
+    public CodeFreeze saveCodeFreezeToRepository(CodeFreeze codeFreeze) {
+        try {
+            return codeFreezeRepository.save(codeFreeze);
+        } catch (DataIntegrityViolationException ex) {
+            log.error("DataIntegrity error ", ex);
+            throw new CustomException(ErrorCode.DATA_INTEGRITY_FAILURE);
+        } catch (Exception ex) {
+            log.error("Failed to update Metadata ", ex);
+            throw new CustomException(ErrorCode.CODE_FREEZE_UPDATE_FAILED);
         }
     }
 }

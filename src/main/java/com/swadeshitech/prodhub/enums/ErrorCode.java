@@ -80,7 +80,11 @@ public enum ErrorCode {
         APPROVALS_LIST_NOT_FOUND("PH-16003", "Approvals list not found", HttpStatus.BAD_REQUEST),
 
         APPROVALS_STAGE_UPDATE_FAILED("PH-17001", "Approvals stage could not be updated", HttpStatus.INTERNAL_SERVER_ERROR),
-        APPROVALS_STAGE_NOT_FOUND("PH-17002", "Approvals stage not found", HttpStatus.NOT_FOUND);
+        APPROVALS_STAGE_NOT_FOUND("PH-17002", "Approvals stage not found", HttpStatus.NOT_FOUND),
+
+        CODE_FREEZE_UPDATE_FAILED("PH-18001", "Code freeze could not be updated", HttpStatus.INTERNAL_SERVER_ERROR),
+        CODE_FREEZE_NOT_FOUND("PH-18002", "Code freeze not found", HttpStatus.NOT_FOUND),
+        CODE_FREEZE_LIST_NOT_FOUND("PH-18003", "Code freeze list not found", HttpStatus.NOT_FOUND);
 
         private final String code;
         private final String description;
