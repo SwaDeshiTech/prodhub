@@ -10,6 +10,8 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
+import com.swadeshitech.prodhub.transaction.read.ReadTransactionService;
+import org.bson.types.ObjectId;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -52,6 +54,9 @@ public class EphemeralEnvironmentImpl implements EphemeralEnvironmentService {
     @Autowired
     ModelMapper modelMapper;
 
+    @Autowired
+    ReadTransactionService readTransactionService;
+
     @Override
     public EphemeralEnvironmentResponse createEphemeralEnvironment(EphemeralEnvironmentRequest request) {
 
@@ -71,6 +76,7 @@ public class EphemeralEnvironmentImpl implements EphemeralEnvironmentService {
         environment.setExpiryOn(LocalDateTime.now().plusDays(request.getExpiryDuration()));
 
         setOwnerDetail(environment, userId);
+        setSharedWith(environment, request.getSharedWith());
 
         setApplications(environment, request.getApplications());
 
@@ -98,7 +104,6 @@ public class EphemeralEnvironmentImpl implements EphemeralEnvironmentService {
 
     private EphemeralEnvironment saveEphemeralEnvironmentToRepository(EphemeralEnvironment environment) {
         try {
-            log.info("null", environment);
             return environmentRepository.save(environment);
         } catch (DataIntegrityViolationException ex) {
             log.error("DataIntegrity error ", ex);
@@ -118,6 +123,26 @@ public class EphemeralEnvironmentImpl implements EphemeralEnvironmentService {
         }
 
         environment.setOwner(user.get());
+    }
+
+    private void setSharedWith(EphemeralEnvironment environment, Set<String> users) {
+        if(CollectionUtils.isEmpty(users)) {
+            log.info("EphemeralEnvironment is not shared with anyone");
+            return;
+        }
+
+        List<User> userList = new ArrayList<>();
+
+        for(String user : users) {
+            Optional<User> userOptional = userRepository.findByUuid(user);
+            if (user.isEmpty()) {
+                log.error("user could not be found", user);
+                throw new CustomException(ErrorCode.USER_UUID_NOT_FOUND);
+            }
+            userList.add(userOptional.get());
+        }
+
+        environment.setSharedWith(new HashSet<>(userList));
     }
 
     private void setApplications(EphemeralEnvironment environment, Set<String> applications) {
@@ -177,14 +202,18 @@ public class EphemeralEnvironmentImpl implements EphemeralEnvironmentService {
             throw new CustomException(ErrorCode.USER_NOT_FOUND);
         }
 
-        Optional<List<EphemeralEnvironment>> ephemeralEnvironmentsOpt = environmentRepository.findByOwner(user.get());
-        if (ephemeralEnvironmentsOpt.isEmpty() || ephemeralEnvironmentsOpt.get().isEmpty()) {
+        Map<String, Object> filters = new HashMap<>();
+        filters.put("owner", user.get());
+        filters.put("sharedWith", user.get());
+
+        List<EphemeralEnvironment> ephemeralEnvironments = readTransactionService.findByDynamicOrFilters(filters, EphemeralEnvironment.class);
+        if(CollectionUtils.isEmpty(ephemeralEnvironments)) {
             log.error("No ephemeral environments found for user {}", userId);
             throw new CustomException(ErrorCode.EPHEMERAL_ENVIRONMENT_LIST_NOT_FOUND);
         }
 
         List<EphemeralEnvironmentResponse> responseList = new ArrayList<>();
-        for (EphemeralEnvironment env : ephemeralEnvironmentsOpt.get()) {
+        for (EphemeralEnvironment env : ephemeralEnvironments) {
             responseList.add(mapEntityToResponse(env));
         }
         return responseList;

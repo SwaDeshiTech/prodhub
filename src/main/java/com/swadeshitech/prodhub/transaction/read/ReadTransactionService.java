@@ -13,11 +13,7 @@ import com.swadeshitech.prodhub.repository.ConstantsRepository;
 
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 @Service
 @Slf4j
@@ -105,9 +101,27 @@ public class ReadTransactionService {
 
     public List<User> findUserDetailsByFilters(Map<String, Object> filters) {
         Query query = new Query();
+
         filters.forEach((key, value) -> {
             if (value != null) {
-                query.addCriteria(Criteria.where(key).is(value));
+                if (value instanceof Iterable) {
+                    Iterable<?> iterable = (Iterable<?>) value;
+                    // Convert Iterable to List and check emptiness
+                    List<Object> list = new ArrayList<>();
+                    iterable.forEach(list::add);
+                    if (!list.isEmpty()) {
+                        query.addCriteria(Criteria.where(key).in(list));
+                    }
+                } else if (value.getClass().isArray()) {
+                    // Convert array to List and check emptiness
+                    Object[] arr = (Object[]) value;
+                    if (arr.length > 0) {
+                        query.addCriteria(Criteria.where(key).in(Arrays.asList(arr)));
+                    }
+                } else {
+                    // Single value - use is()
+                    query.addCriteria(Criteria.where(key).is(value));
+                }
             }
         });
         return mongoTemplate.find(query, User.class);
@@ -336,4 +350,22 @@ public class ReadTransactionService {
         });
         return mongoTemplate.find(query, CodeFreeze.class);
     }
+
+    public <T> List<T> findByDynamicOrFilters(Map<String, Object> filters, Class<T> clazz) {
+        if (filters == null || filters.isEmpty()) {
+            return Collections.emptyList();
+        }
+        List<Criteria> orCriterias = new ArrayList<>();
+        for (Map.Entry<String, Object> entry : filters.entrySet()) {
+            String key = entry.getKey();
+            Object value = entry.getValue();
+            if (value != null) {
+                orCriterias.add(Criteria.where(key).is(value));
+            }
+        }
+        Criteria orCriteria = new Criteria().orOperator(orCriterias.toArray(new Criteria[0]));
+        Query query = new Query(orCriteria);
+        return mongoTemplate.find(query, clazz);
+    }
+
 }
