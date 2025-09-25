@@ -10,9 +10,9 @@ import com.swadeshitech.prodhub.exception.CustomException;
 import com.swadeshitech.prodhub.services.CodeFreezeService;
 import com.swadeshitech.prodhub.transaction.read.ReadTransactionService;
 import com.swadeshitech.prodhub.transaction.write.WriteTransactionService;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.bson.types.ObjectId;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
@@ -23,11 +23,12 @@ import java.util.Objects;
 
 @Service
 @Slf4j
-@RequiredArgsConstructor
 public class CodeFreezeServiceImpl implements CodeFreezeService {
 
+    @Autowired
     private ReadTransactionService readTransactionService;
 
+    @Autowired
     private WriteTransactionService writeTransactionService;
 
     @Override
@@ -51,15 +52,25 @@ public class CodeFreezeServiceImpl implements CodeFreezeService {
     public List<CodeFreezeResponse> getCodeFreezeList() {
 
         List<CodeFreeze> codeFreezeList = readTransactionService.findCodeFreezeByFilters(Map.of());
-        if(CollectionUtils.isEmpty(codeFreezeList)) {
+        if (CollectionUtils.isEmpty(codeFreezeList)) {
             log.error("Code freeze not found");
             throw new CustomException(ErrorCode.CODE_FREEZE_LIST_NOT_FOUND);
         }
 
         List<CodeFreezeResponse> codeFreezeResponses = new ArrayList<>();
 
-        for(CodeFreeze codeFreeze : codeFreezeList) {
-            codeFreezeResponses.add(mapEntityToDTO(codeFreeze));
+        for (CodeFreeze codeFreeze : codeFreezeList) {
+            codeFreezeResponses.add(CodeFreezeResponse.builder()
+                    .id(codeFreeze.getId())
+                    .description(codeFreeze.getDescription())
+                    .isActive(codeFreeze.isActive())
+                    .startTime(codeFreeze.getStartTime())
+                    .endTime(codeFreeze.getEndTime())
+                    .createdBy(codeFreeze.getCreatedBy())
+                    .createdTime(codeFreeze.getCreatedTime())
+                    .lastModifiedBy(codeFreeze.getLastModifiedBy())
+                    .lastModifiedTime(codeFreeze.getLastModifiedTime())
+                    .build());
         }
 
         return codeFreezeResponses;
@@ -82,7 +93,7 @@ public class CodeFreezeServiceImpl implements CodeFreezeService {
     public void updateCodeFreeze(String id, CodeFreezeRequest request) {
 
         List<CodeFreeze> codeFreezeList = readTransactionService.findCodeFreezeByFilters(Map.of("_id", id));
-        if(CollectionUtils.isEmpty(codeFreezeList)) {
+        if (CollectionUtils.isEmpty(codeFreezeList)) {
             log.error("Code freeze could not be found: {}", id);
             throw new CustomException(ErrorCode.CODE_FREEZE_NOT_FOUND);
         }
@@ -101,18 +112,18 @@ public class CodeFreezeServiceImpl implements CodeFreezeService {
 
     private CodeFreezeResponse mapEntityToDTO(CodeFreeze codeFreeze) {
 
-        if(Objects.isNull(codeFreeze)) {
+        if (Objects.isNull(codeFreeze)) {
             return null;
         }
 
         List<String> applications = new ArrayList<>();
         List<String> users = new ArrayList<>();
 
-        for(Application application : codeFreeze.getApplications()) {
+        for (Application application : codeFreeze.getApplications()) {
             applications.add(application.getName());
         }
 
-        for(User user : codeFreeze.getApprovers()) {
+        for (User user : codeFreeze.getApprovers()) {
             users.add(user.getName() + " (" + user.getEmailId() + ")");
         }
 
@@ -122,6 +133,8 @@ public class CodeFreezeServiceImpl implements CodeFreezeService {
                 .approvers(users)
                 .applications(applications)
                 .isActive(codeFreeze.isActive())
+                .startTime(codeFreeze.getStartTime())
+                .endTime(codeFreeze.getEndTime())
                 .createdBy(codeFreeze.getCreatedBy())
                 .createdTime(codeFreeze.getCreatedTime())
                 .lastModifiedBy(codeFreeze.getLastModifiedBy())
@@ -131,23 +144,19 @@ public class CodeFreezeServiceImpl implements CodeFreezeService {
 
     private void updateCommonFields(CodeFreeze codeFreeze, CodeFreezeRequest request) {
         List<ObjectId> applicationIdsFilter = new ArrayList<>();
-        for(String id : request.getApplicationIds()) {
+        for (String id : request.getApplicationIds()) {
             applicationIdsFilter.add(new ObjectId(id));
         }
 
-        List<ObjectId> approverIdsFilter = new ArrayList<>();
-        for(String id : request.getApprovers()) {
-            approverIdsFilter.add(new ObjectId(id));
-        }
-
-        List<User> approvers = readTransactionService.findUserDetailsByFilters(Map.of("_id", approverIdsFilter));
-        if(Objects.isNull(approvers)) {
+        List<User> approvers = readTransactionService.findUserDetailsByFilters(Map.of("uuid", request.getApprovers()));
+        if (Objects.isNull(approvers)) {
             log.error("Approvers could not be found");
             throw new CustomException(ErrorCode.USER_NOT_FOUND);
         }
 
-        List<Application> applications = readTransactionService.findApplicationByFilters(Map.of("_id", applicationIdsFilter));
-        if(Objects.isNull(applications)) {
+        List<Application> applications = readTransactionService
+                .findApplicationByFilters(Map.of("_id", applicationIdsFilter));
+        if (Objects.isNull(applications)) {
             log.error("Applications could not be found");
             throw new CustomException(ErrorCode.APPLICATION_LIST_NOT_FOUND);
         }
