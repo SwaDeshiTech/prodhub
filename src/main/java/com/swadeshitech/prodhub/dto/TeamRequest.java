@@ -12,4 +12,5 @@ public class TeamRequest {
     private String departmentId;
     private Set<String> employeeList;
     private Set<String> managerList;
+    private Set<String> applications;
 }

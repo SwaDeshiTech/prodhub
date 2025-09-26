@@ -37,6 +37,9 @@ public class Team extends BaseEntity implements Serializable {
     @DBRef
     private Set<Department> departments;
 
+    @DBRef
+    private Set<Application> applications;
+
     @Override
     public int hashCode() {
         final int prime = 31;

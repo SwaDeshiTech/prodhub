@@ -4,6 +4,7 @@ import com.swadeshitech.prodhub.dto.CodeFreezeRequest;
 import com.swadeshitech.prodhub.dto.CodeFreezeResponse;
 import com.swadeshitech.prodhub.entity.Application;
 import com.swadeshitech.prodhub.entity.CodeFreeze;
+import com.swadeshitech.prodhub.entity.Team;
 import com.swadeshitech.prodhub.entity.User;
 import com.swadeshitech.prodhub.enums.ErrorCode;
 import com.swadeshitech.prodhub.exception.CustomException;
@@ -16,10 +17,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.time.LocalDateTime;
+import java.util.*;
 
 @Service
 @Slf4j
@@ -161,7 +160,21 @@ public class CodeFreezeServiceImpl implements CodeFreezeService {
             throw new CustomException(ErrorCode.APPLICATION_LIST_NOT_FOUND);
         }
 
+        //Team
+
         codeFreeze.setApprovers(approvers);
         codeFreeze.setApplications(applications);
     }
+
+    /*public CodeFreeze isCodeFreezeEnabled(String applicationId) {
+
+        LocalDateTime currentTime = LocalDateTime.now();
+
+        Map<String, Object> filters = new HashMap<>();
+        filters.put("startTime", currentTime);
+        filters.put("endTime", currentTime);
+        filters.put("applications", applicationId);
+
+
+    }*/
 }

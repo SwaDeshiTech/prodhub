@@ -6,9 +6,11 @@ import java.util.List;
 import com.fasterxml.jackson.annotation.JsonFormat;
 
 import lombok.Data;
+import lombok.experimental.SuperBuilder;
 
 @Data
-public class TeamResponse {
+@SuperBuilder
+public class TeamResponse extends BaseResponse {
 
     private String name;
     private String description;
@@ -16,13 +18,5 @@ public class TeamResponse {
     private List<DepartmentResponse> departments;
     private List<UserResponse> employees;
     private List<UserResponse> managers;
-
-    @JsonFormat(pattern = "yyyy-MM-dd hh:mm:ss")
-    private Date createdTime;
-
-    @JsonFormat(pattern = "yyyy-MM-dd hh:mm:ss")
-    private Date lastModifiedTime;
-
-    private String createdBy;
-    private String lastModifiedBy;
+    private List<ApplicationResponse> applications;
 }

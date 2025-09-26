@@ -1,18 +1,13 @@
 package com.swadeshitech.prodhub.services.impl;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 
+import com.swadeshitech.prodhub.dto.*;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
-import com.swadeshitech.prodhub.dto.ApplicationRequest;
-import com.swadeshitech.prodhub.dto.ApplicationResponse;
-import com.swadeshitech.prodhub.dto.DropdownDTO;
 import com.swadeshitech.prodhub.entity.Application;
 import com.swadeshitech.prodhub.entity.Department;
 import com.swadeshitech.prodhub.entity.Metadata;
@@ -42,7 +37,13 @@ public class ApplicationServiceImpl implements ApplicationService {
     private DepartmentRepository departmentRepository;
 
     @Autowired
+    private TeamServiceImpl teamService;
+
+    @Autowired
     ModelMapper modelMapper;
+
+    @Autowired
+    MetadataServiceImpl metadataService;
 
     @Override
     public ApplicationResponse addApplication(ApplicationRequest applicationRequest) {
@@ -97,7 +98,7 @@ public class ApplicationServiceImpl implements ApplicationService {
 
         decodeProfleMetaData(application.get());
 
-        return modelMapper.map(application.get(), ApplicationResponse.class);
+        return mapEntityToDTO(application.get());
     }
 
     protected Application saveApplicationToRepository(Application application) {
@@ -143,5 +144,29 @@ public class ApplicationServiceImpl implements ApplicationService {
             }
         }
         return false;
+    }
+
+    private ApplicationResponse mapEntityToDTO(Application application) {
+
+        Set<MetaDataResponse> metaDataResponseSet = new HashSet<>();
+        TeamResponse teamResponse = teamService.mapEntityToDTO(application.getTeam());
+
+        for(Metadata metadata : application.getProfiles()) {
+            metaDataResponseSet.add(metadataService.mapToMetaDataResponse(metadata));
+        }
+
+        return ApplicationResponse.builder()
+                .id(application.getId())
+                .name(application.getName())
+                .description(application.getDescription())
+                .profiles(metaDataResponseSet)
+                .isActive(application.isActive())
+                .team(teamResponse)
+                .departmentResponse(teamResponse.getDepartments().getFirst())
+                .createdBy(application.getCreatedBy())
+                .createdTime(application.getCreatedTime())
+                .lastModifiedBy(application.getLastModifiedBy())
+                .lastModifiedTime(application.getLastModifiedTime())
+                .build();
     }
 }

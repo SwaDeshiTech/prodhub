@@ -16,4 +16,6 @@ public class CodeFreezeRequest {
     private List<String> applicationIds;
     private List<String> approvers;
     private boolean isActive;
+    private List<String> teamList;
+    private List<String> departmentList;
 }

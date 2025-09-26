@@ -3,16 +3,16 @@ package com.swadeshitech.prodhub.services.impl;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import com.swadeshitech.prodhub.dto.DropdownDTO;
+import com.swadeshitech.prodhub.dto.*;
+import com.swadeshitech.prodhub.entity.Application;
+import com.swadeshitech.prodhub.transaction.read.ReadTransactionService;
+import org.bson.types.ObjectId;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.swadeshitech.prodhub.dto.TeamRequest;
-import com.swadeshitech.prodhub.dto.TeamResponse;
-import com.swadeshitech.prodhub.dto.TeamEmployeeUpdateRequest;
 import com.swadeshitech.prodhub.entity.Department;
 import com.swadeshitech.prodhub.entity.Team;
 import com.swadeshitech.prodhub.entity.User;
@@ -25,6 +25,7 @@ import com.swadeshitech.prodhub.services.TeamService;
 
 import io.micrometer.common.util.StringUtils;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.util.CollectionUtils;
 
 @Service
 @Slf4j
@@ -41,6 +42,9 @@ public class TeamServiceImpl implements TeamService {
 
     @Autowired
     ModelMapper modelMapper;
+
+    @Autowired
+    ReadTransactionService readTransactionService;
 
     @Override
     @Transactional
@@ -88,6 +92,17 @@ public class TeamServiceImpl implements TeamService {
         departmentTeams.add(team);
         department.setTeams(departmentTeams);
 
+        Set<Application> applications = new HashSet<>();
+        for(String applicationId : teamRequest.getApplications()) {
+            List<Application> application = readTransactionService.findApplicationByFilters(Map.of("_id", new ObjectId(applicationId)));
+            if(CollectionUtils.isEmpty(application)) {
+                log.error("Application ID could not be found {}", applicationId);
+                throw new CustomException(ErrorCode.APPLICATION_NOT_FOUND);
+            }
+            applications.add(application.getFirst());
+        }
+        team.setApplications(applications);
+
         // Save both team and department
         saveTeamDetailToRepository(team);
         departmentRepository.save(department);
@@ -109,7 +124,7 @@ public class TeamServiceImpl implements TeamService {
             throw new CustomException(ErrorCode.TEAM_NOT_FOUND);
         }
 
-        return modelMapper.map(team.get(), TeamResponse.class);
+        return mapEntityToDTO(team.get());
     }
 
     @Override
@@ -248,9 +263,22 @@ public class TeamServiceImpl implements TeamService {
             }
         }
 
+        Set<Application> applications = new HashSet<>();
+        if(!CollectionUtils.isEmpty(updateRequest.getApplications())) {
+            for(String applicationId : updateRequest.getApplications()) {
+                List<Application> application = readTransactionService.findApplicationByFilters(Map.of("_id", new ObjectId(applicationId)));
+                if(CollectionUtils.isEmpty(application)) {
+                    log.error("Application ID could not be found {}", applicationId);
+                    throw new CustomException(ErrorCode.APPLICATION_NOT_FOUND);
+                }
+                applications.add(application.getFirst());
+            }
+        }
+
         // Update team with new employees and managers
         team.setEmployees(newEmployees);
         team.setManagers(newManagers);
+        team.setApplications(applications);
         saveTeamDetailToRepository(team);
 
         // Update all affected users
@@ -258,7 +286,7 @@ public class TeamServiceImpl implements TeamService {
             userRepository.save(user);
         }
 
-        return modelMapper.map(team, TeamResponse.class);
+        return mapEntityToDTO(team);
     }
 
     @Override
@@ -285,4 +313,68 @@ public class TeamServiceImpl implements TeamService {
         }
     }
 
+    protected TeamResponse mapEntityToDTO(Team team) {
+
+        List<UserResponse> teamMembers = new ArrayList<>();
+        if(!CollectionUtils.isEmpty(team.getEmployees())) {
+            for(User user : team.getEmployees()) {
+                UserResponse userResponse = new UserResponse();
+                userResponse.setUuid(user.getUuid());
+                userResponse.setName(user.getName());
+                userResponse.setEmailId(user.getEmailId());
+                userResponse.setProfilePicture(user.getProfilePicture());
+                teamMembers.add(userResponse);
+            }
+        }
+
+        List<UserResponse> managers = new ArrayList<>();
+        if(!CollectionUtils.isEmpty(team.getManagers())) {
+            for(User user : team.getManagers()) {
+                UserResponse userResponse = new UserResponse();
+                userResponse.setUuid(user.getUuid());
+                userResponse.setName(user.getName());
+                userResponse.setEmailId(user.getEmailId());
+                userResponse.setProfilePicture(user.getProfilePicture());
+                managers.add(userResponse);
+            }
+        }
+
+        List<ApplicationResponse> applicationResponses = new ArrayList<>();
+        if(!CollectionUtils.isEmpty(team.getApplications())) {
+            for(Application application : team.getApplications()) {
+                ApplicationResponse applicationResponse = new ApplicationResponse();
+                applicationResponse.setId(application.getId());
+                applicationResponse.setActive(application.isActive());
+                applicationResponse.setName(application.getName());
+                applicationResponse.setDescription(application.getDescription());
+                applicationResponses.add(applicationResponse);
+            }
+        }
+
+        List<DepartmentResponse> departmentResponses = new ArrayList<>();
+        if(!CollectionUtils.isEmpty(team.getDepartments())) {
+            for(Department department : team.getDepartments()) {
+                DepartmentResponse departmentResponse = new DepartmentResponse();
+                departmentResponse.setActive(department.isActive());
+                departmentResponse.setName(department.getName());
+                departmentResponse.setDescription(department.getDescription());
+                departmentResponses.add(departmentResponse);
+            }
+        }
+
+        return TeamResponse.builder()
+                .name(team.getName())
+                .id(team.getId())
+                .isActive(team.isActive())
+                .description(team.getDescription())
+                .employees(teamMembers)
+                .managers(managers)
+                .applications(applicationResponses)
+                .departments(departmentResponses)
+                .createdBy(team.getCreatedBy())
+                .createdTime(team.getCreatedTime())
+                .lastModifiedBy(team.getLastModifiedBy())
+                .lastModifiedTime(team.getLastModifiedTime())
+                .build();
+    }
 }

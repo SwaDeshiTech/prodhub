@@ -98,7 +98,7 @@ public class MetadataServiceImpl implements MetadataService {
         return dropdownDTOs;
     }
 
-    private MetaDataResponse mapToMetaDataResponse(Metadata metadata) {
+    protected MetaDataResponse mapToMetaDataResponse(Metadata metadata) {
         return MetaDataResponse.builder()
                 .id(metadata.getId())
                 .name(metadata.getName())
