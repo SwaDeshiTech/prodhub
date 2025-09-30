@@ -38,4 +38,4 @@ management:
 
 vault:
   uri: http://localhost:8200
-  token: hvs.egaIN3af73tZ4dVdPedTZUMQ
+  token: hvs.kuonI3JQThkmxiaySCBuPwrT

@@ -2,6 +2,7 @@ package com.swadeshitech.prodhub.controller;
 
 import java.util.List;
 
+import com.swadeshitech.prodhub.dto.ProviderConstantResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -20,6 +21,20 @@ public class Constants {
 
     @Autowired
     ConstantsService constantsService;
+
+    @GetMapping("/providers/{type}")
+    public ResponseEntity<Response> getProvidersConstants(@PathVariable String type) {
+
+        List<ProviderConstantResponse> providerConstantResponses = constantsService.getProviders(type);
+
+        Response response = Response.builder()
+                .httpStatus(HttpStatus.OK)
+                .message("Providers list has been fetched successfully")
+                .response(providerConstantResponses)
+                .build();
+
+        return ResponseEntity.ok().body(response);
+    }
 
     @GetMapping("/{type}")
     public ResponseEntity<Response> getConstants(@PathVariable String type) {

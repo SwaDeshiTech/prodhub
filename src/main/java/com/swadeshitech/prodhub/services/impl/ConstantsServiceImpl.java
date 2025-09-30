@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+import com.swadeshitech.prodhub.dto.ProviderConstantResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -35,6 +36,25 @@ public class ConstantsServiceImpl implements ConstantsService {
         }
 
         return dropdownDTOs;
+    }
+
+    @Override
+    public List<ProviderConstantResponse> getProviders(String name) {
+
+        Optional<Constants> optionalConstant = constantsRepository.findByName(name);
+        if (optionalConstant.isEmpty()) {
+            throw new CustomException(ErrorCode.CONSTANTS_NOT_FOUND);
+        }
+
+        List<ProviderConstantResponse> providerConstantResponses = new ArrayList<>();
+        for (String provider : optionalConstant.get().getValues()) {
+            providerConstantResponses.add(ProviderConstantResponse.builder()
+                    .name(provider)
+                    .id(provider)
+                    .location("/dashboard/connect/onboarding/" + name + "/" + provider)
+                    .isActive(true).build());
+        }
+        return providerConstantResponses;
     }
 
 }

@@ -1,5 +1,8 @@
 package com.swadeshitech.prodhub.enums;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public enum CredentialProvider {
     GITHUB_ACTIONS("GitHub Actions", "buildProvider"),
     GITLAB_CI("GitLab CI", "buildProvider"),
@@ -38,5 +41,15 @@ public enum CredentialProvider {
             }
         }
         throw new IllegalArgumentException("No CredentialProvider found for display name: " + displayName);
+    }
+
+    public static List<CredentialProvider> fromType(String type) {
+        List<CredentialProvider> credentialProviders = new ArrayList<>();
+        for(CredentialProvider provider : CredentialProvider.values()) {
+            if (provider.getType().equalsIgnoreCase(type)) {
+                credentialProviders.add(provider);
+            }
+        }
+        return credentialProviders;
     }
 }

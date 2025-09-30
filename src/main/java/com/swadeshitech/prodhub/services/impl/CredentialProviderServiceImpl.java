@@ -47,15 +47,15 @@ public class CredentialProviderServiceImpl implements CredentialProviderService 
             throw new CustomException(ErrorCode.APPLICATION_NOT_FOUND);
         }
 
-        Application application = applications.get(0);
+        Application application = applications.getFirst();
 
         String credentialPath = application.getName() + "/" + request.getName();
-        Map<String, Object> creds = new HashMap<>();
-        creds.put(request.getName(), request.getMetaData());
+        Map<String, Object> credentials = new HashMap<>();
+        credentials.put("secret", request.getMetaData());
 
         VaultRequest vaultRequest = VaultRequest.builder()
                 .credentialPath(credentialPath)
-                .data(creds)
+                .data(credentials)
                 .build();
 
         vaultService.storeSecret(vaultRequest);
@@ -102,7 +102,7 @@ public class CredentialProviderServiceImpl implements CredentialProviderService 
 
         Map<String, Object> vaultResponse = vaultService.getSecret(credentialProvider.getCredentialPath());
 
-        response.setCredentialMetadata(vaultResponse != null ? vaultResponse.toString() : null);
+        response.setCredentialMetadata(vaultResponse != null ? vaultResponse.get("secret").toString() : null);
 
         return response;
     }
@@ -143,7 +143,7 @@ public class CredentialProviderServiceImpl implements CredentialProviderService 
         }
 
         if(StringUtils.isNoneBlank(credentialProviderFilter.getType())) {
-            filters.put("credentialProvider", com.swadeshitech.prodhub.enums.CredentialProvider.fromDisplayName(credentialProviderFilter.getType()));
+            filters.put("credentialProvider", com.swadeshitech.prodhub.enums.CredentialProvider.fromType(credentialProviderFilter.getType()));
         }
 
         if(StringUtils.isNoneBlank(credentialProviderFilter.getName())) {
