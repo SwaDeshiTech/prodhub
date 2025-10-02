@@ -3,6 +3,7 @@ package com.swadeshitech.prodhub.services.impl;
 import com.swadeshitech.prodhub.dto.CredentialProviderFilter;
 import com.swadeshitech.prodhub.dto.CredentialProviderRequest;
 import com.swadeshitech.prodhub.dto.CredentialProviderResponse;
+import com.swadeshitech.prodhub.dto.DropdownDTO;
 import com.swadeshitech.prodhub.entity.Application;
 import com.swadeshitech.prodhub.entity.CredentialProvider;
 import com.swadeshitech.prodhub.enums.ErrorCode;
@@ -125,6 +126,26 @@ public class CredentialProviderServiceImpl implements CredentialProviderService 
         }
 
         return credentialProviderResponses;
+    }
+
+    @Override
+    public List<DropdownDTO> getCredentialProvidersByType(String type) {
+
+        Map<String, Object> filters = Map.of("credentialProviderType", type);
+        List<CredentialProvider> credentialProviders = readTransactionService.findCredentialProviderByFilters(filters);
+        if(CollectionUtils.isEmpty(credentialProviders)) {
+            log.info("Fail to fetch credential providers list {}", filters);
+            throw new CustomException(ErrorCode.CREDENTIAL_PROVIDER_LIST_NOT_FOUND);
+        }
+
+        List<DropdownDTO> dropdownDTOS = new ArrayList<>();
+        for(CredentialProvider provider : credentialProviders) {
+            dropdownDTOS.add(DropdownDTO.builder()
+                    .value(provider.getName() + " ( " + provider.getCredentialProvider().getDisplayName() + " )")
+                    .key(provider.getId())
+                    .build());
+        }
+        return dropdownDTOS;
     }
 
     private Map<String, Object> createFilterObject(CredentialProviderFilter credentialProviderFilter) {

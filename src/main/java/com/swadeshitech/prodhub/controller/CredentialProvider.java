@@ -1,9 +1,6 @@
 package com.swadeshitech.prodhub.controller;
 
-import com.swadeshitech.prodhub.dto.CredentialProviderFilter;
-import com.swadeshitech.prodhub.dto.CredentialProviderRequest;
-import com.swadeshitech.prodhub.dto.CredentialProviderResponse;
-import com.swadeshitech.prodhub.dto.Response;
+import com.swadeshitech.prodhub.dto.*;
 import com.swadeshitech.prodhub.services.CredentialProviderService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -56,6 +53,20 @@ public class CredentialProvider {
                 .httpStatus(HttpStatus.OK)
                 .message("Credential provider list has been fetched")
                 .response(credentialProviderResponses)
+                .build();
+
+        return ResponseEntity.ok().body(response);
+    }
+
+    @GetMapping("/dropdown/{credentialType}")
+    public ResponseEntity<Response> getCredentialProviders(@PathVariable String credentialType) {
+
+        List<DropdownDTO> dropdownDTOS = credentialProviderService.getCredentialProvidersByType(credentialType);
+
+        Response response = Response.builder()
+                .httpStatus(HttpStatus.OK)
+                .message("Credential dropdown list has been fetched")
+                .response(dropdownDTOS)
                 .build();
 
         return ResponseEntity.ok().body(response);

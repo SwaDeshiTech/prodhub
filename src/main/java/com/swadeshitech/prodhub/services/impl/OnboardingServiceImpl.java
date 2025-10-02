@@ -1,11 +1,6 @@
 package com.swadeshitech.prodhub.services.impl;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 
 import com.swadeshitech.prodhub.config.AuditorContextHolder;
 import org.bson.types.ObjectId;
@@ -28,6 +23,7 @@ import com.swadeshitech.prodhub.transaction.write.WriteTransactionService;
 import com.swadeshitech.prodhub.utils.Base64Util;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.util.StringUtils;
 
 @Service
 @Slf4j
@@ -80,11 +76,15 @@ public class OnboardingServiceImpl implements OnboardingService {
             throw new CustomException(ErrorCode.METADATA_PROFILE_ALREADY_EXISTS);
         }
 
-        Map<String, Object> filters = new HashMap<>();
-        filters.put("_id", new ObjectId(request.getProfile().getReferencedProfileId()));
-        List<Metadata> optionalReferencedProfile = readTransactionService.findMetaDataByFilters(filters);
-        if (optionalReferencedProfile.isEmpty()) {
-            throw new CustomException(ErrorCode.METADATA_PROFILE_REFERENCED_NOT_FOUND);
+        Metadata referencedProfile = null;
+        if(Objects.nonNull(request.getProfile()) && StringUtils.hasText(request.getProfile().getReferencedProfileId())) {
+            Map<String, Object> filters = new HashMap<>();
+            filters.put("_id", new ObjectId(request.getProfile().getReferencedProfileId()));
+            List<Metadata> optionalReferencedProfile = readTransactionService.findMetaDataByFilters(filters);
+            if (optionalReferencedProfile.isEmpty()) {
+                throw new CustomException(ErrorCode.METADATA_PROFILE_REFERENCED_NOT_FOUND);
+            }
+            referencedProfile = optionalReferencedProfile.getFirst();
         }
 
         Metadata metadata = new Metadata();
@@ -94,7 +94,7 @@ public class OnboardingServiceImpl implements OnboardingService {
         metadata.setProfileType(request.getProfile().getProfileType());
         metadata.setDescription(request.getProfile().getDescription());
         metadata.setApplication(aOptional.get());
-        metadata.setReferencedProfile(optionalReferencedProfile.get(0));
+        metadata.setReferencedProfile(referencedProfile);
         metadata.setData(Base64Util.generateBase64Encoded(request.getProfile().getData()));
 
         writeTransactionService.saveMetaDataToRepository(metadata);
@@ -151,11 +151,16 @@ public class OnboardingServiceImpl implements OnboardingService {
             throw new CustomException(ErrorCode.METADATA_PROFILE_NOT_FOUND);
         }
 
-        Map<String, Object> filters = new HashMap<>();
-        filters.put("_id", new ObjectId(request.getProfile().getReferencedProfileId()));
-        List<Metadata> optionalReferencedProfile = readTransactionService.findMetaDataByFilters(filters);
-        if (optionalReferencedProfile.isEmpty()) {
-            throw new CustomException(ErrorCode.METADATA_PROFILE_REFERENCED_NOT_FOUND);
+        Metadata referencedProfile = null;
+
+        if(Objects.nonNull(request.getProfile()) && StringUtils.hasText(request.getProfile().getReferencedProfileId())) {
+            Map<String, Object> filters = new HashMap<>();
+            filters.put("_id", new ObjectId(request.getProfile().getReferencedProfileId()));
+            List<Metadata> optionalReferencedProfile = readTransactionService.findMetaDataByFilters(filters);
+            if (optionalReferencedProfile.isEmpty()) {
+                throw new CustomException(ErrorCode.METADATA_PROFILE_REFERENCED_NOT_FOUND);
+            }
+            referencedProfile = optionalReferencedProfile.getFirst();
         }
 
         Metadata metadata = optionalMetaData.get();
@@ -163,7 +168,7 @@ public class OnboardingServiceImpl implements OnboardingService {
         metadata.setActive(request.getProfile().isActive());
         metadata.setDescription(request.getProfile().getDescription());
         metadata.setData(Base64Util.generateBase64Encoded(request.getProfile().getData()));
-        metadata.setReferencedProfile(optionalReferencedProfile.get(0));
+        metadata.setReferencedProfile(referencedProfile);
 
         writeTransactionService.saveMetaDataToRepository(metadata);
 
