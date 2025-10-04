@@ -5,12 +5,7 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import com.swadeshitech.prodhub.dto.ApplicationRequest;
 import com.swadeshitech.prodhub.dto.ApplicationResponse;
@@ -33,6 +28,20 @@ public class Application {
         Response response = Response.builder()
                 .httpStatus(HttpStatus.OK)
                 .message("Applications list has been fetched successfully")
+                .response(applications)
+                .build();
+
+        return ResponseEntity.ok().body(response);
+    }
+
+    @GetMapping("/dropdown/userAccess")
+    public ResponseEntity<Response> getApplicationDropdownByUserAccess() {
+
+        List<DropdownDTO> applications = applicationService.getApplicationDropdownByUserAccess();
+
+        Response response = Response.builder()
+                .httpStatus(HttpStatus.OK)
+                .message("Applications list has been fetched successfully for dropdown")
                 .response(applications)
                 .build();
 

@@ -3,15 +3,14 @@ package com.swadeshitech.prodhub.services.impl;
 import java.util.*;
 
 import com.swadeshitech.prodhub.dto.*;
+import com.swadeshitech.prodhub.entity.*;
+import com.swadeshitech.prodhub.transaction.read.ReadTransactionService;
+import com.swadeshitech.prodhub.utils.UserContextUtil;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
-import com.swadeshitech.prodhub.entity.Application;
-import com.swadeshitech.prodhub.entity.Department;
-import com.swadeshitech.prodhub.entity.Metadata;
-import com.swadeshitech.prodhub.entity.Team;
 import com.swadeshitech.prodhub.enums.ErrorCode;
 import com.swadeshitech.prodhub.exception.CustomException;
 import com.swadeshitech.prodhub.repository.ApplicationRepository;
@@ -22,6 +21,7 @@ import com.swadeshitech.prodhub.utils.Base64Util;
 
 import io.micrometer.common.util.StringUtils;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.util.CollectionUtils;
 
 @Service
 @Slf4j
@@ -44,6 +44,9 @@ public class ApplicationServiceImpl implements ApplicationService {
 
     @Autowired
     MetadataServiceImpl metadataService;
+
+    @Autowired
+    ReadTransactionService readTransactionService;
 
     @Override
     public ApplicationResponse addApplication(ApplicationRequest applicationRequest) {
@@ -135,6 +138,43 @@ public class ApplicationServiceImpl implements ApplicationService {
             dropdown.setValue(application.getName());
             return dropdown;
         }).toList();
+    }
+
+    @Override
+    public List<DropdownDTO> getApplicationDropdownByUserAccess() {
+
+        String userId = UserContextUtil.getUserIdFromRequestContext();
+        if(org.apache.commons.lang3.StringUtils.isBlank(userId)){
+            log.error("User ID could not be found in the logs");
+            throw new CustomException(ErrorCode.USER_NOT_FOUND);
+        }
+        List<User> users = readTransactionService.findUserDetailsByFilters(Map.of("uuid", userId));
+        if(CollectionUtils.isEmpty(users)) {
+            throw new CustomException(ErrorCode.USER_NOT_FOUND);
+        }
+
+        User user = users.getFirst();
+        Set<Team> teams = user.getTeams();
+
+        if (CollectionUtils.isEmpty(teams)) {
+            log.error("Team is not attached to the user");
+            throw new CustomException(ErrorCode.TEAM_NOT_FOUND);
+        }
+
+        List<DropdownDTO> dropdownValues = new ArrayList<>();
+
+        for(Team team : teams) {
+            Set<Application> applicationSet = team.getApplications();
+            if (!CollectionUtils.isEmpty(applicationSet)) {
+                for(Application application : applicationSet) {
+                    dropdownValues.add(DropdownDTO.builder()
+                            .value(application.getName())
+                            .key(application.getId())
+                            .build());
+                }
+            }
+        }
+        return dropdownValues;
     }
 
     private boolean isValidateRequest(Team team, Department department) {

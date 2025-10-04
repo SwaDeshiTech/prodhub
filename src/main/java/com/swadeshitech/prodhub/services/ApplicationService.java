@@ -16,4 +16,6 @@ public interface ApplicationService {
     public ApplicationResponse getApplicationDetail(String name);
 
     public List<DropdownDTO> getAllApplicationsDropdown();
+
+    public List<DropdownDTO> getApplicationDropdownByUserAccess();
 }
