@@ -13,5 +13,6 @@ public class ReleaseCandidateRequest {
     private String buildProfile;
     private String releaseCandidateStatus;
     private Map<String, String> metadata;
+    private String ephemeralEnvironmentName;
     private String certifiedBy;
 }

@@ -39,3 +39,8 @@ management:
 vault:
   uri: http://localhost:8200
   token: hvs.kuonI3JQThkmxiaySCBuPwrT
+
+cicaptain:
+  uri: http://localhost:4457/ci-captain
+  triggerBuildPath: /api/v1/providers/{providerId}/jobs/{job}/trigger
+  buildStatus: /api/v1/builds/{buildId}/status

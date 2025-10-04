@@ -141,7 +141,7 @@ public class CredentialProviderServiceImpl implements CredentialProviderService 
         List<DropdownDTO> dropdownDTOS = new ArrayList<>();
         for(CredentialProvider provider : credentialProviders) {
             dropdownDTOS.add(DropdownDTO.builder()
-                    .value(provider.getName() + " ( " + provider.getCredentialProvider().getDisplayName() + " )")
+                    .value(provider.getName() + " (" + provider.getCredentialProvider().getDisplayName() + ")")
                     .key(provider.getId())
                     .build());
         }
