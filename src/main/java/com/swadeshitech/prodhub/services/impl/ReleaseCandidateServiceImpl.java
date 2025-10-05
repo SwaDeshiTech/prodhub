@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.swadeshitech.prodhub.entity.Application;
 import com.swadeshitech.prodhub.entity.Metadata;
 import com.swadeshitech.prodhub.integration.cicaptain.config.CiCaptainClient;
+import com.swadeshitech.prodhub.integration.cicaptain.dto.BuildStatusResponse;
 import com.swadeshitech.prodhub.integration.cicaptain.dto.BuildTriggerRequest;
 import com.swadeshitech.prodhub.integration.cicaptain.dto.BuildTriggerResponse;
 import com.swadeshitech.prodhub.utils.Base64Util;
@@ -97,7 +98,7 @@ public class ReleaseCandidateServiceImpl implements ReleaseCandidateService {
             return null; // or throw an exception
         }
 
-        return buildResponse(releaseCandidate.get(0));
+        return buildResponse(releaseCandidate.getFirst());
     }
 
     @Override
@@ -139,7 +140,6 @@ public class ReleaseCandidateServiceImpl implements ReleaseCandidateService {
 
         Map<String, Object> filters = new HashMap<>();
         filters.put("initiatedBy", user);
-        filters.put("status", ReleaseCandidateStatus.CREATED);
 
         List<ReleaseCandidate> releaseCandidates = readTransactionService.findReleaseCandidateDetailsByFilters(filters);
         if (CollectionUtils.isEmpty(releaseCandidates)) {
@@ -151,6 +151,38 @@ public class ReleaseCandidateServiceImpl implements ReleaseCandidateService {
         return releaseCandidates.stream()
                 .map(this::buildResponse)
                 .toList();
+    }
+
+    @Override
+    public ReleaseCandidateResponse syncStatus(String buildId, String forceSync) {
+
+        if (ObjectUtils.isEmpty(buildId)) {
+            log.error("Release candidate ID is null or empty");
+            throw new CustomException(ErrorCode.RELEASE_CANDIDATE_NOT_FOUND);
+        }
+
+        log.info("Fetching release candidate with ID: {}", buildId);
+        Map<String, Object> filters = new HashMap<>();
+        filters.put("_id", new ObjectId(buildId));
+
+        List<ReleaseCandidate> releaseCandidates = readTransactionService.findReleaseCandidateDetailsByFilters(filters);
+        if (CollectionUtils.isEmpty(releaseCandidates)) {
+            log.warn("Release candidate with ID: {} not found", buildId);
+            return null; // or throw an exception
+        }
+
+        ReleaseCandidate releaseCandidate = releaseCandidates.getFirst();
+
+        String providerID = releaseCandidate.getMetaData().get("providerID");
+
+        Mono<BuildStatusResponse> buildStatusResponseMono = ciCaptainClient.getBuildStatus(providerID, releaseCandidate.getBuildRefId(), forceSync);
+        BuildStatusResponse response = buildStatusResponseMono.blockOptional().get();
+
+        releaseCandidate.setStatus(mapStatusFromCICaptain(response.status()));
+
+        writeTransactionService.saveReleaseCandidateToRepository(releaseCandidate);
+
+        return buildResponse(releaseCandidate);
     }
 
     @Override
@@ -222,7 +254,7 @@ public class ReleaseCandidateServiceImpl implements ReleaseCandidateService {
         } else {
             Set<Metadata> metadataList = releaseCandidate.getService().getProfiles();
             for(Metadata metadata : metadataList) {
-                if(metadata.getName().equals(releaseCandidate.getBuildProfile())) {
+                if(metadata.getId().equals(releaseCandidate.getBuildProfile())) {
                     try {
                         String decodedData = Base64Util.convertToPlainText(metadata.getData());
                         data = objectMapper.readTree(decodedData);
@@ -252,7 +284,22 @@ public class ReleaseCandidateServiceImpl implements ReleaseCandidateService {
         BuildTriggerResponse response = buildTriggerResponse.blockOptional().get();
         releaseCandidate.setStatus(ReleaseCandidateStatus.IN_PROGRESS);
         releaseCandidate.setBuildRefId(response.data().buildId());
+        releaseCandidate.getMetaData().put("providerID", providerId);
 
         writeTransactionService.saveReleaseCandidateToRepository(releaseCandidate);
+    }
+
+    private ReleaseCandidateStatus mapStatusFromCICaptain(String status) {
+        switch (status) {
+            case "SUCCESS":
+                return ReleaseCandidateStatus.CERTIFIABLE;
+            case "FAILURE":
+            case "FAILED":
+                return ReleaseCandidateStatus.FAILED;
+            case "ABORTED":
+            case "CANCELLED":
+                return ReleaseCandidateStatus.CANCELLED;
+        }
+        return ReleaseCandidateStatus.REJECTED;
     }
 }

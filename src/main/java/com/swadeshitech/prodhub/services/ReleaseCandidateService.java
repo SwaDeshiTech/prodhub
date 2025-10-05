@@ -19,4 +19,6 @@ public interface ReleaseCandidateService {
     void deleteReleaseCandidate(String id);
 
     List<ReleaseCandidateResponse> getAllReleaseCandidates();
+
+    ReleaseCandidateResponse syncStatus(String buildId, String forceSync);
 }

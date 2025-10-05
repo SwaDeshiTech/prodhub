@@ -5,14 +5,7 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import com.swadeshitech.prodhub.config.ContextHolder;
 import com.swadeshitech.prodhub.dto.ReleaseCandidateRequest;
@@ -45,6 +38,20 @@ public class ReleaseCandidate {
             // Clear the context to avoid memory leaks
             ContextHolder.clearContext();
         }
+    }
+
+    @PutMapping("/syncStatus/{id}")
+    public ResponseEntity<Response> syncStatus(@PathVariable String id, @RequestParam String forceSync) {
+
+        ReleaseCandidateResponse releaseCandidateResponse = releaseCandidateService.syncStatus(id, forceSync);
+
+        Response response = Response.builder()
+                .httpStatus(HttpStatus.OK)
+                .message("Successfully synced build status")
+                .response(releaseCandidateResponse)
+                .build();
+
+        return ResponseEntity.ok(response);
     }
 
     @PutMapping("/{id}")

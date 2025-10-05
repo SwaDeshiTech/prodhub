@@ -3,6 +3,7 @@ package com.swadeshitech.prodhub.integration.cicaptain.config;
 import com.swadeshitech.prodhub.integration.cicaptain.dto.BuildStatusResponse;
 import com.swadeshitech.prodhub.integration.cicaptain.dto.BuildTriggerRequest;
 import com.swadeshitech.prodhub.integration.cicaptain.dto.BuildTriggerResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
@@ -10,6 +11,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
 @Component
+@Slf4j
 public class CiCaptainClient {
 
     private final WebClient webClient;
@@ -55,9 +57,20 @@ public class CiCaptainClient {
                 .bodyToMono(BuildTriggerResponse.class);
     }
 
-    public Mono<BuildStatusResponse> getBuildStatus(String baseUrl, String buildId) {
+    public Mono<BuildStatusResponse> getBuildStatus(String providerID, String jobID, String forceSync) {
+        String path = String.format(buildStatusPath, providerID, jobID);
+
+        // 1. Manually combine base URL and path
+        String baseUrlWithPath = cicaptainBaseURL + path;
+
+        // 2. Append the query parameter directly to the string
+        String finalUrl = String.format("%s?forceRefresh=%s", baseUrlWithPath, forceSync); // E.g., http://.../status?forceRefresh=true
+
+        log.info("printing full URL {}", finalUrl);
+
         return webClient.get()
-                .uri(cicaptainBaseURL + buildStatusPath, buildId)
+                // Pass the complete URL string directly
+                .uri(finalUrl)
                 .accept(MediaType.APPLICATION_JSON)
                 .retrieve()
                 .bodyToMono(BuildStatusResponse.class);
