@@ -5,6 +5,7 @@ import java.util.*;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.swadeshitech.prodhub.dto.MetaDataResponse;
 import com.swadeshitech.prodhub.entity.Application;
 import com.swadeshitech.prodhub.entity.Metadata;
 import com.swadeshitech.prodhub.integration.cicaptain.config.CiCaptainClient;
@@ -61,8 +62,9 @@ public class ReleaseCandidateServiceImpl implements ReleaseCandidateService {
 
         User user = extractUserFromContext();
 
-        List<Application> applications = readTransactionService.findApplicationByFilters(Map.of("_id", new ObjectId(request.getServiceName())));
-        if(CollectionUtils.isEmpty(applications)) {
+        List<Application> applications = readTransactionService
+                .findApplicationByFilters(Map.of("_id", new ObjectId(request.getServiceName())));
+        if (CollectionUtils.isEmpty(applications)) {
             log.error("Failed to create release candidate, service not found {}", request.getServiceName());
             throw new CustomException(ErrorCode.RELEASE_CANDIDATE_COULD_NOT_BE_CREATED);
         }
@@ -97,7 +99,7 @@ public class ReleaseCandidateServiceImpl implements ReleaseCandidateService {
         List<ReleaseCandidate> releaseCandidate = readTransactionService.findReleaseCandidateDetailsByFilters(filters);
         if (CollectionUtils.isEmpty(releaseCandidate)) {
             log.warn("Release candidate with ID: {} not found", id);
-            return null; // or throw an exception
+            throw new CustomException(ErrorCode.RELEASE_CANDIDATE_NOT_FOUND);
         }
 
         return buildResponse(releaseCandidate.getFirst());
@@ -149,6 +151,8 @@ public class ReleaseCandidateServiceImpl implements ReleaseCandidateService {
             throw new CustomException(ErrorCode.RELEASE_CANDIDATE_NOT_FOUND);
         }
 
+        releaseCandidates.sort(Comparator.comparing(ReleaseCandidate::getCreatedTime).reversed());
+
         log.info("Found {} release candidates", releaseCandidates.size());
         return releaseCandidates.stream()
                 .map(this::buildResponse)
@@ -177,7 +181,8 @@ public class ReleaseCandidateServiceImpl implements ReleaseCandidateService {
 
         String providerID = releaseCandidate.getMetaData().get("providerID");
 
-        Mono<BuildStatusResponse> buildStatusResponseMono = ciCaptainClient.getBuildStatus(providerID, releaseCandidate.getBuildRefId(), forceSync);
+        Mono<BuildStatusResponse> buildStatusResponseMono = ciCaptainClient.getBuildStatus(providerID,
+                releaseCandidate.getBuildRefId(), forceSync);
         BuildStatusResponse response = buildStatusResponseMono.blockOptional().get();
 
         releaseCandidate.setStatus(mapStatusFromCICaptain(response.status()));
@@ -207,14 +212,27 @@ public class ReleaseCandidateServiceImpl implements ReleaseCandidateService {
             initiatedBy = initiatedUser.getName() + " (" + initiatedUser.getEmailId() + ")";
         }
 
-        return getReleaseCandidateResponse(releaseCandidate, certifiedBy, initiatedBy);
+        List<Metadata> metadataList = readTransactionService
+                .findMetaDataByFilters(Map.of("_id", new ObjectId(releaseCandidate.getBuildProfile())));
+        if (CollectionUtils.isEmpty(metadataList)) {
+            log.error("Metadata could not be found {}", releaseCandidate.getId());
+            throw new CustomException(ErrorCode.RELEASE_CANDIDATE_NOT_FOUND);
+        }
+
+        Metadata metadata = metadataList.getFirst();
+
+        ReleaseCandidateResponse response = getReleaseCandidateResponse(releaseCandidate, certifiedBy, initiatedBy);
+        response.setBuildProfile(metadata.getName());
+
+        return response;
     }
 
-    private static ReleaseCandidateResponse getReleaseCandidateResponse(ReleaseCandidate releaseCandidate, String certifiedBy, String initiatedBy) {
+    private static ReleaseCandidateResponse getReleaseCandidateResponse(ReleaseCandidate releaseCandidate,
+            String certifiedBy, String initiatedBy) {
+
         ReleaseCandidateResponse response = new ReleaseCandidateResponse();
         response.setId(releaseCandidate.getId());
         response.setServiceName(releaseCandidate.getService().getName());
-        response.setBuildProfile(releaseCandidate.getBuildProfile());
         response.setStatus(releaseCandidate.getStatus());
         response.setCertifiedBy(certifiedBy);
         response.setInitiatedBy(initiatedBy);
@@ -251,13 +269,14 @@ public class ReleaseCandidateServiceImpl implements ReleaseCandidateService {
         String providerId = "";
         String jobName = releaseCandidate.getService().getName() + "-" + releaseCandidate.getBuildProfile();
         JsonNode data = null;
+        String commitId = releaseCandidate.getMetaData().get("commitId");
 
-        if(StringUtils.hasText(releaseCandidate.getEphemeralEnvironmentName())) {
+        if (StringUtils.hasText(releaseCandidate.getEphemeralEnvironmentName())) {
             jobName += "-" + releaseCandidate.getEphemeralEnvironmentName();
         } else {
             Set<Metadata> metadataList = releaseCandidate.getService().getProfiles();
-            for(Metadata metadata : metadataList) {
-                if(metadata.getId().equals(releaseCandidate.getBuildProfile())) {
+            for (Metadata metadata : metadataList) {
+                if (metadata.getId().equals(releaseCandidate.getBuildProfile())) {
                     try {
                         String decodedData = Base64Util.convertToPlainText(metadata.getData());
                         data = objectMapper.readTree(decodedData);
@@ -272,15 +291,16 @@ public class ReleaseCandidateServiceImpl implements ReleaseCandidateService {
         }
 
         BuildTriggerRequest request = BuildTriggerRequest.builder()
-                .triggeredBy(releaseCandidate.getInitiatedBy().getName() + " (" + releaseCandidate.getInitiatedBy().getEmailId() + ")")
+                .triggeredBy(releaseCandidate.getInitiatedBy().getName() + " ("
+                        + releaseCandidate.getInitiatedBy().getEmailId() + ")")
                 .parameters(Map.of(
                         "BRANCH_NAME", data.path("branchName").asText(),
+                        "COMMIT_ID", commitId,
                         "BASE_IMAGE", data.path("baseImage").asText(),
                         "BUILD_COMMAND", data.path("buildCommand").asText(),
                         "REPO_URL", "https://github.com/SwaDeshiTech/" + data.path("repo").asText(),
                         "ARTIFACT_PATH", data.path("artifactPath").asText(),
-                        "JOB_TEMPLATE", "prodhub_build"
-                ))
+                        "JOB_TEMPLATE", "prodhub_build"))
                 .refId(releaseCandidate.getBuildRefId())
                 .build();
 
