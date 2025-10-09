@@ -19,4 +19,5 @@ public class ReleaseCandidateResponse extends BaseResponse {
     private String initiatedBy;
     private String serviceName;
     private String buildProfile;
+    private String buildRefId;
 }

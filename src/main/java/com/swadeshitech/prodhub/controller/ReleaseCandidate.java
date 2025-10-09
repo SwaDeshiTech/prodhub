@@ -96,8 +96,8 @@ public class ReleaseCandidate {
         }
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<Response> getReleaseCandidateById(String id) {
+    @GetMapping("/details/{id}")
+    public ResponseEntity<Response> getReleaseCandidateById(@PathVariable String id) {
         ReleaseCandidateResponse releaseCandidateResponse = releaseCandidateService.getReleaseCandidateById(id);
 
         Response response = Response.builder()

@@ -26,6 +26,10 @@ spring:
         maintenance-initial-delay: 1000
         maintenance-frequency: 1000
         max-connection-idle-time: 5
+  kafka:
+    bootstrap-servers: localhost:9092
+    topic:
+      buildStatus: buildStatus
 
 management:
   endpoints:

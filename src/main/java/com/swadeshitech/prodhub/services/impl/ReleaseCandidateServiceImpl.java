@@ -12,6 +12,7 @@ import com.swadeshitech.prodhub.integration.cicaptain.dto.BuildStatusResponse;
 import com.swadeshitech.prodhub.integration.cicaptain.dto.BuildTriggerRequest;
 import com.swadeshitech.prodhub.integration.cicaptain.dto.BuildTriggerResponse;
 import com.swadeshitech.prodhub.utils.Base64Util;
+import com.swadeshitech.prodhub.utils.UuidUtil;
 import lombok.RequiredArgsConstructor;
 import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -72,6 +73,7 @@ public class ReleaseCandidateServiceImpl implements ReleaseCandidateService {
         releaseCandidate.setInitiatedBy(user);
         releaseCandidate.setMetaData(request.getMetadata());
         releaseCandidate.setService(applications.getFirst());
+        releaseCandidate.setBuildRefId(UuidUtil.generateRandomUuid());
 
         releaseCandidate = writeTransactionService.saveReleaseCandidateToRepository(releaseCandidate);
 
@@ -83,7 +85,7 @@ public class ReleaseCandidateServiceImpl implements ReleaseCandidateService {
     @Override
     public ReleaseCandidateResponse getReleaseCandidateById(String id) {
 
-        if (ObjectUtils.isEmpty(id)) {
+        if (org.apache.commons.lang3.StringUtils.isBlank(id)) {
             log.error("Release candidate ID is null or empty");
             throw new CustomException(ErrorCode.RELEASE_CANDIDATE_NOT_FOUND);
         }
@@ -217,6 +219,7 @@ public class ReleaseCandidateServiceImpl implements ReleaseCandidateService {
         response.setCertifiedBy(certifiedBy);
         response.setInitiatedBy(initiatedBy);
         response.setMetaData(releaseCandidate.getMetaData());
+        response.setBuildRefId(releaseCandidate.getBuildRefId());
 
         response.setCreatedBy(releaseCandidate.getCreatedBy());
         response.setCreatedTime(releaseCandidate.getCreatedTime());
@@ -278,12 +281,13 @@ public class ReleaseCandidateServiceImpl implements ReleaseCandidateService {
                         "ARTIFACT_PATH", data.path("artifactPath").asText(),
                         "JOB_TEMPLATE", "prodhub_build"
                 ))
+                .refId(releaseCandidate.getBuildRefId())
                 .build();
 
         Mono<BuildTriggerResponse> buildTriggerResponse = ciCaptainClient.triggerBuild(providerId, jobName, request);
         BuildTriggerResponse response = buildTriggerResponse.blockOptional().get();
+        log.info("Printing ci-captain build response {}", response);
         releaseCandidate.setStatus(ReleaseCandidateStatus.IN_PROGRESS);
-        releaseCandidate.setBuildRefId(response.data().buildId());
         releaseCandidate.getMetaData().put("providerID", providerId);
 
         writeTransactionService.saveReleaseCandidateToRepository(releaseCandidate);

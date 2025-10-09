@@ -12,4 +12,5 @@ public class BuildTriggerRequest {
     private Map<String, String> parameters;
     @JsonProperty("triggered_by")
     private String triggeredBy;
+    private String refId;
 }
