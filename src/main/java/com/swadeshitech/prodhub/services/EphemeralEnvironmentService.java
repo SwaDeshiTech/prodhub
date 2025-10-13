@@ -1,6 +1,7 @@
 package com.swadeshitech.prodhub.services;
 
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.stereotype.Component;
 
@@ -25,4 +26,6 @@ public interface EphemeralEnvironmentService {
 
     public EphemeralEnvironmentResponse updateEphemeralEnvironment(String environmentId,
             EphemeralEnvironmentRequest request);
+
+    public Map<String, Object> getMetadataFromEphemeralEnvironment(String id);
 }

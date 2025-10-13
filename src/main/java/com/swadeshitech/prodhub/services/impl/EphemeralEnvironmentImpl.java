@@ -235,7 +235,6 @@ public class EphemeralEnvironmentImpl implements EphemeralEnvironmentService {
         }
 
         Optional<EphemeralEnvironment> environment = environmentRepository.findByIdAndOwner(environmentId, user.get());
-
         if (environment.isEmpty()) {
             throw new CustomException(ErrorCode.EPHEMERAL_ENVIRONMENT_NOT_FOUND);
         }
@@ -252,11 +251,40 @@ public class EphemeralEnvironmentImpl implements EphemeralEnvironmentService {
             environment.get().setSharedWith(users);
         }
 
-        setApplications(environment.get(), request.getApplications());
+        Map<String, Object> applicationsMap = new HashMap<>();
+        for (Map.Entry<String, Map<String, String>> itr : request.getMetadata().entrySet()) {
+            String applicationID = itr.getKey();
+            Map<String, Object> addedApplication = new HashMap<>();
+            for (Map.Entry<String, String> metadata : itr.getValue().entrySet()) {
+                String key = metadata.getKey();
+                String value = metadata.getValue();
+                String encodedValue = Base64Util.generateBase64Encoded(value);
+                addedApplication.put(key, encodedValue);
+            }
+            applicationsMap.put(applicationID, addedApplication);
+        }
+
+        environment.get().setApplications(applicationsMap);
 
         saveEphemeralEnvironmentToRepository(environment.get());
 
         return mapEntityToResponse(environment.get());
+    }
+
+    @Override
+    public Map<String, Object> getMetadataFromEphemeralEnvironment(String id) {
+
+        List<EphemeralEnvironment> ephemeralEnvironments = readTransactionService.findByDynamicOrFilters(
+                Map.of("_id", new ObjectId(id)), EphemeralEnvironment.class
+        );
+        if (CollectionUtils.isEmpty(ephemeralEnvironments)) {
+            log.error("Ephemeral envrionment could not be found {}", id);
+            throw new CustomException(ErrorCode.EPHEMERAL_ENVIRONMENT_NOT_FOUND);
+        }
+
+        EphemeralEnvironment environment = ephemeralEnvironments.getFirst();
+
+        return environment.getApplications();
     }
 
     private EphemeralEnvironmentResponse mapEntityToResponse(EphemeralEnvironment environment) {

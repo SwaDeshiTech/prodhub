@@ -12,6 +12,7 @@ import com.swadeshitech.prodhub.integration.cicaptain.config.CiCaptainClient;
 import com.swadeshitech.prodhub.integration.cicaptain.dto.BuildStatusResponse;
 import com.swadeshitech.prodhub.integration.cicaptain.dto.BuildTriggerRequest;
 import com.swadeshitech.prodhub.integration.cicaptain.dto.BuildTriggerResponse;
+import com.swadeshitech.prodhub.services.EphemeralEnvironmentService;
 import com.swadeshitech.prodhub.utils.Base64Util;
 import com.swadeshitech.prodhub.utils.UuidUtil;
 import lombok.RequiredArgsConstructor;
@@ -51,6 +52,9 @@ public class ReleaseCandidateServiceImpl implements ReleaseCandidateService {
 
     @Autowired
     private CiCaptainClient ciCaptainClient;
+
+    @Autowired
+    EphemeralEnvironmentService ephemeralEnvironmentService;
 
     private final ObjectMapper objectMapper;
 
@@ -270,15 +274,36 @@ public class ReleaseCandidateServiceImpl implements ReleaseCandidateService {
         String jobName = releaseCandidate.getService().getName() + "-" + releaseCandidate.getBuildProfile();
         JsonNode data = null;
         String commitId = releaseCandidate.getMetaData().get("commitId");
+        String decodedData = "";
 
         if (StringUtils.hasText(releaseCandidate.getEphemeralEnvironmentName())) {
             jobName += "-" + releaseCandidate.getEphemeralEnvironmentName();
+            Map<String, Object> applications = ephemeralEnvironmentService.getMetadataFromEphemeralEnvironment(releaseCandidate.getEphemeralEnvironmentName());
+            for (Map.Entry<String, Object> itr : applications.entrySet()) {
+                if (itr.getKey().equals(releaseCandidate.getService().getId())) {
+                    Map<String, String> profiles = (Map<String, String>) itr.getValue();
+                    for(Map.Entry<String, String> profile : profiles.entrySet()) {
+                        if (profile.getKey().equals(releaseCandidate.getBuildProfile())) {
+                            decodedData = Base64Util.convertToPlainText(profile.getValue());
+                            try {
+                                data = objectMapper.readTree(decodedData);
+                                providerId = data.path("buildProviderId").asText();
+                            } catch (JsonProcessingException e) {
+                                log.error("Fail to read metadata of profile {} in ephemeral environment {}", releaseCandidate.getBuildProfile(), releaseCandidate.getEphemeralEnvironmentName());
+                                throw new CustomException(ErrorCode.METADATA_PROFILE_INVALID_DATA);
+                            }
+                            break;
+                        }
+                    }
+                    break;
+                }
+            }
         } else {
             Set<Metadata> metadataList = releaseCandidate.getService().getProfiles();
             for (Metadata metadata : metadataList) {
                 if (metadata.getId().equals(releaseCandidate.getBuildProfile())) {
                     try {
-                        String decodedData = Base64Util.convertToPlainText(metadata.getData());
+                        decodedData = Base64Util.convertToPlainText(metadata.getData());
                         data = objectMapper.readTree(decodedData);
                         providerId = data.path("buildProviderId").asText();
                     } catch (JsonProcessingException e) {
@@ -290,6 +315,8 @@ public class ReleaseCandidateServiceImpl implements ReleaseCandidateService {
             }
         }
 
+        String hashValue = Base64Util.generate7DigitHash(decodedData) + ":" + commitId.substring(0, 7);
+
         BuildTriggerRequest request = BuildTriggerRequest.builder()
                 .triggeredBy(releaseCandidate.getInitiatedBy().getName() + " ("
                         + releaseCandidate.getInitiatedBy().getEmailId() + ")")
@@ -300,7 +327,9 @@ public class ReleaseCandidateServiceImpl implements ReleaseCandidateService {
                         "BUILD_COMMAND", data.path("buildCommand").asText(),
                         "REPO_URL", "https://github.com/SwaDeshiTech/" + data.path("repo").asText(),
                         "ARTIFACT_PATH", data.path("artifactPath").asText(),
-                        "JOB_TEMPLATE", "prodhub_build"))
+                        "JOB_TEMPLATE", "prodhub_build",
+                        "SERVICE_NAME", releaseCandidate.getService().getName(),
+                        "HASH_VALUE", hashValue))
                 .refId(releaseCandidate.getBuildRefId())
                 .build();
 
