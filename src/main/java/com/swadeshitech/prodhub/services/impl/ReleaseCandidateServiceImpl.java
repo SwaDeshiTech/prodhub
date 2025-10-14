@@ -329,6 +329,7 @@ public class ReleaseCandidateServiceImpl implements ReleaseCandidateService {
                         "ARTIFACT_PATH", data.path("artifactPath").asText(),
                         "JOB_TEMPLATE", "prodhub_build",
                         "SERVICE_NAME", releaseCandidate.getService().getName(),
+                        "PROFILE_PATH", data.path("profilePath").asText(),
                         "HASH_VALUE", hashValue))
                 .refId(releaseCandidate.getBuildRefId())
                 .build();
