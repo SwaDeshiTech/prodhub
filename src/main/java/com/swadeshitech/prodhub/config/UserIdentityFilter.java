@@ -8,6 +8,7 @@ import jakarta.servlet.ServletResponse;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
@@ -19,36 +20,37 @@ import java.util.Optional;
 @Component
 @Slf4j
 public class UserIdentityFilter implements Filter {
-    
-    @Override
-    public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
-        HttpServletRequest httpRequest = (HttpServletRequest) request;
 
+    @Override
+    public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
+            throws IOException, ServletException {
+
+        HttpServletRequest httpRequest = (HttpServletRequest) request;
         Optional<String> userId = getUserIdFromCookie(httpRequest);
 
-        if (!userId.isPresent()) {
+        if (userId.isEmpty()) {
             userId = getUserIdFromHeader(httpRequest);
         }
 
-        if (userId.isPresent()) {
-            log.debug("User ID found in cookie: {}", userId.get());
+        log.info("UserIdentityFilter triggered for path: {}", httpRequest.getRequestURI());
+        log.info("User ID present: {}", userId.isPresent());
 
-            // Store the user ID in the request context
+        // Store the user ID in the request context only if present
+        userId.ifPresent(uid -> {
             ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
             if (attributes != null) {
-                attributes.setAttribute(Constants.USER_ID_CONTEXT_NAME, userId.get(), ServletRequestAttributes.SCOPE_REQUEST);
+                attributes.setAttribute(Constants.USER_ID_CONTEXT_NAME, uid, ServletRequestAttributes.SCOPE_REQUEST);
             }
-
-        } else {
-            log.debug("User ID cookie not found.");
-        }
+            ContextHolder.setContext("uuid", uid);
+        });
 
         chain.doFilter(request, response);
     }
 
-        private Optional<String> getUserIdFromCookie(HttpServletRequest request) {
-        if (request.getCookies() != null) {
-            return Arrays.stream(request.getCookies())
+    private Optional<String> getUserIdFromCookie(HttpServletRequest request) {
+        Cookie[] cookies = request.getCookies();
+        if (cookies != null) {
+            return Arrays.stream(cookies)
                     .filter(cookie -> Constants.USER_ID_COOKIE_NAME.equalsIgnoreCase(cookie.getName()))
                     .map(Cookie::getValue)
                     .findFirst();
@@ -57,7 +59,7 @@ public class UserIdentityFilter implements Filter {
     }
 
     private Optional<String> getUserIdFromHeader(HttpServletRequest request) {
-        String userIdHeader = request.getHeader(Constants.USER_ID_COOKIE_NAME);
-        return Optional.ofNullable(userIdHeader);
+        return Optional.ofNullable(request.getHeader(Constants.USER_ID_COOKIE_NAME));
     }
 }
+

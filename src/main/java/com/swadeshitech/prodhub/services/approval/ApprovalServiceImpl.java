@@ -1,14 +1,13 @@
-package com.swadeshitech.prodhub.services.impl;
+package com.swadeshitech.prodhub.services.approval;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.swadeshitech.prodhub.config.AuditorContextHolder;
 import com.swadeshitech.prodhub.dto.*;
 import com.swadeshitech.prodhub.entity.*;
 import com.swadeshitech.prodhub.enums.ApprovalStatus;
 import com.swadeshitech.prodhub.enums.ErrorCode;
+import com.swadeshitech.prodhub.enums.ProfileType;
 import com.swadeshitech.prodhub.exception.CustomException;
-import com.swadeshitech.prodhub.services.ApprovalService;
 import com.swadeshitech.prodhub.services.MetadataService;
 import com.swadeshitech.prodhub.services.OnboardingService;
 import com.swadeshitech.prodhub.services.UserService;
@@ -16,10 +15,10 @@ import com.swadeshitech.prodhub.transaction.read.ReadTransactionService;
 import com.swadeshitech.prodhub.transaction.write.WriteTransactionService;
 import com.swadeshitech.prodhub.utils.Base64Util;
 import com.swadeshitech.prodhub.utils.UserContextUtil;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -27,8 +26,8 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
+@Qualifier("ApprovalServiceImpl")
 @Slf4j
-@RequiredArgsConstructor
 public class ApprovalServiceImpl implements ApprovalService {
 
     @Autowired
@@ -43,9 +42,11 @@ public class ApprovalServiceImpl implements ApprovalService {
     @Autowired
     private MetadataService metadataService;
 
-    private final ObjectMapper objectMapper;
+    @Autowired
+    ObjectMapper objectMapper;
 
-    private final OnboardingService onboardingService;
+    @Autowired
+    OnboardingService onboardingService;
 
     @Override
     public ApprovalResponse createApprovalRequest(ApprovalRequest request) {
@@ -198,6 +199,7 @@ public class ApprovalServiceImpl implements ApprovalService {
                 throw new CustomException(ErrorCode.APPROVALS_STAGE_UPDATE_FAILED);
             }
         }
+        writeTransactionService.saveApprovalStageToRepository(stage);
     }
 
     private void updateStageStatus(ApprovalStage.Stage stage, ApprovalUpdateRequest request) {
@@ -237,17 +239,25 @@ public class ApprovalServiceImpl implements ApprovalService {
                 .name(profile.getProfileType().getValue())
                 .stages(stages)
                 .build();
-
     }
 
     private ApprovalResponse mapEntityToDTO(Approvals approvals) {
+        String oldMetaData = "", newMetaData = "";
+
+        if(Objects.nonNull(approvals.getCurrentMetadata())) {
+            oldMetaData = Base64Util.convertToPlainText(approvals.getCurrentMetadata().getData());
+        }
+        if(Objects.nonNull(approvals.getUpdatedMetaData())) {
+            newMetaData = Base64Util.convertToPlainText(approvals.getUpdatedMetaData());
+        }
+
         return ApprovalResponse.builder()
                 .requestId(approvals.getId())
                 .serviceName(approvals.getApplication().getName())
                 .profileName(approvals.getProfileName())
                 .profileType(approvals.getProfileType().getMessage())
-                .oldMetaData(Base64Util.convertToPlainText(approvals.getCurrentMetadata().getData()))
-                .newMetaData(Base64Util.convertToPlainText(approvals.getUpdatedMetaData()))
+                .oldMetaData(oldMetaData)
+                .newMetaData(newMetaData)
                 .approvalStageResponse(mapApprovalStageEntityToDTO(approvals.getApprovalStage()))
                 .createdBy(approvals.getCreatedBy())
                 .createdTime(approvals.getCreatedTime())

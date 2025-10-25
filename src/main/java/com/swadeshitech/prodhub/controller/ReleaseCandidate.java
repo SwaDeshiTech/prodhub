@@ -2,6 +2,7 @@ package com.swadeshitech.prodhub.controller;
 
 import java.util.List;
 
+import com.swadeshitech.prodhub.dto.DropdownDTO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -76,6 +77,26 @@ public class ReleaseCandidate {
         }
     }
 
+    @PutMapping("/{id}/certifyProduction")
+    public ResponseEntity<Response> certifyReleaseCandidateForProduction(@RequestHeader(name = "uuid") String uuid, @PathVariable String id) {
+
+        try {
+            ContextHolder.setContext("uuid", uuid);
+        ReleaseCandidateResponse releaseCandidateResponse = releaseCandidateService.certifyRelaseCandidateForProduction(id);
+
+        Response response = Response.builder()
+                .httpStatus(HttpStatus.OK)
+                .message("Successfully initiated the certify pipeline")
+                .response(releaseCandidateResponse)
+                .build();
+
+        return ResponseEntity.ok(response);
+        } finally {
+            // Clear the context to avoid memory leaks
+            ContextHolder.clearContext();
+        }
+    }
+
     @GetMapping
     public ResponseEntity<Response> getAllReleaseCandidates(@RequestHeader(name = "uuid") String uuid) {
 
@@ -103,6 +124,19 @@ public class ReleaseCandidate {
         Response response = Response.builder()
                 .httpStatus(HttpStatus.OK)
                 .message("Successfully retrieved release candidate")
+                .response(releaseCandidateResponse)
+                .build();
+
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/dropdown/certifiable/{applicationId}")
+    public ResponseEntity<Response> getDropdownCertifiable(@PathVariable String applicationId) {
+        List<DropdownDTO> releaseCandidateResponse = releaseCandidateService.getDropdownCertifiable(applicationId);
+
+        Response response = Response.builder()
+                .httpStatus(HttpStatus.OK)
+                .message("Successfully retrieved release candidate dropdown")
                 .response(releaseCandidateResponse)
                 .build();
 

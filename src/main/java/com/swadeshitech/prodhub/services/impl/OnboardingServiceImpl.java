@@ -23,6 +23,7 @@ import com.swadeshitech.prodhub.transaction.write.WriteTransactionService;
 import com.swadeshitech.prodhub.utils.Base64Util;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
 @Service
@@ -71,15 +72,22 @@ public class OnboardingServiceImpl implements OnboardingService {
             throw new CustomException(ErrorCode.APPLICATION_NOT_FOUND);
         }
 
-        Optional<Metadata> optionalMetaData = metaDataRepository.findByName(request.getProfile().getName());
-        if (optionalMetaData.isPresent()) {
+        Map<String, Object> filters = Map.of("name", request.getProfile().getName(),
+                "application", aOptional.get(),
+                "profileType", request.getProfile().getProfileType());
+
+        List<Metadata> metadataList = readTransactionService.findMetaDataByFilters(filters);
+        if (!CollectionUtils.isEmpty(metadataList)) {
+            log.error("Meta data list could not be found {} {} {}",
+                    request.getProfile().getName(),
+                    aOptional.get().getId(),
+                    request.getProfile().getProfileType());
             throw new CustomException(ErrorCode.METADATA_PROFILE_ALREADY_EXISTS);
         }
 
         Metadata referencedProfile = null;
         if(Objects.nonNull(request.getProfile()) && StringUtils.hasText(request.getProfile().getReferencedProfileId())) {
-            Map<String, Object> filters = new HashMap<>();
-            filters.put("_id", new ObjectId(request.getProfile().getReferencedProfileId()));
+            filters = Map.of("_id", new ObjectId(request.getProfile().getReferencedProfileId()));
             List<Metadata> optionalReferencedProfile = readTransactionService.findMetaDataByFilters(filters);
             if (optionalReferencedProfile.isEmpty()) {
                 throw new CustomException(ErrorCode.METADATA_PROFILE_REFERENCED_NOT_FOUND);

@@ -9,6 +9,7 @@ import java.util.Set;
 import java.util.HashMap;
 import java.util.HashSet;
 
+import com.swadeshitech.prodhub.config.ContextHolder;
 import org.apache.logging.log4j.util.Strings;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,6 +34,7 @@ import com.swadeshitech.prodhub.utils.UserContextUtil;
 
 import io.micrometer.common.util.StringUtils;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.util.ObjectUtils;
 
 @Service
 @Slf4j
@@ -193,6 +195,24 @@ public class UserServiceImpl implements UserService {
             log.error("Failed to save data ", ex);
             throw new CustomException(ErrorCode.USER_UPDATE_FAILED);
         }
+    }
+
+    public User extractUserFromContext() {
+        String uuid = (String) ContextHolder.getContext("uuid");
+        if (ObjectUtils.isEmpty(uuid)) {
+            log.error("UUID is null or empty");
+            throw new CustomException(ErrorCode.USER_UUID_NOT_FOUND);
+        }
+
+        Map<String, Object> userFilters = new HashMap<>();
+        userFilters.put("uuid", uuid);
+
+        List<User> userOption = readTransactionService.findUserDetailsByFilters(userFilters);
+        if (CollectionUtils.isEmpty(userOption)) {
+            log.error("User with UUID: {} not found", uuid);
+            throw new CustomException(ErrorCode.USER_NOT_FOUND);
+        }
+        return userOption.getFirst();
     }
 
 }

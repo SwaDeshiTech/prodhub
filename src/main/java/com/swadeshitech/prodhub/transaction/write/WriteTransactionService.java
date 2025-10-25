@@ -54,6 +54,12 @@ public class WriteTransactionService {
     @Autowired
     private CodeFreezeRepository codeFreezeRepository;
 
+    @Autowired
+    private DeploymentSetRepository deploymentSetRepository;
+
+    @Autowired
+    private ApprovalStageRepository approvalStageRepository;
+
     public Application saveApplicationToRepository(Application application) {
         try {
             return applicationRepository.save(application);
@@ -220,8 +226,20 @@ public class WriteTransactionService {
             log.error("DataIntegrity error ", ex);
             throw new CustomException(ErrorCode.DATA_INTEGRITY_FAILURE);
         } catch (Exception ex) {
-            log.error("Failed to update Metadata ", ex);
+            log.error("Failed to update approval repository ", ex);
             throw new CustomException(ErrorCode.APPROVALS_UPDATE_FAILED);
+        }
+    }
+
+    public ApprovalStage saveApprovalStageToRepository(ApprovalStage approvalStage) {
+        try {
+            return approvalStageRepository.save(approvalStage);
+        } catch (DataIntegrityViolationException ex) {
+            log.error("DataIntegrity error ", ex);
+            throw new CustomException(ErrorCode.DATA_INTEGRITY_FAILURE);
+        } catch (Exception ex) {
+            log.error("Failed to update approval stage ", ex);
+            throw new CustomException(ErrorCode.APPROVALS_STAGE_UPDATE_FAILED);
         }
     }
 
@@ -234,6 +252,18 @@ public class WriteTransactionService {
         } catch (Exception ex) {
             log.error("Failed to update Metadata ", ex);
             throw new CustomException(ErrorCode.CODE_FREEZE_UPDATE_FAILED);
+        }
+    }
+
+    public DeploymentSet saveDeploymentSetToRepository(DeploymentSet deploymentSet) {
+        try {
+            return deploymentSetRepository.save(deploymentSet);
+        } catch (DataIntegrityViolationException ex) {
+            log.error("DataIntegrity error ", ex);
+            throw new CustomException(ErrorCode.DATA_INTEGRITY_FAILURE);
+        } catch (Exception ex) {
+            log.error("Failed to update Metadata ", ex);
+            throw new CustomException(ErrorCode.DEPLOYMENT_SET_COULD_NOT_BE_CREATED);
         }
     }
 }

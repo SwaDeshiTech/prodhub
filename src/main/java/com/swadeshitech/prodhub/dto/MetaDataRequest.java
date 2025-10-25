@@ -2,9 +2,11 @@ package com.swadeshitech.prodhub.dto;
 
 import com.swadeshitech.prodhub.enums.ProfileType;
 
+import lombok.Builder;
 import lombok.Data;
 
 @Data
+@Builder
 public class MetaDataRequest {
     private String id;
     private boolean isActive;

@@ -2,6 +2,7 @@ package com.swadeshitech.prodhub.services;
 
 import java.util.List;
 
+import com.swadeshitech.prodhub.dto.DropdownDTO;
 import org.springframework.stereotype.Component;
 
 import com.swadeshitech.prodhub.dto.ReleaseCandidateRequest;
@@ -21,4 +22,8 @@ public interface ReleaseCandidateService {
     List<ReleaseCandidateResponse> getAllReleaseCandidates();
 
     ReleaseCandidateResponse syncStatus(String buildId, String forceSync);
+
+    List<DropdownDTO> getDropdownCertifiable(String applicationId);
+
+    ReleaseCandidateResponse certifyRelaseCandidateForProduction(String id);
 }

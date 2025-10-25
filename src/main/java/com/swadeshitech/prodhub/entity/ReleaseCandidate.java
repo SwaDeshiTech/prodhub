@@ -32,8 +32,6 @@ public class ReleaseCandidate extends BaseEntity implements Serializable {
 
     private String buildProfile;
 
-    private Map<String, String> metadata;
-
     private String ephemeralEnvironmentName;
 
     private String buildRefId;

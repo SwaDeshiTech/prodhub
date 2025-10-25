@@ -5,7 +5,7 @@ import java.util.*;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.swadeshitech.prodhub.dto.MetaDataResponse;
+import com.swadeshitech.prodhub.dto.DropdownDTO;
 import com.swadeshitech.prodhub.entity.Application;
 import com.swadeshitech.prodhub.entity.Metadata;
 import com.swadeshitech.prodhub.integration.cicaptain.config.CiCaptainClient;
@@ -58,13 +58,16 @@ public class ReleaseCandidateServiceImpl implements ReleaseCandidateService {
 
     private final ObjectMapper objectMapper;
 
+    @Autowired
+    UserServiceImpl userService;
+
     @Override
     public ReleaseCandidateResponse createReleaseCandidate(ReleaseCandidateRequest request) {
 
         log.info("Creating release candidate for service: {} with build profile: {}", request.getServiceName(),
                 request.getBuildProfile());
 
-        User user = extractUserFromContext();
+        User user = userService.extractUserFromContext();
 
         List<Application> applications = readTransactionService
                 .findApplicationByFilters(Map.of("_id", new ObjectId(request.getServiceName())));
@@ -144,7 +147,7 @@ public class ReleaseCandidateServiceImpl implements ReleaseCandidateService {
     public List<ReleaseCandidateResponse> getAllReleaseCandidates() {
 
         log.info("Fetching all release candidates");
-        User user = extractUserFromContext();
+        User user = userService.extractUserFromContext();
 
         Map<String, Object> filters = new HashMap<>();
         filters.put("initiatedBy", user);
@@ -190,6 +193,62 @@ public class ReleaseCandidateServiceImpl implements ReleaseCandidateService {
         BuildStatusResponse response = buildStatusResponseMono.blockOptional().get();
 
         releaseCandidate.setStatus(mapStatusFromCICaptain(response.status()));
+
+        writeTransactionService.saveReleaseCandidateToRepository(releaseCandidate);
+
+        return buildResponse(releaseCandidate);
+    }
+
+    @Override
+    public List<DropdownDTO> getDropdownCertifiable(String applicationId) {
+
+        List<Application> applications = readTransactionService
+                .findApplicationByFilters(Map.of("_id", new ObjectId(applicationId)));
+        if (CollectionUtils.isEmpty(applications)) {
+            log.error("Failed to create release candidate, service not found {}", applicationId);
+            throw new CustomException(ErrorCode.RELEASE_CANDIDATE_COULD_NOT_BE_CREATED);
+        }
+
+        Application application = applications.getFirst();
+
+        List<ReleaseCandidate> releaseCandidates = readTransactionService.findReleaseCandidateDetailsByFilters(Map.of("service", application, "status", "CERTIFIED"));
+        if (CollectionUtils.isEmpty(releaseCandidates)) {
+            log.error("Release candidates could not be found for application id {}", applicationId);
+            throw new CustomException(ErrorCode.RELEASE_CANDIDATE_NOT_FOUND);
+        }
+
+        List<DropdownDTO> dropdownDTOList = new ArrayList<>();
+
+        for (ReleaseCandidate releaseCandidate : releaseCandidates) {
+            String key = "Commit ID: " + releaseCandidate.getMetaData().get("commitId") +
+                    " Certified by: " +
+                    releaseCandidate.getCertifiedBy().getNameAndEmailId();
+            dropdownDTOList.add(DropdownDTO.builder()
+                            .key(releaseCandidate.getId())
+                            .value(key)
+                    .build());
+        }
+
+        return dropdownDTOList;
+    }
+
+    @Override
+    public ReleaseCandidateResponse certifyRelaseCandidateForProduction(String id) {
+
+        List<ReleaseCandidate> releaseCandidates = readTransactionService.findReleaseCandidateDetailsByFilters(Map.of(
+                "_id", new ObjectId(id),
+                "status", ReleaseCandidateStatus.CERTIFIABLE));
+        if (CollectionUtils.isEmpty(releaseCandidates)) {
+            log.error("Release candidates could not be found for application id {}", id);
+            throw new CustomException(ErrorCode.RELEASE_CANDIDATE_NOT_FOUND);
+        }
+
+        ReleaseCandidate releaseCandidate = releaseCandidates.getFirst();
+
+        //trigger the pipeline
+        User certifiedBy = userService.extractUserFromContext();
+        releaseCandidate.setStatus(ReleaseCandidateStatus.CERTIFIED);
+        releaseCandidate.setCertifiedBy(certifiedBy);
 
         writeTransactionService.saveReleaseCandidateToRepository(releaseCandidate);
 
@@ -250,23 +309,7 @@ public class ReleaseCandidateServiceImpl implements ReleaseCandidateService {
         return response;
     }
 
-    private User extractUserFromContext() {
-        String uuid = (String) ContextHolder.getContext("uuid");
-        if (ObjectUtils.isEmpty(uuid)) {
-            log.error("UUID is null or empty");
-            throw new CustomException(ErrorCode.USER_UUID_NOT_FOUND);
-        }
 
-        Map<String, Object> userFilters = new HashMap<>();
-        userFilters.put("uuid", uuid);
-
-        List<User> userOption = readTransactionService.findUserDetailsByFilters(userFilters);
-        if (CollectionUtils.isEmpty(userOption)) {
-            log.error("User with UUID: {} not found", uuid);
-            throw new CustomException(ErrorCode.USER_NOT_FOUND);
-        }
-        return userOption.getFirst();
-    }
 
     private void triggerBuild(ReleaseCandidate releaseCandidate) {
 
@@ -315,22 +358,26 @@ public class ReleaseCandidateServiceImpl implements ReleaseCandidateService {
             }
         }
 
-        String hashValue = Base64Util.generate7DigitHash(decodedData) + ":" + commitId.substring(0, 7);
+        String dockerImageHashValue = releaseCandidate.getService().getName().toLowerCase() + "-"
+                + Base64Util.generate7DigitHash(decodedData) + ":" + commitId.substring(0, 7);
+
+        Map<String, String> params = new HashMap<>();
+        params.put("BRANCH_NAME", data.path("branchName").asText());
+        params.put("COMMIT_ID", commitId);
+        params.put("BASE_IMAGE", data.path("baseImage").asText());
+        params.put("BUILD_COMMAND", data.path("buildCommand").asText());
+        params.put("REPO_URL", "https://github.com/SwaDeshiTech/" + data.path("repo").asText());
+        params.put("ARTIFACT_PATH", data.path("artifactPath").asText());
+        params.put("JOB_TEMPLATE", "prodhub_build");
+        params.put("SERVICE_NAME", releaseCandidate.getService().getName());
+        params.put("PROFILE_PATH", data.path("profilePath").asText());
+        params.put("DOCKER_IMAGE_HASH_VALUE", dockerImageHashValue);
+        params.put("BUILD_PATH", data.path("buildPath").asText());
 
         BuildTriggerRequest request = BuildTriggerRequest.builder()
                 .triggeredBy(releaseCandidate.getInitiatedBy().getName() + " ("
                         + releaseCandidate.getInitiatedBy().getEmailId() + ")")
-                .parameters(Map.of(
-                        "BRANCH_NAME", data.path("branchName").asText(),
-                        "COMMIT_ID", commitId,
-                        "BASE_IMAGE", data.path("baseImage").asText(),
-                        "BUILD_COMMAND", data.path("buildCommand").asText(),
-                        "REPO_URL", "https://github.com/SwaDeshiTech/" + data.path("repo").asText(),
-                        "ARTIFACT_PATH", data.path("artifactPath").asText(),
-                        "JOB_TEMPLATE", "prodhub_build",
-                        "SERVICE_NAME", releaseCandidate.getService().getName(),
-                        "PROFILE_PATH", data.path("profilePath").asText(),
-                        "HASH_VALUE", hashValue))
+                .parameters(params)
                 .refId(releaseCandidate.getBuildRefId())
                 .build();
 
@@ -339,6 +386,7 @@ public class ReleaseCandidateServiceImpl implements ReleaseCandidateService {
         log.info("Printing ci-captain build response {}", response);
         releaseCandidate.setStatus(ReleaseCandidateStatus.IN_PROGRESS);
         releaseCandidate.getMetaData().put("providerID", providerId);
+        releaseCandidate.getMetaData().put("dockerImageHashValue", dockerImageHashValue);
 
         writeTransactionService.saveReleaseCandidateToRepository(releaseCandidate);
     }

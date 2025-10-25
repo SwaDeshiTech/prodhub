@@ -1,8 +1,9 @@
 package com.swadeshitech.prodhub.controller;
 
 import com.swadeshitech.prodhub.dto.*;
-import com.swadeshitech.prodhub.services.ApprovalService;
+import com.swadeshitech.prodhub.services.approval.ApprovalService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -14,6 +15,7 @@ import java.util.List;
 public class Approval {
 
     @Autowired
+    @Qualifier("ApprovalServiceImpl")
     private ApprovalService approvalService;
 
     @PostMapping
@@ -30,7 +32,7 @@ public class Approval {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @GetMapping("/details/{id}")
+    @GetMapping("/details/{requestId}")
     public ResponseEntity<Response> getApprovalRequestDetails(@PathVariable String requestId) {
 
         ApprovalResponse approvalResponse = approvalService.getApprovalById(requestId);

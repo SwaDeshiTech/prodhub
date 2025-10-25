@@ -51,6 +51,8 @@ public class ApplicationServiceImpl implements ApplicationService {
     @Override
     public ApplicationResponse addApplication(ApplicationRequest applicationRequest) {
 
+        validation(applicationRequest);
+
         Application application = modelMapper.map(applicationRequest, Application.class);
         if (Objects.isNull(application)) {
             log.error("application request could not be converted", applicationRequest);
@@ -81,8 +83,7 @@ public class ApplicationServiceImpl implements ApplicationService {
 
         saveApplicationToRepository(application);
 
-        ApplicationResponse applicationResponse = modelMapper.map(application, ApplicationResponse.class);
-        return applicationResponse;
+        return mapEntityToDTO(application);
     }
 
     @Override
@@ -175,6 +176,13 @@ public class ApplicationServiceImpl implements ApplicationService {
             }
         }
         return dropdownValues;
+    }
+
+    private void validation(ApplicationRequest request) {
+        if(org.apache.commons.lang3.StringUtils.containsWhitespace(request.getName())) {
+            log.error("Application name cannot have blank space {}", request.getName());
+            throw new CustomException(ErrorCode.APPLICATION_CREATION_FAILED);
+        }
     }
 
     private boolean isValidateRequest(Team team, Department department) {
