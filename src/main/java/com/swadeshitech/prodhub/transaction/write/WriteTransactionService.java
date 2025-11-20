@@ -60,6 +60,12 @@ public class WriteTransactionService {
     @Autowired
     private ApprovalStageRepository approvalStageRepository;
 
+    @Autowired
+    private DeploymentRepository deploymentRepository;
+
+    @Autowired
+    private DeploymentRunRepository deploymentRunRepository;
+
     public Application saveApplicationToRepository(Application application) {
         try {
             return applicationRepository.save(application);
@@ -262,8 +268,32 @@ public class WriteTransactionService {
             log.error("DataIntegrity error ", ex);
             throw new CustomException(ErrorCode.DATA_INTEGRITY_FAILURE);
         } catch (Exception ex) {
-            log.error("Failed to update Metadata ", ex);
+            log.error("Failed to update deployment set ", ex);
             throw new CustomException(ErrorCode.DEPLOYMENT_SET_COULD_NOT_BE_CREATED);
+        }
+    }
+
+    public Deployment saveDeploymentToRepository(Deployment deployment) {
+        try {
+            return deploymentRepository.save(deployment);
+        } catch (DataIntegrityViolationException ex) {
+            log.error("DataIntegrity error ", ex);
+            throw new CustomException(ErrorCode.DATA_INTEGRITY_FAILURE);
+        } catch (Exception ex) {
+            log.error("Failed to update deployment ", ex);
+            throw new CustomException(ErrorCode.DEPLOYMENT_COULD_NOT_BE_CREATED);
+        }
+    }
+
+    public DeploymentRun saveDeploymentRunToRepository(DeploymentRun deploymentRun) {
+        try {
+            return deploymentRunRepository.save(deploymentRun);
+        } catch (DataIntegrityViolationException ex) {
+            log.error("DataIntegrity error ", ex);
+            throw new CustomException(ErrorCode.DATA_INTEGRITY_FAILURE);
+        } catch (Exception ex) {
+            log.error("Failed to update deployment run ", ex);
+            throw new CustomException(ErrorCode.DEPLOYMENT_RUN_COULD_NOT_BE_CREATED);
         }
     }
 }

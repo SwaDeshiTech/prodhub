@@ -48,3 +48,7 @@ cicaptain:
   uri: http://localhost:4457/ci-captain
   triggerBuildPath: /api/v1/providers/{providerId}/jobs/{job}/trigger
   buildStatus: /api/v1/providers/%s/job/%s/status
+
+deplorch:
+  uri: http://localhost:4455/deplorch
+  initiateDeployment: /api/v1/deployment

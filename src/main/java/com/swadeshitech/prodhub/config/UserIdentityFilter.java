@@ -31,10 +31,6 @@ public class UserIdentityFilter implements Filter {
         if (userId.isEmpty()) {
             userId = getUserIdFromHeader(httpRequest);
         }
-
-        log.info("UserIdentityFilter triggered for path: {}", httpRequest.getRequestURI());
-        log.info("User ID present: {}", userId.isPresent());
-
         // Store the user ID in the request context only if present
         userId.ifPresent(uid -> {
             ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();

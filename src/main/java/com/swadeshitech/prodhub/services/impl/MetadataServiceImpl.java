@@ -5,7 +5,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.swadeshitech.prodhub.transaction.write.WriteTransactionService;
 import org.bson.types.ObjectId;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.ObjectUtils;
@@ -20,6 +22,7 @@ import com.swadeshitech.prodhub.services.MetadataService;
 import com.swadeshitech.prodhub.transaction.read.ReadTransactionService;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.util.StringUtils;
 
 @Service
 @Slf4j
@@ -27,6 +30,9 @@ public class MetadataServiceImpl implements MetadataService {
 
     @Autowired
     private ReadTransactionService readTransactionService;
+
+    @Autowired
+    private WriteTransactionService writeTransactionService;
 
     @Override
     public MetaDataResponse getMetadataDetails(String id) {
@@ -96,6 +102,33 @@ public class MetadataServiceImpl implements MetadataService {
         }
 
         return dropdownDTOs;
+    }
+
+    @Override
+    public Metadata cloneProfile(String sourceProfileId, String cloneProfileName) {
+        return fetchAndCloneMetadataProfile(sourceProfileId, cloneProfileName);
+    }
+
+    private Metadata fetchAndCloneMetadataProfile(String metaDataProfileId, String cloneProfileName) {
+        Map<String, Object> filters = new HashMap<>();
+        filters.put("_id", new ObjectId(metaDataProfileId));
+
+        List<Metadata> metadataList = readTransactionService.findMetaDataByFilters(filters);
+        if (metadataList.isEmpty()) {
+            log.error("No metadata found for metaDataProfileId: {}", metaDataProfileId);
+            throw new CustomException(ErrorCode.METADATA_PROFILE_LIST_NOT_FOUND);
+        }
+
+        Metadata metadata = metadataList.getFirst();
+        Metadata clonedProfile = new Metadata();
+
+        BeanUtils.copyProperties(metadata, clonedProfile, "id");
+        if(StringUtils.hasText(cloneProfileName)) {
+            clonedProfile.setName(cloneProfileName);
+        }
+        clonedProfile = writeTransactionService.saveMetadataToRepository(clonedProfile);
+
+        return clonedProfile;
     }
 
     protected MetaDataResponse mapToMetaDataResponse(Metadata metadata) {

@@ -4,6 +4,7 @@ import com.swadeshitech.prodhub.dto.*;
 import com.swadeshitech.prodhub.entity.*;
 import com.swadeshitech.prodhub.enums.*;
 import com.swadeshitech.prodhub.exception.CustomException;
+import com.swadeshitech.prodhub.services.MetadataService;
 import com.swadeshitech.prodhub.services.approval.ApprovalService;
 import com.swadeshitech.prodhub.services.DeploymentSetService;
 import com.swadeshitech.prodhub.transaction.read.ReadTransactionService;
@@ -34,6 +35,9 @@ public class DeploymentSetServiceImpl implements DeploymentSetService {
     @Autowired
     @Qualifier("DeploymentApprovalImpl")
     ApprovalService approvalService;
+
+    @Autowired
+    MetadataService metadataService;
 
     @Override
     public String createDeploymentSet(DeploymentSetRequest request) {
@@ -67,6 +71,10 @@ public class DeploymentSetServiceImpl implements DeploymentSetService {
 
         ReleaseCandidate releaseCandidate1 = releaseCandidate.getFirst();
 
+        String clonedProfileName = metadataList.getFirst().getName() + "::" + "DeploymentProfile" + "::" + releaseCandidate1.getMetaData().get("commitId");
+
+        Metadata clonedMetaDataProfile = metadataService.cloneProfile(metadataList.getFirst().getId(), clonedProfileName);
+
         String uuid = UuidUtil.generateFromString(releaseCandidate1.getMetaData().get("dockerImageHashValue"));
 
         ApprovalRequest approvalRequest = ApprovalRequest.builder()
@@ -91,6 +99,7 @@ public class DeploymentSetServiceImpl implements DeploymentSetService {
                 .releaseCandidate(releaseCandidate.getFirst())
                 .deploymentProfile(metadataList.getFirst())
                 .approvals(approval)
+                .deploymentProfile(clonedMetaDataProfile)
                 .build();
 
         deploymentSet = writeTransactionService.saveDeploymentSetToRepository(deploymentSet);
@@ -152,9 +161,12 @@ public class DeploymentSetServiceImpl implements DeploymentSetService {
         DeploymentSet deploymentSet = deploymentSets.getFirst();
         approvalService.updateApprovalStatus(deploymentSet.getApprovals().getId(), ApprovalUpdateRequest.builder()
                         .comments(request.getComments())
-                        .name(request.getApprovalStage())
+                        .name(request.getName())
                         .status(request.getStatus())
                 .build());
+        deploymentSets = readTransactionService.findByDynamicOrFilters(
+                Map.of("_id", new ObjectId(id)), DeploymentSet.class);
+        deploymentSet = deploymentSets.getFirst();
         if(ApprovalStatus.APPROVED.equals(deploymentSet.getApprovals().getApprovalStatus())) {
             deploymentSet.setStatus(DeploymentSetStatus.COMPLETED);
         } else {
@@ -168,7 +180,7 @@ public class DeploymentSetServiceImpl implements DeploymentSetService {
                 .id(deploymentSet.getId())
                 .status(deploymentSet.getStatus().getMessage())
                 .serviceName(deploymentSet.getApplication().getName())
-                .deploymentProfileName(deploymentSet.getDeploymentProfile().getName())
+                .deploymentProfileName(deploymentSet.getDeploymentProfile().getName().split("::")[0])
                 .buildProfileName(deploymentSet.getReleaseCandidate().getBuildProfile())
                 .approvalId(deploymentSet.getApprovals().getId())
                 .metaData(Map.of("COMMIT_ID", deploymentSet.getReleaseCandidate().getMetaData().get("commitId")))

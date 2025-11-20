@@ -2,6 +2,7 @@ package com.swadeshitech.prodhub.entity;
 
 import java.io.Serializable;
 
+import com.swadeshitech.prodhub.enums.RunTimeEnvironment;
 import org.bson.BsonType;
 import org.bson.codecs.pojo.annotations.BsonRepresentation;
 import org.springframework.data.annotation.Id;
@@ -36,6 +37,8 @@ public class Metadata extends BaseEntity implements Serializable {
     private boolean isActive;
 
     private String description;
+
+    private RunTimeEnvironment runTimeEnvironment;
 
     @DBRef
     private transient Metadata referencedProfile;

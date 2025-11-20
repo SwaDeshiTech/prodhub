@@ -21,7 +21,7 @@ public class DeploymentSet extends BaseEntity {
 
     private String uuid;
 
-    private Map<String, String> metaData;
+    private Map<String, Object> metaData;
 
     private DeploymentSetStatus status;
 

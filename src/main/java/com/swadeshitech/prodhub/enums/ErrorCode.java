@@ -88,7 +88,13 @@ public enum ErrorCode {
         CODE_FREEZE_LIST_NOT_FOUND("PH-18003", "Code freeze list not found", HttpStatus.NOT_FOUND),
 
         DEPLOYMENT_SET_COULD_NOT_BE_CREATED("PH-19001", "Deployment set could not be created", HttpStatus.INTERNAL_SERVER_ERROR),
-        DEPLOYMENT_SET_NOT_FOUND("PH-19002", "Deployment set could not be found", HttpStatus.NOT_FOUND);
+        DEPLOYMENT_SET_NOT_FOUND("PH-19002", "Deployment set could not be found", HttpStatus.NOT_FOUND),
+
+        DEPLOYMENT_COULD_NOT_BE_CREATED("PH-19001", "Deployment could not be created", HttpStatus.INTERNAL_SERVER_ERROR),
+        DEPLOYMENT_NOT_FOUND("PH-19002", "Deployment could not be found", HttpStatus.NOT_FOUND),
+
+        DEPLOYMENT_RUN_COULD_NOT_BE_CREATED("PH-19001", "Deployment run could not be created", HttpStatus.INTERNAL_SERVER_ERROR),
+        DEPLOYMENT_RUN_NOT_FOUND("PH-19002", "Deployment run could not be found", HttpStatus.NOT_FOUND);
 
         private final String code;
         private final String description;
