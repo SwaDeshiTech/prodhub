@@ -17,7 +17,7 @@ import java.util.Map;
 
 @Service
 @Slf4j
-public class KafkaConsumer {
+public class CICaptainKafkaConsumer {
 
     @Autowired
     ReleaseCandidateService releaseCandidateService;

@@ -6,6 +6,7 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.DBRef;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import java.util.List;
 import java.util.Map;
 
 @Data
@@ -26,14 +27,17 @@ public class DeploymentSet extends BaseEntity {
     private DeploymentSetStatus status;
 
     @DBRef
-    private Application application;
+    private transient Application application;
 
     @DBRef
-    private Metadata deploymentProfile;
+    private transient Metadata deploymentProfile;
 
     @DBRef
-    private Approvals approvals;
+    private transient Approvals approvals;
 
     @DBRef
-    private ReleaseCandidate releaseCandidate;
+    private transient ReleaseCandidate releaseCandidate;
+
+    @DBRef
+    private transient List<DeploymentRun> deploymentRuns;
 }

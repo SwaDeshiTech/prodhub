@@ -12,7 +12,7 @@ import java.util.Map;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Document(collection = "deployment_run")
+@Document(collection = "deployment_runs")
 @EqualsAndHashCode(callSuper = true)
 @Builder
 public class DeploymentRun extends BaseEntity {
@@ -22,12 +22,11 @@ public class DeploymentRun extends BaseEntity {
 
     private DeploymentRunStatus deploymentRunStatus;
 
+    private DeploymentTemplate deploymentTemplate;
+
     @DBRef
     private transient Metadata metaData;
 
     @DBRef
-    private transient Deployment deployment;
-
-    @DBRef
-    private transient Application application;
+    private transient DeploymentSet deploymentSet;
 }

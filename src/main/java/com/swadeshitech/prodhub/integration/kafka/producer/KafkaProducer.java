@@ -1,4 +1,4 @@
-package com.swadeshitech.prodhub.integration.kafka;
+package com.swadeshitech.prodhub.integration.kafka.producer;
 
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;

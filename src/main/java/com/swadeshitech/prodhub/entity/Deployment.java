@@ -20,11 +20,11 @@ public class Deployment extends BaseEntity {
     @Id
     private String id;
 
-    private String referenceID;
-
     private DeploymentStatus status;
 
     private Map<String, Object> metaData;
+
+    private DeploymentTemplate deploymentTemplate;
 
     @DBRef
     private transient DeploymentSet deploymentSet;
@@ -35,3 +35,4 @@ public class Deployment extends BaseEntity {
     @DBRef
     private transient List<DeploymentRun> deploymentRuns;
 }
+
