@@ -31,8 +31,5 @@ public class Deployment extends BaseEntity {
 
     @DBRef
     private transient Application application;
-
-    @DBRef
-    private transient List<DeploymentRun> deploymentRuns;
 }
 

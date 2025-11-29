@@ -16,4 +16,13 @@ public enum RunTimeEnvironment {
         this.deploymentTemplate = deploymentTemplate;
     }
 
+    public RunTimeEnvironment fromName(String value) {
+        for (RunTimeEnvironment environment : RunTimeEnvironment.values()) {
+            if(environment.name().equals(value)) {
+                return environment;
+            }
+        }
+        return null;
+    }
+
 }

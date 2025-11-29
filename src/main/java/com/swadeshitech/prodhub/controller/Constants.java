@@ -36,6 +36,20 @@ public class Constants {
         return ResponseEntity.ok().body(response);
     }
 
+    @GetMapping("/runtimeEnvironments")
+    public ResponseEntity<Response> getRunTimeEnvironment() {
+
+        List<DropdownDTO> dropdownDTOs = constantsService.getRuntimeEnvironment();
+
+        Response response = Response.builder()
+                .httpStatus(HttpStatus.OK)
+                .message("Dropdown details of runtime environment has been fetched successfully")
+                .response(dropdownDTOs)
+                .build();
+
+        return ResponseEntity.ok().body(response);
+    }
+
     @GetMapping("/{type}")
     public ResponseEntity<Response> getConstants(@PathVariable String type) {
 

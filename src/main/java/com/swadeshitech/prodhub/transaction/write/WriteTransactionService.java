@@ -64,9 +64,6 @@ public class WriteTransactionService {
     private DeploymentRepository deploymentRepository;
 
     @Autowired
-    private DeploymentRunRepository deploymentRunRepository;
-
-    @Autowired
     private DeploymentTemplateRepository deploymentTemplateRepository;
 
     public Application saveApplicationToRepository(Application application) {
@@ -285,18 +282,6 @@ public class WriteTransactionService {
         } catch (Exception ex) {
             log.error("Failed to update deployment ", ex);
             throw new CustomException(ErrorCode.DEPLOYMENT_COULD_NOT_BE_CREATED);
-        }
-    }
-
-    public DeploymentRun saveDeploymentRunToRepository(DeploymentRun deploymentRun) {
-        try {
-            return deploymentRunRepository.save(deploymentRun);
-        } catch (DataIntegrityViolationException ex) {
-            log.error("DataIntegrity error ", ex);
-            throw new CustomException(ErrorCode.DATA_INTEGRITY_FAILURE);
-        } catch (Exception ex) {
-            log.error("Failed to update deployment run ", ex);
-            throw new CustomException(ErrorCode.DEPLOYMENT_RUN_COULD_NOT_BE_CREATED);
         }
     }
 

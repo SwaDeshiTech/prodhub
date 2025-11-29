@@ -13,7 +13,6 @@ public class DeplOrchClient {
 
     private final WebClient webClient;
 
-    // Inject the configured bean
     public DeplOrchClient(WebClient ciCaptainWebClient) {
         this.webClient = ciCaptainWebClient;
     }
@@ -24,14 +23,11 @@ public class DeplOrchClient {
     @Value("${deplorch.initiateDeployment}")
     String initiateDeployment;
 
-    public Mono<DeploymentResponse> triggerDeployment(
-            DeploymentRequest request
-    ) {
+    public Mono<DeploymentResponse> triggerDeployment(String deploymentID) {
         return webClient.post()
-                .uri(deplorchBaseURL + initiateDeployment)
+                .uri(deplorchBaseURL + initiateDeployment + "/" + deploymentID)
                 .contentType(MediaType.APPLICATION_JSON)
                 .accept(MediaType.APPLICATION_JSON)
-                .bodyValue(request)
                 .retrieve()
                 .onStatus(status -> status.is4xxClientError() || status.is5xxServerError(),
                         resp -> resp.bodyToMono(String.class)

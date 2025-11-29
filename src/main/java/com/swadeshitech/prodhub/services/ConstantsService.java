@@ -7,7 +7,9 @@ import com.swadeshitech.prodhub.dto.ProviderConstantResponse;
 
 public interface ConstantsService {
 
-    public List<DropdownDTO> getConstants(String name);
+    List<DropdownDTO> getConstants(String name);
 
-    public List<ProviderConstantResponse> getProviders(String name);
+    List<ProviderConstantResponse> getProviders(String name);
+
+    List<DropdownDTO> getRuntimeEnvironment();
 }

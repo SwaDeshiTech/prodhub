@@ -20,5 +20,7 @@ public class KafkaConsumer {
         log.info("{}: Request for deployment config and submit {}", this.getClass().getCanonicalName(), message);
 
         deploymentService.generateDeploymentConfig(message);
+
+        deploymentService.submitDeploymentRequest(message);
     }
 }

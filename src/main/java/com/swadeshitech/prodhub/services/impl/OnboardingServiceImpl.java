@@ -3,6 +3,7 @@ package com.swadeshitech.prodhub.services.impl;
 import java.util.*;
 
 import com.swadeshitech.prodhub.config.AuditorContextHolder;
+import com.swadeshitech.prodhub.enums.RunTimeEnvironment;
 import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -105,6 +106,10 @@ public class OnboardingServiceImpl implements OnboardingService {
         metadata.setReferencedProfile(referencedProfile);
         metadata.setData(Base64Util.generateBase64Encoded(request.getProfile().getData()));
 
+        if(StringUtils.hasText(request.getProfile().getRuntimeEnvironment())) {
+            metadata.setRunTimeEnvironment(RunTimeEnvironment.valueOf(request.getProfile().getRuntimeEnvironment()));
+        }
+
         writeTransactionService.saveMetaDataToRepository(metadata);
 
         if (aOptional.get().getProfiles() == null) {
@@ -177,6 +182,10 @@ public class OnboardingServiceImpl implements OnboardingService {
         metadata.setDescription(request.getProfile().getDescription());
         metadata.setData(Base64Util.generateBase64Encoded(request.getProfile().getData()));
         metadata.setReferencedProfile(referencedProfile);
+
+        if(StringUtils.hasText(request.getProfile().getRuntimeEnvironment())) {
+            metadata.setRunTimeEnvironment(RunTimeEnvironment.valueOf(request.getProfile().getRuntimeEnvironment()));
+        }
 
         writeTransactionService.saveMetaDataToRepository(metadata);
 

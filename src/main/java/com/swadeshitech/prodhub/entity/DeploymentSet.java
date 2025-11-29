@@ -39,5 +39,5 @@ public class DeploymentSet extends BaseEntity {
     private transient ReleaseCandidate releaseCandidate;
 
     @DBRef
-    private transient List<DeploymentRun> deploymentRuns;
+    private transient List<Deployment> deployments;
 }

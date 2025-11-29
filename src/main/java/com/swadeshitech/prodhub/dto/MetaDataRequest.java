@@ -15,4 +15,5 @@ public class MetaDataRequest {
     private ProfileType profileType;
     private String description;
     private String referencedProfileId;
+    private String runtimeEnvironment;
 }

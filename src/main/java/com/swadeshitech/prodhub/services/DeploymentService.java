@@ -9,4 +9,6 @@ public interface DeploymentService {
     DeploymentRequestResponse triggerDeployment(String deploymentSetID);
 
     void generateDeploymentConfig(String deploymentID);
+
+    void submitDeploymentRequest(String deploymentID);
 }

@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Optional;
 
 import com.swadeshitech.prodhub.dto.ProviderConstantResponse;
+import com.swadeshitech.prodhub.enums.RunTimeEnvironment;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -55,6 +56,21 @@ public class ConstantsServiceImpl implements ConstantsService {
                     .isActive(true).build());
         }
         return providerConstantResponses;
+    }
+
+    @Override
+    public List<DropdownDTO> getRuntimeEnvironment() {
+
+        List<DropdownDTO> dropdownDTOs = new ArrayList<>();
+
+        for(RunTimeEnvironment runTimeEnvironment : RunTimeEnvironment.values()) {
+            dropdownDTOs.add(DropdownDTO.builder()
+                    .key(runTimeEnvironment.toString())
+                    .value(runTimeEnvironment.toString())
+                    .build());
+        }
+
+        return dropdownDTOs;
     }
 
 }

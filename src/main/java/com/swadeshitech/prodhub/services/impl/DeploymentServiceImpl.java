@@ -6,14 +6,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.swadeshitech.prodhub.constant.KafkaConstants;
 import com.swadeshitech.prodhub.dto.DeploymentRequestResponse;
 import com.swadeshitech.prodhub.entity.Deployment;
-import com.swadeshitech.prodhub.entity.DeploymentRun;
 import com.swadeshitech.prodhub.entity.DeploymentSet;
 import com.swadeshitech.prodhub.entity.DeploymentTemplate;
-import com.swadeshitech.prodhub.enums.DeploymentRunStatus;
 import com.swadeshitech.prodhub.enums.DeploymentStatus;
 import com.swadeshitech.prodhub.enums.ErrorCode;
 import com.swadeshitech.prodhub.enums.RunTimeEnvironment;
 import com.swadeshitech.prodhub.exception.CustomException;
+import com.swadeshitech.prodhub.integration.deplorch.DeplOrchClient;
 import com.swadeshitech.prodhub.integration.kafka.producer.KafkaProducer;
 import com.swadeshitech.prodhub.services.DeploymentService;
 import com.swadeshitech.prodhub.transaction.read.ReadTransactionService;
@@ -25,8 +24,9 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
+import org.springframework.util.ObjectUtils;
 
-import java.util.Collections;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -47,6 +47,9 @@ public class DeploymentServiceImpl implements DeploymentService {
     @Autowired
     KafkaProducer kafkaProducer;
 
+    @Autowired
+    DeplOrchClient deplOrchClient;
+
     @Override
     public DeploymentRequestResponse triggerDeployment(String deploymentSetID) {
 
@@ -57,26 +60,26 @@ public class DeploymentServiceImpl implements DeploymentService {
         }
 
         DeploymentSet deploymentSet = deploymentSets.getFirst();
-
-        DeploymentRun deploymentRun = DeploymentRun.builder()
-                .deploymentRunStatus(DeploymentRunStatus.CREATED)
-                .metaData(deploymentSet.getDeploymentProfile())
-                .build();
-
-        deploymentRun = writeTransactionService.saveDeploymentRunToRepository(deploymentRun);
-
         Deployment deployment = Deployment.builder()
                 .status(DeploymentStatus.CREATED)
                 .application(deploymentSet.getApplication())
-                .deploymentRuns(Collections.singletonList(deploymentRun))
                 .metaData(Map.of(
-                        "runtimeEnvironment", RunTimeEnvironment.K8s.getRunTimeEnvironment(),//deploymentRun.getMetaData().getRunTimeEnvironment().getRunTimeEnvironment(),
-                        "deploymentTemplate", RunTimeEnvironment.K8s.getDeploymentTemplate())//deploymentRun.getMetaData().getRunTimeEnvironment().getDeploymentTemplate())
+                        "runtimeEnvironment", deploymentSet.getDeploymentProfile().getRunTimeEnvironment().getRunTimeEnvironment(),
+                        "deploymentTemplate", deploymentSet.getDeploymentProfile().getRunTimeEnvironment().getDeploymentTemplate())
                 )
                 .deploymentSet(deploymentSet)
                 .build();
 
         deployment = writeTransactionService.saveDeploymentToRepository(deployment);
+
+        List<Deployment> deployments = deploymentSet.getDeployments();
+        if (CollectionUtils.isEmpty(deployments)) {
+            deployments = new ArrayList<>();
+        }
+        deployments.add(deployment);
+
+        writeTransactionService.saveDeploymentSetToRepository(deploymentSet);
+
         kafkaProducer.sendMessage(KafkaConstants.DEPLOYMENT_CONFIG_AND_SUBMIT_TOPIC_NAME, deployment.getId());
         return mapEntityToDTO(deployment);
     }
@@ -115,15 +118,25 @@ public class DeploymentServiceImpl implements DeploymentService {
             if(!CollectionUtils.isEmpty(deploymentStep.getParams())) {
                 Map<String, Object> configs = new HashMap<>();
                 for(String key : deploymentStep.getParams()) {
-                    configs.put(key, deploymentProfileConfig.path(key));
+                    if(ObjectUtils.isEmpty(deploymentProfileConfig.path(key))) {
+                        configs.put(key, "");
+                    } else {
+                        configs.put(key, deploymentProfileConfig.path(key).asText());
+                    }
                 }
                 deploymentStep.setValues(configs);
             }
+            deploymentStep.setStatus(DeploymentStatus.IN_PROGRESS);
         }
 
         deployment.setStatus(DeploymentStatus.IN_PROGRESS);
         deployment.setDeploymentTemplate(clonedDeploymentTemplate);
         writeTransactionService.saveDeploymentToRepository(deployment);
+    }
+
+    @Override
+    public void submitDeploymentRequest(String deploymentID) {
+        deplOrchClient.triggerDeployment(deploymentID);
     }
 
     private DeploymentRequestResponse mapEntityToDTO(Deployment deployment) {
