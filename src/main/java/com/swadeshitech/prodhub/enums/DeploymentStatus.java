@@ -1,5 +1,8 @@
 package com.swadeshitech.prodhub.enums;
 
+import lombok.Getter;
+
+@Getter
 public enum DeploymentStatus {
     CREATED("Created"),
     IN_PROGRESS("In progress"),

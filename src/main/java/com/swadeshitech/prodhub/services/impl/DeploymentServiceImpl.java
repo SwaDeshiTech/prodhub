@@ -5,6 +5,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.swadeshitech.prodhub.constant.KafkaConstants;
 import com.swadeshitech.prodhub.dto.DeploymentRequestResponse;
+import com.swadeshitech.prodhub.dto.DeploymentResponse;
+import com.swadeshitech.prodhub.dto.DeploymentTemplateResponse;
+import com.swadeshitech.prodhub.dto.DeploymentUpdateKafka;
 import com.swadeshitech.prodhub.entity.Deployment;
 import com.swadeshitech.prodhub.entity.DeploymentSet;
 import com.swadeshitech.prodhub.entity.DeploymentTemplate;
@@ -72,12 +75,10 @@ public class DeploymentServiceImpl implements DeploymentService {
 
         deployment = writeTransactionService.saveDeploymentToRepository(deployment);
 
-        List<Deployment> deployments = deploymentSet.getDeployments();
-        if (CollectionUtils.isEmpty(deployments)) {
-            deployments = new ArrayList<>();
+        if (CollectionUtils.isEmpty(deploymentSet.getDeployments())) {
+            deploymentSet.setDeployments(new ArrayList<>());
         }
-        deployments.add(deployment);
-
+        deploymentSet.getDeployments().add(deployment);
         writeTransactionService.saveDeploymentSetToRepository(deploymentSet);
 
         kafkaProducer.sendMessage(KafkaConstants.DEPLOYMENT_CONFIG_AND_SUBMIT_TOPIC_NAME, deployment.getId());
@@ -129,6 +130,10 @@ public class DeploymentServiceImpl implements DeploymentService {
             deploymentStep.setStatus(DeploymentStatus.IN_PROGRESS);
         }
 
+        if (deployment.getMetaData().get("runtimeEnvironment").toString().equals(RunTimeEnvironment.K8s.getRunTimeEnvironment())) {
+            deployment.getMetaData().put("k8sClusterId", deploymentProfileConfig.path("k8sClusterName").asText());
+        }
+
         deployment.setStatus(DeploymentStatus.IN_PROGRESS);
         deployment.setDeploymentTemplate(clonedDeploymentTemplate);
         writeTransactionService.saveDeploymentToRepository(deployment);
@@ -137,6 +142,70 @@ public class DeploymentServiceImpl implements DeploymentService {
     @Override
     public void submitDeploymentRequest(String deploymentID) {
         deplOrchClient.triggerDeployment(deploymentID);
+    }
+
+    @Override
+    public void updateDeploymentStepStatus(DeploymentUpdateKafka deploymentUpdateKafka) {
+        List<Deployment> deployments = readTransactionService.findByDynamicOrFilters(Map.of("_id", new ObjectId(deploymentUpdateKafka.getDeploymentRequestId())), Deployment.class);
+        if(CollectionUtils.isEmpty(deployments)) {
+            log.error("Deployment could not be found {}", deploymentUpdateKafka.getDeploymentRequestId());
+            throw new CustomException(ErrorCode.DEPLOYMENT_NOT_FOUND);
+        }
+
+        Deployment deployment = deployments.getFirst();
+
+        for(DeploymentTemplate.DeploymentStep step : deployment.getDeploymentTemplate().getSteps()) {
+            if(step.getStepName().equalsIgnoreCase(deploymentUpdateKafka.getStepName())) {
+                step.setStatus(DeploymentStatus.valueOf(deploymentUpdateKafka.getStatus()));
+                step.getMetadata().put("timestamp", deploymentUpdateKafka.getTimestamp());
+                step.getMetadata().put("details", deploymentUpdateKafka.getDetails());
+                updateDeploymentStatus(deployment);
+                break;
+            }
+        }
+
+        writeTransactionService.saveDeploymentToRepository(deployment);
+    }
+
+    @Override
+    public DeploymentResponse getDeploymentDetails(String deploymentId) {
+
+        List<Deployment> deployments = readTransactionService.findByDynamicOrFilters(Map.of("_id", new ObjectId(deploymentId)), Deployment.class);
+        if(CollectionUtils.isEmpty(deployments)) {
+            log.error("Deployment could not be found {}", deploymentId);
+            throw new CustomException(ErrorCode.DEPLOYMENT_NOT_FOUND);
+        }
+
+        Deployment deployment = deployments.getFirst();
+
+        return DeploymentResponse.builder()
+                .id(deployment.getId())
+                .applicationId(deployment.getApplication().getId())
+                .deploymentSetId(deployment.getDeploymentSet().getId())
+                .status(deployment.getStatus().getMessage())
+                .deploymentTemplateResponse(DeploymentTemplateResponse.mapDTOToEntity(deployment.getDeploymentTemplate()))
+                .createdBy(deployment.getCreatedBy())
+                .createdTime(deployment.getCreatedTime())
+                .lastModifiedBy(deployment.getLastModifiedBy())
+                .lastModifiedTime(deployment.getLastModifiedTime())
+                .build();
+    }
+
+    private void updateDeploymentStatus(Deployment deployment) {
+
+        int stepExecutedSuccessfully = 0, totalStep = deployment.getDeploymentTemplate().getSteps().size();
+
+        for(DeploymentTemplate.DeploymentStep deploymentStep : deployment.getDeploymentTemplate().getSteps()) {
+            if (deploymentStep.getStatus().equals(DeploymentStatus.COMPLETED)) {
+                stepExecutedSuccessfully++;
+            } else if (deploymentStep.getStatus().equals(DeploymentStatus.FAILED)){
+                deployment.setStatus(DeploymentStatus.FAILED);
+                return;
+            }
+        }
+        if(stepExecutedSuccessfully == totalStep) {
+            deployment.setStatus(DeploymentStatus.COMPLETED);
+        }
     }
 
     private DeploymentRequestResponse mapEntityToDTO(Deployment deployment) {

@@ -1,6 +1,7 @@
 package com.swadeshitech.prodhub.controller;
 
 import com.swadeshitech.prodhub.dto.DeploymentRequestResponse;
+import com.swadeshitech.prodhub.dto.DeploymentResponse;
 import com.swadeshitech.prodhub.dto.Response;
 import com.swadeshitech.prodhub.services.DeploymentService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,5 +28,19 @@ public class Deployment {
                 .build();
 
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @GetMapping("/{deploymentId}")
+    public ResponseEntity<Response> deploymentDetails(@PathVariable String deploymentId) {
+
+        DeploymentResponse deploymentResponse = deploymentService.getDeploymentDetails(deploymentId);
+
+        Response response = Response.builder()
+                .httpStatus(HttpStatus.OK)
+                .message("Deployment details has been fetched successfully")
+                .response(deploymentResponse)
+                .build();
+
+        return ResponseEntity.ok().body(response);
     }
 }

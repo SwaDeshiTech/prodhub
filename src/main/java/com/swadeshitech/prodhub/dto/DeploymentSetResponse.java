@@ -3,6 +3,7 @@ package com.swadeshitech.prodhub.dto;
 import lombok.Data;
 import lombok.experimental.SuperBuilder;
 
+import java.util.List;
 import java.util.Map;
 
 @Data
@@ -15,4 +16,5 @@ public class DeploymentSetResponse extends BaseResponse {
     private String buildProfileName;
     private Map<String, String> metaData;
     private String approvalId;
+    private List<DeploymentResponse> deployments;
 }

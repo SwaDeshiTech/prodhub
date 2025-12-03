@@ -1,8 +1,11 @@
 package com.swadeshitech.prodhub.enums;
 
+import lombok.Getter;
+
 import java.util.ArrayList;
 import java.util.List;
 
+@Getter
 public enum CredentialProvider {
     GITHUB_ACTIONS("GitHub Actions", "buildProvider"),
     GITLAB_CI("GitLab CI", "buildProvider"),
@@ -18,7 +21,8 @@ public enum CredentialProvider {
     GITHUB("Github", "scm"),
     AWS("AWS", "cloudProvider"),
     GCP("GCP", "cloudProvider"),
-    AZURE("Azure", "cloudProvider");
+    AZURE("Azure", "cloudProvider"),
+    K8S("k8s", "deploymentProvider");
 
     private final String displayName;
     private final String type;
@@ -27,12 +31,6 @@ public enum CredentialProvider {
         this.displayName = displayName;
         this.type = type;
     }
-
-    public String getDisplayName() {
-        return displayName;
-    }
-
-    public String getType() { return type; }
 
     public static CredentialProvider fromDisplayName(String displayName) {
         for (CredentialProvider provider : CredentialProvider.values()) {

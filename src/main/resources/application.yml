@@ -31,6 +31,7 @@ spring:
     topic:
       buildStatus: buildStatus
       deploymentConfigAndSubmit: deployment-config-and-submit
+      deploymentUpdates: deployment-updates
 
 management:
   endpoints:

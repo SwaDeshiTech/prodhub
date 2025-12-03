@@ -12,4 +12,6 @@ public interface ConstantsService {
     List<ProviderConstantResponse> getProviders(String name);
 
     List<DropdownDTO> getRuntimeEnvironment();
+
+    List<DropdownDTO> getK8sClusterDropdown();
 }

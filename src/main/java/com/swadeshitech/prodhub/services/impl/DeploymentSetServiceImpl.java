@@ -136,7 +136,7 @@ public class DeploymentSetServiceImpl implements DeploymentSetService {
             deploymentSetResponses.add(DeploymentSetResponse.builder()
                     .id(deploymentSet.getId())
                     .status(deploymentSet.getStatus().getMessage())
-                    .deploymentProfileName(deploymentSet.getDeploymentProfile().getName())
+                    .deploymentProfileName(deploymentSet.getDeploymentProfile().getName().split("::")[0])
                     .serviceName(deploymentSet.getApplication().getName())
                     .createdTime(deploymentSet.getCreatedTime())
                     .metaData(Map.of("COMMIT_ID",
@@ -176,6 +176,18 @@ public class DeploymentSetServiceImpl implements DeploymentSetService {
     }
 
     private DeploymentSetResponse mapDTOToEntity(DeploymentSet deploymentSet) {
+        List<DeploymentResponse> deploymentResponse = new ArrayList<>();
+        log.info("printing deployment {}", deploymentSet.getDeployments());
+        if(Objects.nonNull(deploymentSet.getDeployments()) && !deploymentSet.getDeployments().isEmpty()) {
+            for(Deployment deployment : deploymentSet.getDeployments()) {
+                deploymentResponse.add(DeploymentResponse.builder()
+                                .deploymentID(deployment.getId())
+                                .status(deployment.getStatus().getMessage())
+                                .createdBy(deployment.getCreatedBy())
+                                .createdTime(deployment.getCreatedTime())
+                        .build());
+            }
+        }
         return DeploymentSetResponse.builder()
                 .id(deploymentSet.getId())
                 .status(deploymentSet.getStatus().getMessage())
@@ -184,6 +196,7 @@ public class DeploymentSetServiceImpl implements DeploymentSetService {
                 .buildProfileName(deploymentSet.getReleaseCandidate().getBuildProfile())
                 .approvalId(deploymentSet.getApprovals().getId())
                 .metaData(Map.of("COMMIT_ID", deploymentSet.getReleaseCandidate().getMetaData().get("commitId")))
+                .deployments(deploymentResponse)
                 .createdBy(deploymentSet.getCreatedBy())
                 .createdTime(deploymentSet.getCreatedTime())
                 .lastModifiedBy(deploymentSet.getLastModifiedBy())

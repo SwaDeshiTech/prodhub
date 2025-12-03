@@ -63,4 +63,18 @@ public class Constants {
 
         return ResponseEntity.ok().body(response);
     }
+
+    @GetMapping("/k8s/dropdown")
+    public ResponseEntity<Response> getK8sClusterConstants() {
+
+        List<DropdownDTO> dropdownDTOs = constantsService.getK8sClusterDropdown();
+
+        Response response = Response.builder()
+                .httpStatus(HttpStatus.OK)
+                .message("Dropdown details has been fetched successfully")
+                .response(dropdownDTOs)
+                .build();
+
+        return ResponseEntity.ok().body(response);
+    }
 }
