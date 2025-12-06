@@ -28,6 +28,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.ObjectUtils;
+import reactor.core.publisher.Mono;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -141,7 +142,10 @@ public class DeploymentServiceImpl implements DeploymentService {
 
     @Override
     public void submitDeploymentRequest(String deploymentID) {
-        deplOrchClient.triggerDeployment(deploymentID);
+        Mono<com.swadeshitech.prodhub.integration.deplorch.DeploymentResponse> responseMono =
+                deplOrchClient.triggerDeployment(deploymentID);
+        com.swadeshitech.prodhub.integration.deplorch.DeploymentResponse response = responseMono.blockOptional().get();
+        log.info("Printing the response {}", response);
     }
 
     @Override
@@ -157,6 +161,9 @@ public class DeploymentServiceImpl implements DeploymentService {
         for(DeploymentTemplate.DeploymentStep step : deployment.getDeploymentTemplate().getSteps()) {
             if(step.getStepName().equalsIgnoreCase(deploymentUpdateKafka.getStepName())) {
                 step.setStatus(DeploymentStatus.valueOf(deploymentUpdateKafka.getStatus()));
+                if(CollectionUtils.isEmpty(step.getMetadata())) {
+                    step.setMetadata(new HashMap<>());
+                }
                 step.getMetadata().put("timestamp", deploymentUpdateKafka.getTimestamp());
                 step.getMetadata().put("details", deploymentUpdateKafka.getDetails());
                 updateDeploymentStatus(deployment);

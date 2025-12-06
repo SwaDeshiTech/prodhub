@@ -30,6 +30,8 @@ spring:
     bootstrap-servers: localhost:9092
     topic:
       buildStatus: buildStatus
+      deploymentConfigAndSubmit: deployment-config-and-submit
+      deploymentUpdates: deployment-update
 
 management:
   endpoints:
@@ -48,3 +50,7 @@ cicaptain:
   uri: http://localhost:4457/ci-captain
   triggerBuildPath: /api/v1/providers/{providerId}/jobs/{job}/trigger
   buildStatus: /api/v1/providers/%s/job/%s/status
+
+deplorch:
+  uri: http://localhost:4458/cloudedge-deployer
+  initiateDeployment: /api/v1/deployment/start

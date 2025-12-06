@@ -31,7 +31,7 @@ spring:
     topic:
       buildStatus: buildStatus
       deploymentConfigAndSubmit: deployment-config-and-submit
-      deploymentUpdates: deployment-updates
+      deploymentUpdates: deployment-update
 
 management:
   endpoints:
@@ -52,5 +52,5 @@ cicaptain:
   buildStatus: /api/v1/providers/%s/job/%s/status
 
 deplorch:
-  uri: http://localhost:4455/deplorch
-  initiateDeployment: /api/v1/deployment
+  uri: http://localhost:4458/cloudedge-deployer
+  initiateDeployment: /api/v1/deployment/start

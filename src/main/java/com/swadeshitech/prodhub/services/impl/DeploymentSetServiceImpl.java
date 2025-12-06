@@ -177,7 +177,6 @@ public class DeploymentSetServiceImpl implements DeploymentSetService {
 
     private DeploymentSetResponse mapDTOToEntity(DeploymentSet deploymentSet) {
         List<DeploymentResponse> deploymentResponse = new ArrayList<>();
-        log.info("printing deployment {}", deploymentSet.getDeployments());
         if(Objects.nonNull(deploymentSet.getDeployments()) && !deploymentSet.getDeployments().isEmpty()) {
             for(Deployment deployment : deploymentSet.getDeployments()) {
                 deploymentResponse.add(DeploymentResponse.builder()

@@ -24,7 +24,7 @@ public class DeploymentUpdateConsumer {
     @KafkaListener(topics = "${spring.kafka.topic.deploymentUpdates}", groupId = "default_group")
     public void listen(String message) {
 
-        log.info("{}: Request for deployment config and submit {}", this.getClass().getCanonicalName(), message);
+        log.info("{}: Request for deployment update {}", this.getClass().getCanonicalName(), message);
 
         try {
             DeploymentUpdateKafka deploymentUpdateKafka = objectMapper.readValue(message, DeploymentUpdateKafka.class);
