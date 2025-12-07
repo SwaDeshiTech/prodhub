@@ -61,7 +61,7 @@ public class ConstantsServiceImpl implements ConstantsService {
             providerConstantResponses.add(ProviderConstantResponse.builder()
                     .name(provider)
                     .id(provider)
-                    .location("/dashboard/connect/onboarding/" + name + "/" + provider)
+                    .location("/dashboard/connect/onboarding/" + name + "/" + String.join("_", provider.toLowerCase().split(" ")))
                     .isActive(true).build());
         }
         return providerConstantResponses;

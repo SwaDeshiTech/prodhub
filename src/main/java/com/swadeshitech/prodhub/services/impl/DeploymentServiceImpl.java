@@ -128,13 +128,15 @@ public class DeploymentServiceImpl implements DeploymentService {
                 }
                 deploymentStep.setValues(configs);
             }
+            deploymentStep.setMetadata(new HashMap<>());
             deploymentStep.setStatus(DeploymentStatus.IN_PROGRESS);
         }
 
-        if (deployment.getMetaData().get("runtimeEnvironment").toString().equals(RunTimeEnvironment.K8s.getRunTimeEnvironment())) {
+        if (RunTimeEnvironment.K8s.getRunTimeEnvironment().equals(deployment.getMetaData().get("runtimeEnvironment").toString())) {
             deployment.getMetaData().put("k8sClusterId", deploymentProfileConfig.path("k8sClusterName").asText());
         }
 
+        deployment.getMetaData().put("namespace", deploymentProfileConfig.path("namespace").asText());
         deployment.setStatus(DeploymentStatus.IN_PROGRESS);
         deployment.setDeploymentTemplate(clonedDeploymentTemplate);
         writeTransactionService.saveDeploymentToRepository(deployment);
@@ -161,9 +163,6 @@ public class DeploymentServiceImpl implements DeploymentService {
         for(DeploymentTemplate.DeploymentStep step : deployment.getDeploymentTemplate().getSteps()) {
             if(step.getStepName().equalsIgnoreCase(deploymentUpdateKafka.getStepName())) {
                 step.setStatus(DeploymentStatus.valueOf(deploymentUpdateKafka.getStatus()));
-                if(CollectionUtils.isEmpty(step.getMetadata())) {
-                    step.setMetadata(new HashMap<>());
-                }
                 step.getMetadata().put("timestamp", deploymentUpdateKafka.getTimestamp());
                 step.getMetadata().put("details", deploymentUpdateKafka.getDetails());
                 updateDeploymentStatus(deployment);
