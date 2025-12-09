@@ -1,9 +1,7 @@
 package com.swadeshitech.prodhub.enums;
 
+import com.swadeshitech.prodhub.exception.CustomException;
 import lombok.Getter;
-
-import java.util.ArrayList;
-import java.util.List;
 
 @Getter
 public enum CredentialProvider {
@@ -13,10 +11,13 @@ public enum CredentialProvider {
     CIRCLECI("CircleCI", "buildProvider"),
     TRAVIS_CI("Travis CI", "buildProvider"),
     JENKINS("Jenkins", "buildProvider"),
-    AZURE_DEVOPS("Azure DevOps", ""),
     AWS_CODEBUILD("AWS CodeBuild", "buildProvider"),
     GOOGLE_CLOUD_BUILD("Google Cloud Build", "buildProvider"),
-    DOCKER_HUB("Docker Hub", ""),
+    DOCKER_CONTAINER_REGISTRY("Docker Container Registry", "repositoryProvider"),
+    JFROG_ARTIFACTORY("Jfrog Artifactory", "repositoryProvider"),
+    BLOB_STORAGE("Blob Storage", "repositoryProvider"),
+    NEXUS_REPOSITORY_MANAGER("Nexus Repository Manager", "repositoryProvider"),
+    GIT_REPOSITORY("Git Repository", "repositoryProvider"),
     CUSTOM("Custom", ""),
     GITHUB("Github", "scm"),
     AWS("AWS", "cloudProvider"),
@@ -32,22 +33,21 @@ public enum CredentialProvider {
         this.type = type;
     }
 
-    public static CredentialProvider fromDisplayName(String displayName) {
+    public static CredentialProvider fromValue(String value) {
         for (CredentialProvider provider : CredentialProvider.values()) {
-            if (provider.getDisplayName().equalsIgnoreCase(displayName)) {
+            if (provider.name().equalsIgnoreCase(value)) {
                 return provider;
             }
         }
-        throw new IllegalArgumentException("No CredentialProvider found for display name: " + displayName);
+        throw new IllegalArgumentException("No CredentialProvider found for : " + value);
     }
 
-    public static List<CredentialProvider> fromType(String type) {
-        List<CredentialProvider> credentialProviders = new ArrayList<>();
+    public static CredentialProvider fromType(String type) {
         for(CredentialProvider provider : CredentialProvider.values()) {
             if (provider.getType().equalsIgnoreCase(type)) {
-                credentialProviders.add(provider);
+                return provider;
             }
         }
-        return credentialProviders;
+        throw new CustomException(ErrorCode.CREDENTIAL_PROVIDER_NOT_FOUND);
     }
 }

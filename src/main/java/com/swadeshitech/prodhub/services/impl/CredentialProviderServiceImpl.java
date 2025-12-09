@@ -61,7 +61,7 @@ public class CredentialProviderServiceImpl implements CredentialProviderService 
 
         vaultService.storeSecret(vaultRequest);
 
-        com.swadeshitech.prodhub.enums.CredentialProvider credentialProviderType = com.swadeshitech.prodhub.enums.CredentialProvider.fromDisplayName(request.getProvider());
+        com.swadeshitech.prodhub.enums.CredentialProvider credentialProviderType = com.swadeshitech.prodhub.enums.CredentialProvider.fromValue(request.getProvider());
 
         CredentialProvider credentialProvider = CredentialProvider.builder()
                 .name(request.getName())
@@ -164,7 +164,7 @@ public class CredentialProviderServiceImpl implements CredentialProviderService 
         }
 
         if(StringUtils.isNoneBlank(credentialProviderFilter.getType())) {
-            filters.put("credentialProvider", com.swadeshitech.prodhub.enums.CredentialProvider.fromType(credentialProviderFilter.getType()));
+            filters.put("credentialProviderType", com.swadeshitech.prodhub.enums.CredentialProvider.fromType(credentialProviderFilter.getType()).getType());
         }
 
         if(StringUtils.isNoneBlank(credentialProviderFilter.getName())) {
