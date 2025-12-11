@@ -45,4 +45,8 @@ public class Metadata extends BaseEntity implements Serializable {
 
     @DBRef
     private transient Application application;
+
+    public String extractMetaDataName() {
+        return this.name.split("::")[0];
+    }
 }

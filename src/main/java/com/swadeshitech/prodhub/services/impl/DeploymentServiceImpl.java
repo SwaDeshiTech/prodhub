@@ -69,7 +69,8 @@ public class DeploymentServiceImpl implements DeploymentService {
                 .application(deploymentSet.getApplication())
                 .metaData(Map.of(
                         "runtimeEnvironment", deploymentSet.getDeploymentProfile().getRunTimeEnvironment().getRunTimeEnvironment(),
-                        "deploymentTemplate", deploymentSet.getDeploymentProfile().getRunTimeEnvironment().getDeploymentTemplate())
+                        "deploymentTemplate", deploymentSet.getDeploymentProfile().getRunTimeEnvironment().getDeploymentTemplate(),
+                        "releaseName", deploymentSet.getDeploymentProfile().getApplication().getName() + "-" + deploymentSet.getDeploymentProfile().extractMetaDataName())
                 )
                 .deploymentSet(deploymentSet)
                 .build();
@@ -117,7 +118,7 @@ public class DeploymentServiceImpl implements DeploymentService {
         }
 
         for(DeploymentTemplate.DeploymentStep deploymentStep : clonedDeploymentTemplate.getSteps()) {
-            if(!CollectionUtils.isEmpty(deploymentStep.getParams())) {
+            if(!CollectionUtils.isEmpty(deploymentStep.getParams()) && !deploymentStep.isSkipStep()) {
                 Map<String, Object> configs = new HashMap<>();
                 for(String key : deploymentStep.getParams()) {
                     if(ObjectUtils.isEmpty(deploymentProfileConfig.path(key))) {
@@ -134,6 +135,7 @@ public class DeploymentServiceImpl implements DeploymentService {
 
         if (RunTimeEnvironment.K8s.getRunTimeEnvironment().equals(deployment.getMetaData().get("runtimeEnvironment").toString())) {
             deployment.getMetaData().put("k8sClusterId", deploymentProfileConfig.path("k8sClusterName").asText());
+            deployment.getMetaData().put("dockerContainerRegistry", deploymentProfileConfig.path("dockerContainerRegistry").asText());
         }
 
         deployment.getMetaData().put("namespace", deploymentProfileConfig.path("namespace").asText());

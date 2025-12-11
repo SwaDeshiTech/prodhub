@@ -49,6 +49,8 @@ public class DeploymentTemplate extends BaseEntity {
 
         private Map<String, Object> metadata;
 
+        private boolean skipStep;
+
         @Data
         @Builder
         public static class ChartDetails {
