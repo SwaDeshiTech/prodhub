@@ -23,6 +23,9 @@ public class DeplOrchClient {
     @Value("${deplorch.initiateDeployment}")
     String initiateDeployment;
 
+    @Value("${deplorch.deployedPodDetails}")
+    String deployedPodDetails;
+
     public Mono<DeploymentResponse> triggerDeployment(String deploymentID) {
         return webClient.post()
                 .uri(deplorchBaseURL + initiateDeployment + "/" + deploymentID)
@@ -34,5 +37,17 @@ public class DeplOrchClient {
                                 .defaultIfEmpty("Deployment Orchestrator error")
                                 .map(msg -> new RuntimeException("Deployment Orchestrator HTTP " + resp.statusCode() + " - " + msg)))
                 .bodyToMono(DeploymentResponse.class);
+    }
+
+    public Mono<DeploymentPodResponse> getDeployedPodDetails(String k8sClusterId, String namespace) {
+        return webClient.get()
+                .uri(deplorchBaseURL + deployedPodDetails + "/" + k8sClusterId + "/" + namespace)
+                .accept(MediaType.APPLICATION_JSON)
+                .retrieve()
+                .onStatus(status -> status.is4xxClientError() || status.is5xxServerError(),
+                        resp -> resp.bodyToMono(String.class)
+                                .defaultIfEmpty("Deployment Orchestrator error")
+                                .map(msg -> new RuntimeException("Deployment Orchestrator HTTP " + resp.statusCode() + " - " + msg)))
+                .bodyToMono(DeploymentPodResponse.class);
     }
 }

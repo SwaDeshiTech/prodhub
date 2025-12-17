@@ -20,10 +20,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -50,7 +48,8 @@ public class CredentialProviderServiceImpl implements CredentialProviderService 
 
         Application application = applications.getFirst();
 
-        String credentialPath = application.getName() + "/" + request.getName();
+        String credentialPath = String.join("_", application.getName().split("\\s+")) + "/" +
+                String.join("_", request.getName().split("\\s+"));
         Map<String, Object> credentials = new HashMap<>();
         credentials.put("secret", request.getMetaData());
 

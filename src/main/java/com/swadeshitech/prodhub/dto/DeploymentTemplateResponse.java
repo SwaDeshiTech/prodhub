@@ -8,6 +8,7 @@ import lombok.experimental.SuperBuilder;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 @Data
 @SuperBuilder
@@ -75,6 +76,9 @@ public class DeploymentTemplateResponse extends BaseResponse {
     }
 
     private static DeploymentTemplateResponse.DeploymentTemplateStepResponse.ChartDetailsResponse generateChartDetailsResponse(DeploymentTemplate.DeploymentStep.ChartDetails chartDetails) {
+        if (Objects.isNull(chartDetails)) {
+            return null;
+        }
         return DeploymentTemplateResponse.DeploymentTemplateStepResponse.ChartDetailsResponse.builder()
                 .chartName(chartDetails.getChartName())
                 .repository(chartDetails.getRepository())

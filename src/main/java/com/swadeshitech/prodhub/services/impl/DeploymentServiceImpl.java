@@ -8,6 +8,7 @@ import com.swadeshitech.prodhub.dto.DeploymentRequestResponse;
 import com.swadeshitech.prodhub.dto.DeploymentResponse;
 import com.swadeshitech.prodhub.dto.DeploymentTemplateResponse;
 import com.swadeshitech.prodhub.dto.DeploymentUpdateKafka;
+import com.swadeshitech.prodhub.entity.CredentialProvider;
 import com.swadeshitech.prodhub.entity.Deployment;
 import com.swadeshitech.prodhub.entity.DeploymentSet;
 import com.swadeshitech.prodhub.entity.DeploymentTemplate;
@@ -16,6 +17,7 @@ import com.swadeshitech.prodhub.enums.ErrorCode;
 import com.swadeshitech.prodhub.enums.RunTimeEnvironment;
 import com.swadeshitech.prodhub.exception.CustomException;
 import com.swadeshitech.prodhub.integration.deplorch.DeplOrchClient;
+import com.swadeshitech.prodhub.integration.deplorch.DeploymentPodResponse;
 import com.swadeshitech.prodhub.integration.kafka.producer.KafkaProducer;
 import com.swadeshitech.prodhub.services.DeploymentService;
 import com.swadeshitech.prodhub.transaction.read.ReadTransactionService;
@@ -30,10 +32,7 @@ import org.springframework.util.CollectionUtils;
 import org.springframework.util.ObjectUtils;
 import reactor.core.publisher.Mono;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Service
 @Slf4j
@@ -70,7 +69,8 @@ public class DeploymentServiceImpl implements DeploymentService {
                 .metaData(Map.of(
                         "runtimeEnvironment", deploymentSet.getDeploymentProfile().getRunTimeEnvironment().getRunTimeEnvironment(),
                         "deploymentTemplate", deploymentSet.getDeploymentProfile().getRunTimeEnvironment().getDeploymentTemplate(),
-                        "releaseName", deploymentSet.getDeploymentProfile().getApplication().getName() + "-" + deploymentSet.getDeploymentProfile().extractMetaDataName())
+                        "releaseName", deploymentSet.getDeploymentProfile().getApplication().getName() + "-" + deploymentSet.getDeploymentProfile().extractMetaDataName(),
+                        "imageTag", deploymentSet.getReleaseCandidate().getMetaData().get("dockerImageHashValue"))
                 )
                 .deploymentSet(deploymentSet)
                 .build();
@@ -90,12 +90,6 @@ public class DeploymentServiceImpl implements DeploymentService {
     @Override
     public void generateDeploymentConfig(String deploymentID) {
 
-        List<Deployment> deployments = readTransactionService.findByDynamicOrFilters(Map.of("_id", new ObjectId(deploymentID)), Deployment.class);
-        if(CollectionUtils.isEmpty(deployments)) {
-            log.error("Deployment could not be found {}", deploymentID);
-            throw new CustomException(ErrorCode.DEPLOYMENT_NOT_FOUND);
-        }
-
         String deploymentTemplateName = "DeploymentK8s";
 
         List<DeploymentTemplate> deploymentTemplates = readTransactionService.findByDynamicOrFilters(Map.of("templateName", deploymentTemplateName), DeploymentTemplate.class);
@@ -104,7 +98,7 @@ public class DeploymentServiceImpl implements DeploymentService {
             throw new CustomException(ErrorCode.DEPLOYMENT_TEMPLATE_COULD_NOT_BE_CREATED);
         }
 
-        Deployment deployment = deployments.getFirst();
+        Deployment deployment = findDeployment(deploymentID);
         DeploymentTemplate deploymentTemplate = deploymentTemplates.getFirst();
 
         DeploymentTemplate clonedDeploymentTemplate = new DeploymentTemplate();
@@ -154,13 +148,8 @@ public class DeploymentServiceImpl implements DeploymentService {
 
     @Override
     public void updateDeploymentStepStatus(DeploymentUpdateKafka deploymentUpdateKafka) {
-        List<Deployment> deployments = readTransactionService.findByDynamicOrFilters(Map.of("_id", new ObjectId(deploymentUpdateKafka.getDeploymentRequestId())), Deployment.class);
-        if(CollectionUtils.isEmpty(deployments)) {
-            log.error("Deployment could not be found {}", deploymentUpdateKafka.getDeploymentRequestId());
-            throw new CustomException(ErrorCode.DEPLOYMENT_NOT_FOUND);
-        }
 
-        Deployment deployment = deployments.getFirst();
+        Deployment deployment = findDeployment(deploymentUpdateKafka.getDeploymentRequestId());
 
         for(DeploymentTemplate.DeploymentStep step : deployment.getDeploymentTemplate().getSteps()) {
             if(step.getStepName().equalsIgnoreCase(deploymentUpdateKafka.getStepName())) {
@@ -178,17 +167,11 @@ public class DeploymentServiceImpl implements DeploymentService {
     @Override
     public DeploymentResponse getDeploymentDetails(String deploymentId) {
 
-        List<Deployment> deployments = readTransactionService.findByDynamicOrFilters(Map.of("_id", new ObjectId(deploymentId)), Deployment.class);
-        if(CollectionUtils.isEmpty(deployments)) {
-            log.error("Deployment could not be found {}", deploymentId);
-            throw new CustomException(ErrorCode.DEPLOYMENT_NOT_FOUND);
-        }
-
-        Deployment deployment = deployments.getFirst();
+        Deployment deployment = findDeployment(deploymentId);
 
         return DeploymentResponse.builder()
                 .id(deployment.getId())
-                .applicationId(deployment.getApplication().getId())
+                .applicationId(deployment.getApplication().getName())
                 .deploymentSetId(deployment.getDeploymentSet().getId())
                 .status(deployment.getStatus().getMessage())
                 .deploymentTemplateResponse(DeploymentTemplateResponse.mapDTOToEntity(deployment.getDeploymentTemplate()))
@@ -199,12 +182,43 @@ public class DeploymentServiceImpl implements DeploymentService {
                 .build();
     }
 
+    @Override
+    public DeploymentPodResponse getDeployedPodDetails(String deploymentId) {
+
+        Deployment deployment = findDeployment(deploymentId);
+
+        DeploymentPodResponse deploymentPodResponse = deplOrchClient.getDeployedPodDetails(deployment.getMetaData().get("k8sClusterId").toString(), deployment.getMetaData().get("namespace").toString()).block();
+
+        if(Objects.isNull(deploymentPodResponse)) {
+            throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
+        }
+
+        List<CredentialProvider> credentialProviders = readTransactionService.findCredentialProviderByFilters(Map.of("_id", new ObjectId(deployment.getMetaData().get("k8sClusterId").toString())));
+        if (credentialProviders.isEmpty()) {
+            log.error("K8s cluster could not be found in vault {}", deployment.getMetaData().get("k8sClusterId"));
+            throw new CustomException(ErrorCode.CREDENTIAL_PROVIDER_NOT_FOUND);
+        }
+
+        deploymentPodResponse.setClusterId(credentialProviders.getFirst().getName());
+
+        return deploymentPodResponse;
+    }
+
+    private Deployment findDeployment(String deploymentId) {
+        List<Deployment> deployments = readTransactionService.findByDynamicOrFilters(Map.of("_id", new ObjectId(deploymentId)), Deployment.class);
+        if(CollectionUtils.isEmpty(deployments)) {
+            log.error("Deployment could not be found {}", deploymentId);
+            throw new CustomException(ErrorCode.DEPLOYMENT_NOT_FOUND);
+        }
+        return deployments.getFirst();
+    }
+
     private void updateDeploymentStatus(Deployment deployment) {
 
         int stepExecutedSuccessfully = 0, totalStep = deployment.getDeploymentTemplate().getSteps().size();
 
         for(DeploymentTemplate.DeploymentStep deploymentStep : deployment.getDeploymentTemplate().getSteps()) {
-            if (deploymentStep.getStatus().equals(DeploymentStatus.COMPLETED)) {
+            if (deploymentStep.getStatus().equals(DeploymentStatus.COMPLETED) || deploymentStep.isSkipStep()) {
                 stepExecutedSuccessfully++;
             } else if (deploymentStep.getStatus().equals(DeploymentStatus.FAILED)){
                 deployment.setStatus(DeploymentStatus.FAILED);
