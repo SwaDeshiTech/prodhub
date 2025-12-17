@@ -48,3 +48,7 @@ cicaptain:
   uri: http://192.168.1.2:4457/ci-captain
   triggerBuildPath: /api/v1/providers/{providerId}/jobs/{job}/trigger
   buildStatus: /api/v1/providers/%s/job/%s/status
+
+deplorch:
+  uri: http://192.168.1.2:4458/cloudedge-deployer
+  initiateDeployment: /api/v1/deployment/start
