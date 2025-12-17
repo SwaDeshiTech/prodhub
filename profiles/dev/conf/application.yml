@@ -14,7 +14,7 @@ springdoc:
 spring:
   data:
     mongodb:
-      host: 127.0.0.1
+      host: 192.168.1.2
       port: 27017
       database: prodhub
       pool:
@@ -27,7 +27,7 @@ spring:
         maintenance-frequency: 1000
         max-connection-idle-time: 5
   kafka:
-    bootstrap-servers: localhost:9092
+    bootstrap-servers: 192.168.1.2:9092
     topic:
       buildStatus: buildStatus
 
@@ -41,10 +41,10 @@ management:
       show-details: always
 
 vault:
-  uri: http://localhost:8200
+  uri: http://192.168.1.2:8200
   token: hvs.kuonI3JQThkmxiaySCBuPwrT
 
 cicaptain:
-  uri: http://localhost:4457/ci-captain
+  uri: http://192.168.1.2:4457/ci-captain
   triggerBuildPath: /api/v1/providers/{providerId}/jobs/{job}/trigger
   buildStatus: /api/v1/providers/%s/job/%s/status
