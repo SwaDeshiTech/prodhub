@@ -30,6 +30,9 @@ spring:
     bootstrap-servers: 192.168.1.2:9092
     topic:
       buildStatus: buildStatus
+      deploymentConfigAndSubmit: deployment-config-and-submit
+      deploymentUpdates: deployment-update
+      ephemeralEnvironmentUpdate: ephemeral-environment-update
 
 management:
   endpoints:
