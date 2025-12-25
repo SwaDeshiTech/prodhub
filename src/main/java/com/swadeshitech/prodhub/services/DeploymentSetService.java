@@ -18,4 +18,6 @@ public interface DeploymentSetService {
     List<DeploymentSetResponse> getDeploymentResponseList();
 
     void updateDeploymentSet(String id, DeploymentSetUpdateRequest request);
+
+    void updateDeploymentSetStatus(String deploymentSetIDUUID);
 }

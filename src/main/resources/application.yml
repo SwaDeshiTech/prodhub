@@ -32,6 +32,8 @@ spring:
       buildStatus: buildStatus
       deploymentConfigAndSubmit: deployment-config-and-submit
       deploymentUpdates: deployment-update
+      ephemeralEnvironmentUpdate: ephemeral-environment-update
+      deploymentSetStatusUpdate: deploymentSet-status-update
 
 management:
   endpoints:
@@ -54,3 +56,4 @@ cicaptain:
 deplorch:
   uri: http://localhost:4458/cloudedge-deployer
   initiateDeployment: /api/v1/deployment/start
+  deployedPodDetails: /api/v1/pods

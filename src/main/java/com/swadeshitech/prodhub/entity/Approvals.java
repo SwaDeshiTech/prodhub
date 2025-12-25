@@ -7,6 +7,8 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.DBRef;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import java.util.Map;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -27,6 +29,8 @@ public class Approvals extends BaseEntity {
     private String profileName;
 
     private ProfileType profileType;
+
+    private Map<String, Object> metaData;
 
     @DBRef
     private transient ApprovalStage approvalStage;

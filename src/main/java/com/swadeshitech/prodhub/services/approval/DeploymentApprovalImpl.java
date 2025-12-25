@@ -6,7 +6,7 @@ import com.swadeshitech.prodhub.enums.ApprovalStatus;
 import com.swadeshitech.prodhub.enums.ErrorCode;
 import com.swadeshitech.prodhub.enums.ProfileType;
 import com.swadeshitech.prodhub.exception.CustomException;
-import com.swadeshitech.prodhub.services.DeploymentSetService;
+import com.swadeshitech.prodhub.integration.kafka.producer.KafkaProducer;
 import com.swadeshitech.prodhub.services.UserService;
 import com.swadeshitech.prodhub.transaction.read.ReadTransactionService;
 import com.swadeshitech.prodhub.transaction.write.WriteTransactionService;
@@ -14,12 +14,16 @@ import com.swadeshitech.prodhub.utils.UserContextUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
+import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
+
+import static com.swadeshitech.prodhub.constant.Constants.DEPLOYMENT_SET_ID_KEY;
 
 @Service("DeploymentApprovalImpl")
 @Slf4j
@@ -33,6 +37,12 @@ public class DeploymentApprovalImpl implements ApprovalService {
 
     @Autowired
     UserService userService;
+
+    @Autowired
+    KafkaProducer kafkaProducer;
+
+    @Value("${spring.kafka.topic.deploymentSetStatusUpdate}")
+    String deploymentSetStatusUpdate;
 
     @Override
     public ApprovalResponse createApprovalRequest(ApprovalRequest request) {
@@ -56,16 +66,17 @@ public class DeploymentApprovalImpl implements ApprovalService {
         Application application = applications.getFirst();
         Metadata metadata = metadataList.getFirst();
 
-        ApprovalStage approvalStage = createApprovalStage(application);
-
         Approvals approvals = new Approvals();
-        approvals.setApprovalStatus(ApprovalStatus.PENDING);
+        approvals.setApprovalStatus(ApprovalStatus.CREATED);
         approvals.setProfileType(ProfileType.DEPLOYMENT);
-
-        approvals.setApprovalStage(approvalStage);
         approvals.setApplication(application);
         approvals.setCurrentMetadata(metadata);
+        approvals.setMetaData(request.getMetaData());
+        writeTransactionService.saveApprovalsToRepository(approvals);
 
+        ApprovalStage approvalStage = createApprovalStage(approvals, application);
+        approvals.setApprovalStage(approvalStage);
+        approvals.setApprovalStatus(ApprovalStatus.PENDING);
         writeTransactionService.saveApprovalsToRepository(approvals);
 
         return mapEntityToDTO(approvals);
@@ -106,6 +117,10 @@ public class DeploymentApprovalImpl implements ApprovalService {
         validateAndUpdateStatus(stage, request);
         markRequestComplete(approvals);
 
+        String deploymentSetUUID = String.valueOf(approvals.getMetaData().get(DEPLOYMENT_SET_ID_KEY));
+        if (StringUtils.hasText(deploymentSetUUID)) {
+            kafkaProducer.sendMessage(deploymentSetStatusUpdate, deploymentSetUUID);
+        }
         return true;
     }
 
@@ -179,7 +194,18 @@ public class DeploymentApprovalImpl implements ApprovalService {
                 throw new CustomException(ErrorCode.APPROVALS_STAGE_UPDATE_FAILED);
             }
         }
+        updateStagesOnFailure(stage, currentStage);
         writeTransactionService.saveApprovalStageToRepository(stage);
+    }
+
+    private void updateStagesOnFailure(ApprovalStage stage, ApprovalStage.Stage currentStage) {
+        if(ApprovalStatus.REJECTED.equals(currentStage.getStatus())) {
+            for (ApprovalStage.Stage itr : stage.getStages()) {
+                if (currentStage.getSequence() < itr.getSequence()) {
+                    itr.setStatus(ApprovalStatus.SKIPPED);
+                }
+            }
+        }
     }
 
     private void updateStageStatus(ApprovalStage.Stage stage, ApprovalUpdateRequest request) {
@@ -194,7 +220,7 @@ public class DeploymentApprovalImpl implements ApprovalService {
         }
     }
 
-    private ApprovalStage createApprovalStage(Application application) {
+    private ApprovalStage createApprovalStage(Approvals approvals, Application application) {
 
         Team team = application.getTeam();
 
@@ -220,6 +246,7 @@ public class DeploymentApprovalImpl implements ApprovalService {
                 .description("Deployment Approval")
                 .name("Deployment")
                 .stages(stages)
+                .approvals(approvals)
                 .build();
 
         return writeTransactionService.saveApprovalStageToRepository(approvalStage);
@@ -283,6 +310,10 @@ public class DeploymentApprovalImpl implements ApprovalService {
                 total++;
                 if(ApprovalStatus.APPROVED.equals(stage.getStatus())) {
                     totalCompleted++;
+                } else if (ApprovalStatus.REJECTED.equals(stage.getStatus())
+                        || ApprovalStatus.CANCELED.equals(stage.getStatus())) {
+                    approvals.setApprovalStatus(stage.getStatus());
+                    break;
                 } else {
                     return;
                 }
@@ -290,7 +321,7 @@ public class DeploymentApprovalImpl implements ApprovalService {
         }
         if(total == totalCompleted) {
             approvals.setApprovalStatus(ApprovalStatus.APPROVED);
-            writeTransactionService.saveApprovalsToRepository(approvals);
         }
+        writeTransactionService.saveApprovalsToRepository(approvals);
     }
 }

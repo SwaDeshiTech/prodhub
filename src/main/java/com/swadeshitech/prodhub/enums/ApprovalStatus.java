@@ -1,6 +1,7 @@
 package com.swadeshitech.prodhub.enums;
 
 public enum ApprovalStatus {
+    CREATED("Created"),
     PENDING("Pending"),
     APPROVED("Approved"),
     REJECTED("Rejected"),

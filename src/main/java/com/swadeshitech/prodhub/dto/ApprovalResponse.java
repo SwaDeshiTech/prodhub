@@ -18,6 +18,7 @@ public class ApprovalResponse extends BaseResponse {
     private String profileName;
     private String oldMetaData;
     private String newMetaData;
+    private String status;
     private ApprovalStageResponse approvalStageResponse;
 
     @Data

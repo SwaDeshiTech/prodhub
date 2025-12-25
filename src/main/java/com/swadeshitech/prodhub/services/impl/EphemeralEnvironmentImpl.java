@@ -87,19 +87,7 @@ public class EphemeralEnvironmentImpl implements EphemeralEnvironmentService {
 
     @Override
     public EphemeralEnvironmentResponse getEphemeralEnvironmentDetail(String id) {
-
-        if (!StringUtils.hasText(id)) {
-            log.error("ephemeral environment id is not present");
-            throw new CustomException(ErrorCode.EPHEMERAL_ENVIRONMENT_ID_NOT_FOUND);
-        }
-
-        Optional<EphemeralEnvironment> environment = environmentRepository.findById(id);
-        if (environment.isEmpty()) {
-            log.error("ephemeral environment could not be found", id);
-            throw new CustomException(ErrorCode.EPHEMERAL_ENVIRONMENT_ID_NOT_FOUND);
-        }
-
-        return mapEntityToResponse(environment.get());
+        return mapEntityToResponse(fetchEphemeralEnvironmentFromDB(id));
     }
 
     private EphemeralEnvironment saveEphemeralEnvironmentToRepository(EphemeralEnvironment environment) {
@@ -273,18 +261,15 @@ public class EphemeralEnvironmentImpl implements EphemeralEnvironmentService {
 
     @Override
     public Map<String, Object> getMetadataFromEphemeralEnvironment(String id) {
-
-        List<EphemeralEnvironment> ephemeralEnvironments = readTransactionService.findByDynamicOrFilters(
-                Map.of("_id", new ObjectId(id)), EphemeralEnvironment.class
-        );
-        if (CollectionUtils.isEmpty(ephemeralEnvironments)) {
-            log.error("Ephemeral envrionment could not be found {}", id);
-            throw new CustomException(ErrorCode.EPHEMERAL_ENVIRONMENT_NOT_FOUND);
-        }
-
-        EphemeralEnvironment environment = ephemeralEnvironments.getFirst();
-
+        EphemeralEnvironment environment = fetchEphemeralEnvironmentFromDB(id);
         return environment.getApplications();
+    }
+
+    @Override
+    public void setUpProfiles(String ephemeralEnvironmentId, String profileType) {
+        EphemeralEnvironment ephemeralEnvironment = fetchEphemeralEnvironmentFromDB(ephemeralEnvironmentId);
+
+
     }
 
     private EphemeralEnvironmentResponse mapEntityToResponse(EphemeralEnvironment environment) {
@@ -359,5 +344,23 @@ public class EphemeralEnvironmentImpl implements EphemeralEnvironmentService {
         }
 
         return response;
+    }
+
+    private EphemeralEnvironment fetchEphemeralEnvironmentFromDB(String id) {
+
+        if (!StringUtils.hasText(id)) {
+            log.error("ephemeral environment id is not present");
+            throw new CustomException(ErrorCode.EPHEMERAL_ENVIRONMENT_ID_NOT_FOUND);
+        }
+
+        List<EphemeralEnvironment> ephemeralEnvironments = readTransactionService.findByDynamicOrFilters(
+                Map.of("_id", new ObjectId(id)), EphemeralEnvironment.class
+        );
+        if (CollectionUtils.isEmpty(ephemeralEnvironments)) {
+            log.error("Ephemeral envrionment could not be found {}", id);
+            throw new CustomException(ErrorCode.EPHEMERAL_ENVIRONMENT_NOT_FOUND);
+        }
+
+        return ephemeralEnvironments.getFirst();
     }
 }

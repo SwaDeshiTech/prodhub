@@ -33,6 +33,7 @@ spring:
       deploymentConfigAndSubmit: deployment-config-and-submit
       deploymentUpdates: deployment-update
       ephemeralEnvironmentUpdate: ephemeral-environment-update
+      deploymentSetStatusUpdate: deploymentSet-status-update
 
 management:
   endpoints:

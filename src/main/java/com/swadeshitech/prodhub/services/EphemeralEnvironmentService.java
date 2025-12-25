@@ -28,4 +28,6 @@ public interface EphemeralEnvironmentService {
             EphemeralEnvironmentRequest request);
 
     public Map<String, Object> getMetadataFromEphemeralEnvironment(String id);
+
+    public void setUpProfiles(String ephemeralEnvironmentId, String profileType);
 }

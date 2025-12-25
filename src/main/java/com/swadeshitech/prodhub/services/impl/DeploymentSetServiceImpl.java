@@ -19,6 +19,8 @@ import org.springframework.util.CollectionUtils;
 
 import java.util.*;
 
+import static com.swadeshitech.prodhub.constant.Constants.DEPLOYMENT_SET_ID_KEY;
+
 @Service
 @Slf4j
 public class DeploymentSetServiceImpl implements DeploymentSetService {
@@ -81,6 +83,7 @@ public class DeploymentSetServiceImpl implements DeploymentSetService {
                 .serviceId(request.getApplicationId())
                 .comment("Deployment Request")
                 .metaDataRequest(MetaDataRequest.builder().id(request.getDeploymentProfileId()).build())
+                .metaData(Map.of(DEPLOYMENT_SET_ID_KEY, uuid))
                 .build();
 
         ApprovalResponse approvalResponse = approvalService.createApprovalRequest(approvalRequest);
@@ -151,28 +154,46 @@ public class DeploymentSetServiceImpl implements DeploymentSetService {
 
     @Override
     public void updateDeploymentSet(String id, DeploymentSetUpdateRequest request) {
-        List<DeploymentSet> deploymentSets = readTransactionService.findByDynamicOrFilters(
-                Map.of("_id", new ObjectId(id)), DeploymentSet.class);
-        if (CollectionUtils.isEmpty(deploymentSets)) {
-            log.error("Deployment sets could not be found");
-            throw new CustomException(ErrorCode.DEPLOYMENT_SET_NOT_FOUND);
-        }
 
-        DeploymentSet deploymentSet = deploymentSets.getFirst();
+        DeploymentSet deploymentSet = fetchDeploymentSet(Map.of("_id", new ObjectId(id)));
         approvalService.updateApprovalStatus(deploymentSet.getApprovals().getId(), ApprovalUpdateRequest.builder()
                         .comments(request.getComments())
                         .name(request.getName())
                         .status(request.getStatus())
                 .build());
-        deploymentSets = readTransactionService.findByDynamicOrFilters(
-                Map.of("_id", new ObjectId(id)), DeploymentSet.class);
-        deploymentSet = deploymentSets.getFirst();
-        if(ApprovalStatus.APPROVED.equals(deploymentSet.getApprovals().getApprovalStatus())) {
-            deploymentSet.setStatus(DeploymentSetStatus.COMPLETED);
-        } else {
-            deploymentSet.setStatus(DeploymentSetStatus.IN_PROGRESS);
-        }
+        deploymentSet = fetchDeploymentSet(Map.of("_id", new ObjectId(id)));
+        updateDeploymentSetStatusByApprovalStatus(deploymentSet);
         writeTransactionService.saveDeploymentSetToRepository(deploymentSet);
+    }
+
+    @Override
+    public void updateDeploymentSetStatus(String deploymentSetIDUUID) {
+        DeploymentSet deploymentSet = fetchDeploymentSet(Map.of("uuid", deploymentSetIDUUID));
+        updateDeploymentSetStatusByApprovalStatus(deploymentSet);
+        writeTransactionService.saveDeploymentSetToRepository(deploymentSet);
+    }
+
+    private void updateDeploymentSetStatusByApprovalStatus(DeploymentSet deploymentSet) {
+        ApprovalStatus status = deploymentSet.getApprovals().getApprovalStatus();
+        log.info("Printing deployment set ID {} and status {}", deploymentSet.getId(), status);
+        if(ApprovalStatus.APPROVED.equals(status)) {
+            deploymentSet.setStatus(DeploymentSetStatus.COMPLETED);
+        } else if(ApprovalStatus.PENDING.equals(status)) {
+            deploymentSet.setStatus(DeploymentSetStatus.IN_PROGRESS);
+        } else if(ApprovalStatus.CANCELED.equals(status) || ApprovalStatus.REJECTED.equals(status)) {
+            deploymentSet.setStatus(DeploymentSetStatus.FAILED);
+        }
+    }
+
+    private DeploymentSet fetchDeploymentSet(Map<String, Object> filters) {
+        List<DeploymentSet> deploymentSets = readTransactionService.findByDynamicOrFilters(
+                filters, DeploymentSet.class);
+        if (CollectionUtils.isEmpty(deploymentSets)) {
+            log.error("Deployment sets could not be found");
+            throw new CustomException(ErrorCode.DEPLOYMENT_SET_NOT_FOUND);
+        }
+
+        return deploymentSets.getFirst();
     }
 
     private DeploymentSetResponse mapDTOToEntity(DeploymentSet deploymentSet) {

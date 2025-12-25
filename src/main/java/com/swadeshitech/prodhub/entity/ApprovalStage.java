@@ -3,6 +3,7 @@ package com.swadeshitech.prodhub.entity;
 import com.swadeshitech.prodhub.enums.ApprovalStatus;
 import lombok.*;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.DBRef;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDate;
@@ -23,6 +24,9 @@ public class ApprovalStage extends BaseEntity {
     private String description;
 
     private List<Stage> stages;
+
+    @DBRef
+    private transient Approvals approvals;
 
     @Data
     @NoArgsConstructor

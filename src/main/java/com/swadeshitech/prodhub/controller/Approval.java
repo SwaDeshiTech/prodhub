@@ -16,7 +16,7 @@ public class Approval {
 
     @Autowired
     @Qualifier("ApprovalServiceImpl")
-    private ApprovalService approvalService;
+    ApprovalService approvalService;
 
     @PostMapping
     public ResponseEntity<Response> createApprovalRequest(@RequestBody ApprovalRequest approvalRequest) {
@@ -47,7 +47,8 @@ public class Approval {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Response> updateApprovalRequestStatus(@PathVariable String id, @RequestBody ApprovalUpdateRequest request) {
+    public ResponseEntity<Response> updateApprovalRequestStatus(@PathVariable String id,
+            @RequestBody ApprovalUpdateRequest request) {
 
         boolean isUpdated = approvalService.updateApprovalStatus(id, request);
 
@@ -73,5 +74,4 @@ public class Approval {
 
         return ResponseEntity.ok().body(response);
     }
-
 }

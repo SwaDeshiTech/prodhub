@@ -20,6 +20,7 @@ import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.util.*;
@@ -47,6 +48,10 @@ public class ApprovalServiceImpl implements ApprovalService {
 
     @Autowired
     OnboardingService onboardingService;
+
+    @Autowired
+    @Qualifier("DeploymentApprovalImpl")
+    ApprovalService deploymentApprovalService;
 
     @Override
     public ApprovalResponse createApprovalRequest(ApprovalRequest request) {
@@ -117,58 +122,76 @@ public class ApprovalServiceImpl implements ApprovalService {
         }
 
         Approvals approvals = approvalList.getFirst();
-        ApprovalStage stage = approvals.getApprovalStage();
-        if (Objects.isNull(stage)) {
-            log.error("Approval stage is not attached to approval request: {}", approvals.getId());
-            throw new CustomException(ErrorCode.APPROVALS_STAGE_NOT_FOUND);
+
+        if (ProfileType.DEPLOYMENT.equals(approvals.getProfileType())) {
+            deploymentApprovalService.updateApprovalStatus(requestId, request);
+        } else {
+            ApprovalStage stage = approvals.getApprovalStage();
+            if (Objects.isNull(stage)) {
+                log.error("Approval stage is not attached to approval request: {}", approvals.getId());
+                throw new CustomException(ErrorCode.APPROVALS_STAGE_NOT_FOUND);
+            }
+            validateAndUpdateStatus(stage, request);
+            markRequestComplete(approvals);
         }
-
-        validateAndUpdateStatus(stage, request);
-        markRequestComplete(approvals);
-
         return true;
     }
 
     @Override
     public List<ApprovalResponse> getApprovalsList(ApprovalRequestFilter requestFilter) {
 
-        List<Application> applications = readTransactionService.findApplicationByFilters(
-                Map.of("_id", new ObjectId(requestFilter.getServiceId())));
-        if (applications.isEmpty()) {
-            log.error("No application found for id: {}", requestFilter.getServiceId());
-            throw new CustomException(ErrorCode.APPLICATION_NOT_FOUND);
-        }
-
-        List<Metadata> metadataList = readTransactionService.findMetaDataByFilters(
-                Map.of("_id", new ObjectId(requestFilter.getProfileId())));
-        if (metadataList.isEmpty()) {
-            log.error("No metadata found for id: {}", requestFilter.getProfileId());
-            throw new CustomException(ErrorCode.METADATA_PROFILE_NOT_FOUND);
-        }
-
-        Application application = applications.getFirst();
-        Metadata metadata = metadataList.getFirst();
-
-        List<Approvals> approvalList = readTransactionService.findApprovalsByFilters(
-                Map.of("application", application,
-                        "profileName", metadata.getName(),
-                        "approvalStatus", ApprovalStatus.fromDisplayName(requestFilter.getStatus())
-                )
-        );
-
+        Map<String, Object> filters = generateApprovalFilters(requestFilter);
+        List<ApprovalStage> approvalList = readTransactionService.findByDynamicOrFilters(filters, ApprovalStage.class);
         List<ApprovalResponse> approvalResponseList = new ArrayList<>();
 
-        for(Approvals approvals : approvalList) {
+        for (ApprovalStage stage : approvalList) {
+            Approvals approvals = stage.getApprovals();
             approvalResponseList.add(ApprovalResponse.builder()
-                            .requestId(approvals.getId())
-                            .serviceName(approvals.getApplication().getName())
-                            .profileType(approvals.getProfileType().getMessage())
-                            .createdBy(approvals.getCreatedBy())
-                            .description(approvals.getComment())
+                    .requestId(approvals.getId())
+                    .serviceName(approvals.getApplication().getName())
+                    .profileType(approvals.getProfileType().getMessage())
+                    .createdBy(approvals.getCreatedBy())
+                    .description(approvals.getComment())
+                    .status(approvals.getApprovalStatus().getDisplayName())
                     .build());
         }
 
         return approvalResponseList;
+    }
+
+    private Map<String, Object> generateApprovalFilters(ApprovalRequestFilter requestFilter) {
+
+        Map<String, Object> filters = new HashMap<>();
+
+        if (StringUtils.hasText(requestFilter.getServiceId())) {
+            List<Application> applications = readTransactionService.findApplicationByFilters(
+                    Map.of("_id", new ObjectId(requestFilter.getServiceId())));
+            if (applications.isEmpty()) {
+                log.error("No application found for id: {}", requestFilter.getServiceId());
+                throw new CustomException(ErrorCode.APPLICATION_NOT_FOUND);
+            }
+            filters.put("application", applications.getFirst());
+        }
+
+        if (StringUtils.hasText(requestFilter.getProfileId())) {
+            List<Metadata> metadataList = readTransactionService.findMetaDataByFilters(
+                    Map.of("_id", new ObjectId()));
+            if (metadataList.isEmpty()) {
+                log.error("No metadata found for id: {}", requestFilter.getProfileId());
+                throw new CustomException(ErrorCode.METADATA_PROFILE_NOT_FOUND);
+            }
+            filters.put("profileName", metadataList.getFirst().getName());
+        }
+
+        if (StringUtils.hasText(requestFilter.getStatus())) {
+            filters.put("approvalStatus", ApprovalStatus.fromDisplayName(requestFilter.getStatus()));
+        }
+
+        String userId = UserContextUtil.getUserIdFromRequestContext();
+        if (StringUtils.hasText(userId)) {
+            filters.put("stages.approvers", List.of(userId));
+        }
+        return filters;
     }
 
     public void validateAndUpdateStatus(ApprovalStage stage, ApprovalUpdateRequest request) {
@@ -244,10 +267,10 @@ public class ApprovalServiceImpl implements ApprovalService {
     private ApprovalResponse mapEntityToDTO(Approvals approvals) {
         String oldMetaData = "", newMetaData = "";
 
-        if(Objects.nonNull(approvals.getCurrentMetadata())) {
+        if (Objects.nonNull(approvals.getCurrentMetadata())) {
             oldMetaData = Base64Util.convertToPlainText(approvals.getCurrentMetadata().getData());
         }
-        if(Objects.nonNull(approvals.getUpdatedMetaData())) {
+        if (Objects.nonNull(approvals.getUpdatedMetaData())) {
             newMetaData = Base64Util.convertToPlainText(approvals.getUpdatedMetaData());
         }
 
@@ -270,12 +293,12 @@ public class ApprovalServiceImpl implements ApprovalService {
 
         List<ApprovalResponse.ApprovalStageResponse.StageResponse> stageResponseList = new ArrayList<>();
 
-        for(ApprovalStage.Stage stageItr : approvalStage.getStages()) {
+        for (ApprovalStage.Stage stageItr : approvalStage.getStages()) {
 
             List<String> userDetail = new ArrayList<>();
-            for(String userItr : stageItr.getApprovers()) {
+            for (String userItr : stageItr.getApprovers()) {
                 UserResponse userResponse = userService.getUserDetail(userItr);
-                if(Objects.isNull(userResponse)) {
+                if (Objects.isNull(userResponse)) {
                     log.error("User not found {}", userItr);
                     throw new CustomException(ErrorCode.USER_NOT_FOUND);
                 }
@@ -283,14 +306,14 @@ public class ApprovalServiceImpl implements ApprovalService {
             }
 
             stageResponseList.add(ApprovalResponse.ApprovalStageResponse.StageResponse.builder()
-                            .approvedAt(stageItr.getApprovedAt())
-                            .approvedBy(stageItr.getApprovedBy())
-                            .status(stageItr.getStatus().getDisplayName())
-                            .comments(stageItr.getComments())
-                            .sequence(stageItr.getSequence())
-                            .isMandatory(stageItr.isMandatory())
-                            .name(stageItr.getName())
-                            .approvers(userDetail)
+                    .approvedAt(stageItr.getApprovedAt())
+                    .approvedBy(stageItr.getApprovedBy())
+                    .status(stageItr.getStatus().getDisplayName())
+                    .comments(stageItr.getComments())
+                    .sequence(stageItr.getSequence())
+                    .isMandatory(stageItr.isMandatory())
+                    .name(stageItr.getName())
+                    .approvers(userDetail)
                     .build());
         }
 
@@ -305,18 +328,19 @@ public class ApprovalServiceImpl implements ApprovalService {
     private void markRequestComplete(Approvals approvals) {
         List<ApprovalStage.Stage> stages = approvals.getApprovalStage().getStages();
         int total = 0, totalCompleted = 0;
-        for(ApprovalStage.Stage stage : stages) {
-            if(stage.isMandatory()) {
+        for (ApprovalStage.Stage stage : stages) {
+            if (stage.isMandatory()) {
                 total++;
-                if(ApprovalStatus.APPROVED.equals(stage.getStatus())) {
+                if (ApprovalStatus.APPROVED.equals(stage.getStatus())) {
                     totalCompleted++;
                 } else {
                     return;
                 }
             }
         }
-        if(total == totalCompleted) {
+        if (total == totalCompleted) {
             approvals.setApprovalStatus(ApprovalStatus.APPROVED);
+            writeTransactionService.saveApprovalsToRepository(approvals);
             String data = Base64Util.convertToPlainText(approvals.getUpdatedMetaData());
             MetaDataRequest metaDataRequest = objectMapper.convertValue(data, MetaDataRequest.class);
             ApplicationProfileRequest applicationRequest = ApplicationProfileRequest.builder()
@@ -325,7 +349,6 @@ public class ApprovalServiceImpl implements ApprovalService {
                     .initiatedBy(approvals.getCreatedBy())
                     .build();
             onboardingService.onboardProfile(applicationRequest);
-            writeTransactionService.saveApprovalsToRepository(approvals);
         }
     }
 }
