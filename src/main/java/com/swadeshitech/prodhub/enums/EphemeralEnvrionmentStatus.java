@@ -1,5 +1,5 @@
 package com.swadeshitech.prodhub.enums;
 
 public enum EphemeralEnvrionmentStatus {
-    CREATED, PENDING, RUNNING, DELETED, EXPIRED
+    CREATED, PENDING, RUNNING, DELETED, EXPIRED, DELETING, FAILED
 }

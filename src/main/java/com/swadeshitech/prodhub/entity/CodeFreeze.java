@@ -33,7 +33,7 @@ public class CodeFreeze extends BaseEntity {
     private LocalDateTime endTime;
 
     @DBRef
-    private transient List<User> approvers;
+    private List<User> approvers;
 
     @DBRef
     private List<Application> applications;

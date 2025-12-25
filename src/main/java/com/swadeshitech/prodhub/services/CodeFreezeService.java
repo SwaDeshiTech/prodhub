@@ -9,7 +9,10 @@ import java.util.List;
 @Component
 public interface CodeFreezeService {
     CodeFreezeResponse createCodeFreeze(CodeFreezeRequest request);
+
     List<CodeFreezeResponse> getCodeFreezeList();
+
     CodeFreezeResponse codeFreezeDetails(String id);
+
     void updateCodeFreeze(String id, CodeFreezeRequest request);
 }

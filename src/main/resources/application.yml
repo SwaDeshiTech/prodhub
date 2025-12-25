@@ -57,3 +57,7 @@ deplorch:
   uri: http://localhost:4458/cloudedge-deployer
   initiateDeployment: /api/v1/deployment/start
   deployedPodDetails: /api/v1/pods
+
+cron:
+  codeFreezeScheduler: "0 * * * * *"
+  ephemeralCleanup: "0 */5 * * * *"
