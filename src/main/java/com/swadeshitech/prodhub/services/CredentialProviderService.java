@@ -15,6 +15,8 @@ public interface CredentialProviderService {
 
     public CredentialProviderResponse credentialProviderDetails(String serviceId, String credentialId);
 
+    public CredentialProviderResponse credentialProviderDetails(String credentialId);
+
     public List<CredentialProviderResponse> credentialProviders(CredentialProviderFilter credentialProviderFilter);
 
     public List<DropdownDTO> getCredentialProvidersByType(String type);

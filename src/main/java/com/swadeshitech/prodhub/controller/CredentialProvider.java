@@ -30,6 +30,20 @@ public class CredentialProvider {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
+    @GetMapping("/details/{credentialId}")
+    public ResponseEntity<Response> credentialProviderDetails(@PathVariable String credentialId) {
+
+        CredentialProviderResponse credentialProviderResponse = credentialProviderService.credentialProviderDetails(credentialId);
+
+        Response response = Response.builder()
+                .httpStatus(HttpStatus.OK)
+                .message("Credential details has been fetched")
+                .response(credentialProviderResponse)
+                .build();
+
+        return ResponseEntity.ok().body(response);
+    }
+
     @GetMapping("/{serviceId}/{credentialId}")
     public ResponseEntity<Response> credentialProviderDetails(@PathVariable String serviceId, @PathVariable String credentialId) {
 

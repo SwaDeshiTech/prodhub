@@ -108,6 +108,23 @@ public class CredentialProviderServiceImpl implements CredentialProviderService 
     }
 
     @Override
+    public CredentialProviderResponse credentialProviderDetails(String credentialId) {
+
+        List<CredentialProvider> credentialProviders = readTransactionService.findByDynamicOrFilters(Map.of("_id", new ObjectId(credentialId)), CredentialProvider.class);
+        if(CollectionUtils.isEmpty(credentialProviders)) {
+            log.info("Fail to fetch credential providers list {}", credentialId);
+            throw new CustomException(ErrorCode.CREDENTIAL_PROVIDER_LIST_NOT_FOUND);
+        }
+
+        CredentialProvider credentialProvider = credentialProviders.getFirst();
+        CredentialProviderResponse response = mapEntityToDTO(credentialProvider);
+        Map<String, Object> vaultResponse = vaultService.getSecret(credentialProvider.getCredentialPath());
+        response.setCredentialMetadata(vaultResponse != null ? vaultResponse.get("secret").toString() : null);
+
+        return response;
+    }
+
+    @Override
     public List<CredentialProviderResponse> credentialProviders(CredentialProviderFilter credentialProviderFilter) {
 
         Map<String, Object> filters = createFilterObject(credentialProviderFilter);
