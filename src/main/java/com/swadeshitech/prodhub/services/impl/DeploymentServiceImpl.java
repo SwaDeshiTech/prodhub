@@ -150,14 +150,25 @@ public class DeploymentServiceImpl implements DeploymentService {
     public void updateDeploymentStepStatus(DeploymentUpdateKafka deploymentUpdateKafka) {
 
         Deployment deployment = findDeployment(deploymentUpdateKafka.getDeploymentRequestId());
+        boolean isDeploymentStepFailed = false;
 
-        for(DeploymentTemplate.DeploymentStep step : deployment.getDeploymentTemplate().getSteps()) {
+        if(DeploymentStatus.valueOf(deploymentUpdateKafka.getStatus()).equals(DeploymentStatus.FAILED)) {
+            isDeploymentStepFailed = true;
+        }
+
+        for(int iCounter = 0; iCounter < deployment.getDeploymentTemplate().getSteps().size(); iCounter++) {
+            DeploymentTemplate.DeploymentStep step = deployment.getDeploymentTemplate().getSteps().get(iCounter);
             if(step.getStepName().equalsIgnoreCase(deploymentUpdateKafka.getStepName())) {
                 step.setStatus(DeploymentStatus.valueOf(deploymentUpdateKafka.getStatus()));
                 step.getMetadata().put("timestamp", deploymentUpdateKafka.getTimestamp());
                 step.getMetadata().put("details", deploymentUpdateKafka.getDetails());
                 updateDeploymentStatus(deployment);
-                break;
+                iCounter++;
+                while(isDeploymentStepFailed && iCounter < deployment.getDeploymentTemplate().getSteps().size()) {
+                    step = deployment.getDeploymentTemplate().getSteps().get(iCounter);
+                    step.setStatus(DeploymentStatus.SKIPPED);
+                    iCounter++;
+                }
             }
         }
 
