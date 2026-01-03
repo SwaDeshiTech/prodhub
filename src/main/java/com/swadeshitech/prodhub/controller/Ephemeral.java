@@ -87,7 +87,7 @@ public class Ephemeral {
 
     @PostMapping
     public ResponseEntity<Response> ephemeralEnvironmentDetail(@RequestBody EphemeralEnvironmentRequest request) {
-
+        System.out.println(request);
         EphemeralEnvironmentResponse environmentResponse = environmentService.createEphemeralEnvironment(request);
 
         Response response = Response.builder()

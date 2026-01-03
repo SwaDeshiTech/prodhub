@@ -66,6 +66,9 @@ public class WriteTransactionService {
     @Autowired
     private DeploymentTemplateRepository deploymentTemplateRepository;
 
+    @Autowired
+    EphemeralEnvironmentRepository environmentRepository;
+
     public Application saveApplicationToRepository(Application application) {
         try {
             return applicationRepository.save(application);
@@ -294,6 +297,18 @@ public class WriteTransactionService {
         } catch (Exception ex) {
             log.error("Failed to update deployment run ", ex);
             throw new CustomException(ErrorCode.DEPLOYMENT_TEMPLATE_COULD_NOT_BE_CREATED);
+        }
+    }
+
+    public EphemeralEnvironment saveEphemeralEnvironmentToRepository(EphemeralEnvironment environment) {
+        try {
+            return environmentRepository.save(environment);
+        } catch (DataIntegrityViolationException ex) {
+            log.error("DataIntegrity error ", ex);
+            throw new CustomException(ErrorCode.DATA_INTEGRITY_FAILURE);
+        } catch (Exception ex) {
+            log.error("Failed to save data ", ex);
+            throw new CustomException(ErrorCode.USER_UPDATE_FAILED);
         }
     }
 }

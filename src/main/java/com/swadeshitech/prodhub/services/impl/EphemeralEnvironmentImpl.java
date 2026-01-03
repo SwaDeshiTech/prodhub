@@ -1,61 +1,51 @@
 package com.swadeshitech.prodhub.services.impl;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 
+import com.swadeshitech.prodhub.dto.*;
+import com.swadeshitech.prodhub.entity.Application;
+import com.swadeshitech.prodhub.services.MetadataService;
 import com.swadeshitech.prodhub.transaction.read.ReadTransactionService;
+import com.swadeshitech.prodhub.transaction.write.WriteTransactionService;
 import org.bson.types.ObjectId;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
-import com.swadeshitech.prodhub.dto.DropdownDTO;
-import com.swadeshitech.prodhub.dto.EphemeralEnvironmentApplicationResponse;
-import com.swadeshitech.prodhub.dto.EphemeralEnvironmentRequest;
-import com.swadeshitech.prodhub.dto.EphemeralEnvironmentResponse;
-import com.swadeshitech.prodhub.entity.Application;
 import com.swadeshitech.prodhub.entity.EphemeralEnvironment;
 import com.swadeshitech.prodhub.entity.Metadata;
 import com.swadeshitech.prodhub.entity.User;
 import com.swadeshitech.prodhub.enums.EphemeralEnvrionmentStatus;
 import com.swadeshitech.prodhub.enums.ErrorCode;
 import com.swadeshitech.prodhub.exception.CustomException;
-import com.swadeshitech.prodhub.repository.ApplicationRepository;
-import com.swadeshitech.prodhub.repository.EphemeralEnvironmentRepository;
 import com.swadeshitech.prodhub.repository.UserRepository;
 import com.swadeshitech.prodhub.services.EphemeralEnvironmentService;
-import com.swadeshitech.prodhub.utils.Base64Util;
 import com.swadeshitech.prodhub.utils.UserContextUtil;
 import lombok.extern.log4j.Log4j2;
+
+import static com.swadeshitech.prodhub.constant.Constants.CLONE_METADATA_DELIMITER;
 
 @Service
 @Log4j2
 public class EphemeralEnvironmentImpl implements EphemeralEnvironmentService {
 
     @Autowired
-    private EphemeralEnvironmentRepository environmentRepository;
-
-    @Autowired
-    private UserRepository userRepository;
-
-    @Autowired
-    private ApplicationRepository applicationRepository;
+    UserRepository userRepository;
 
     @Autowired
     ModelMapper modelMapper;
 
     @Autowired
     ReadTransactionService readTransactionService;
+
+    @Autowired
+    WriteTransactionService writeTransactionService;
+
+    @Autowired
+    MetadataService metadataService;
 
     @Override
     public EphemeralEnvironmentResponse createEphemeralEnvironment(EphemeralEnvironmentRequest request) {
@@ -78,9 +68,9 @@ public class EphemeralEnvironmentImpl implements EphemeralEnvironmentService {
         setOwnerDetail(environment, userId);
         setSharedWith(environment, request.getSharedWith());
 
-        setApplications(environment, request.getApplications());
+        generateUpdatedProfiles(environment, request);
 
-        saveEphemeralEnvironmentToRepository(environment);
+        writeTransactionService.saveEphemeralEnvironmentToRepository(environment);
 
         return modelMapper.map(environment, EphemeralEnvironmentResponse.class);
     }
@@ -88,18 +78,6 @@ public class EphemeralEnvironmentImpl implements EphemeralEnvironmentService {
     @Override
     public EphemeralEnvironmentResponse getEphemeralEnvironmentDetail(String id) {
         return mapEntityToResponse(fetchEphemeralEnvironmentFromDB(id));
-    }
-
-    private EphemeralEnvironment saveEphemeralEnvironmentToRepository(EphemeralEnvironment environment) {
-        try {
-            return environmentRepository.save(environment);
-        } catch (DataIntegrityViolationException ex) {
-            log.error("DataIntegrity error ", ex);
-            throw new CustomException(ErrorCode.DATA_INTEGRITY_FAILURE);
-        } catch (Exception ex) {
-            log.error("Failed to save data ", ex);
-            throw new CustomException(ErrorCode.USER_UPDATE_FAILED);
-        }
     }
 
     private void setOwnerDetail(EphemeralEnvironment environment, String uuId) {
@@ -133,35 +111,10 @@ public class EphemeralEnvironmentImpl implements EphemeralEnvironmentService {
         environment.setSharedWith(new HashSet<>(userList));
     }
 
-    private void setApplications(EphemeralEnvironment environment, Set<String> applications) {
-        List<Application> applicationList = applicationRepository.findAllById(applications);
-
-        if (applicationList.isEmpty()) {
-            log.error("applications could not be found", applications);
-            throw new CustomException(ErrorCode.APPLICATION_LIST_NOT_FOUND);
-        }
-
-        Map<String, Object> applicationsMap = new HashMap<>();
-
-        for (Application application : applicationList) {
-            Map<String, Object> addedApplication = new HashMap<>();
-
-            if (!CollectionUtils.isEmpty(application.getProfiles())) {
-                for (Metadata metadata : application.getProfiles()) {
-                    addedApplication.put(metadata.getName(), metadata.getData());
-                }
-            }
-
-            applicationsMap.put(application.getId(), addedApplication);
-        }
-
-        environment.setApplications(applicationsMap);
-    }
-
     @Override
     public List<DropdownDTO> getEphemeralEnvironmentDropdownList() {
 
-        List<EphemeralEnvironment> environments = environmentRepository.findAll();
+        List<EphemeralEnvironment> environments = readTransactionService.findByDynamicOrFilters(null, EphemeralEnvironment.class);
         if (environments.isEmpty()) {
             log.error("ephemeral environment list is empty");
             throw new CustomException(ErrorCode.EPHEMERAL_ENVIRONMENT_LIST_NOT_FOUND);
@@ -222,11 +175,15 @@ public class EphemeralEnvironmentImpl implements EphemeralEnvironmentService {
             throw new CustomException(ErrorCode.USER_NOT_FOUND);
         }
 
-        Optional<EphemeralEnvironment> environment = environmentRepository.findByIdAndOwner(environmentId, user.get());
-        if (environment.isEmpty()) {
+        List<EphemeralEnvironment> environments = readTransactionService.findByDynamicOrFilters(
+                Map.of("_id", environmentId, "owner", user)
+                , EphemeralEnvironment.class);
+
+        if (environments.isEmpty()) {
             throw new CustomException(ErrorCode.EPHEMERAL_ENVIRONMENT_NOT_FOUND);
         }
 
+        EphemeralEnvironment ephemeralEnvironment = environments.getFirst();
         if (Objects.nonNull(request.getSharedWith())) {
             Set<User> users = new HashSet<>();
             for (String id : request.getSharedWith()) {
@@ -236,33 +193,19 @@ public class EphemeralEnvironmentImpl implements EphemeralEnvironmentService {
                 }
                 users.add(sharedUserOpt.get());
             }
-            environment.get().setSharedWith(users);
+            ephemeralEnvironment.setSharedWith(users);
         }
 
-        Map<String, Object> applicationsMap = new HashMap<>();
-        for (Map.Entry<String, Map<String, String>> itr : request.getMetadata().entrySet()) {
-            String applicationID = itr.getKey();
-            Map<String, Object> addedApplication = new HashMap<>();
-            for (Map.Entry<String, String> metadata : itr.getValue().entrySet()) {
-                String key = metadata.getKey();
-                String value = metadata.getValue();
-                String encodedValue = Base64Util.generateBase64Encoded(value);
-                addedApplication.put(key, encodedValue);
-            }
-            applicationsMap.put(applicationID, addedApplication);
-        }
+        generateUpdatedProfiles(ephemeralEnvironment, request);
+        writeTransactionService.saveEphemeralEnvironmentToRepository(ephemeralEnvironment);
 
-        environment.get().setApplications(applicationsMap);
-
-        saveEphemeralEnvironmentToRepository(environment.get());
-
-        return mapEntityToResponse(environment.get());
+        return mapEntityToResponse(ephemeralEnvironment);
     }
 
     @Override
     public Map<String, Object> getMetadataFromEphemeralEnvironment(String id) {
         EphemeralEnvironment environment = fetchEphemeralEnvironmentFromDB(id);
-        return environment.getApplications();
+        return null;//environment.getApplications();
     }
 
     @Override
@@ -274,29 +217,37 @@ public class EphemeralEnvironmentImpl implements EphemeralEnvironmentService {
 
     private EphemeralEnvironmentResponse mapEntityToResponse(EphemeralEnvironment environment) {
 
-        EphemeralEnvironmentResponse environmentResponse = new EphemeralEnvironmentResponse();
+        EphemeralEnvironmentResponse environmentResponse = EphemeralEnvironmentResponse.builder()
+                .owner(environment.getOwner().getName() + " (" + environment.getOwner().getEmailId() + ")")
+                .status(environment.getStatus())
+                .name(environment.getName())
+                .id(environment.getId())
+                .createdTime(environment.getCreatedTime())
+                .expiryOn(environment.getExpiryOn())
+                .build();
 
-        environmentResponse.setId(environment.getId());
-        environmentResponse.setName(environment.getName());
-        environmentResponse.setStatus(environment.getStatus());
-        environmentResponse
-                .setOwner(environment.getOwner().getName() + " (" + environment.getOwner().getEmailId() + ")");
-        environmentResponse.setCreatedTime(environment.getCreatedTime());
-        environmentResponse.setExpiryOn(environment.getExpiryOn());
-
-        if (!CollectionUtils.isEmpty(environment.getApplications())) {
-            Set<DropdownDTO> applications = new HashSet<>();
-            for (Map.Entry<String, Object> itr : environment.getApplications().entrySet()) {
-                Application application = applicationRepository.findById(itr.getKey()).orElse(null);
-                if (Objects.isNull(application)) {
-                    continue;
+        if (environment.getAttachedProfiles() != null && !environment.getAttachedProfiles().isEmpty()) {
+            Set<DropdownDTO> applicationsDropdownDTO = new HashSet<>();
+            Map<String, Boolean> uniqueApplicationTrack = new HashMap<>();
+            List<EphemeralEnvironmentResponse.EphemeralEnvironmentProfileResponse> profileResponses = new ArrayList<>();
+            for (EphemeralEnvironment.Profile profile : environment.getAttachedProfiles()) {
+                if(!uniqueApplicationTrack.containsKey(profile.getApplication().getName())) {
+                    uniqueApplicationTrack.put(profile.getApplication().getName(), true);
+                    applicationsDropdownDTO.add(DropdownDTO.builder()
+                            .key(profile.getApplication().getName())
+                            .value(profile.getApplication().getId())
+                            .build());
                 }
-                applications.add(DropdownDTO.builder()
-                        .key(application.getId())
-                        .value(application.getName())
+                profileResponses.add(EphemeralEnvironmentResponse.EphemeralEnvironmentProfileResponse.builder()
+                                .applicationName(profile.getApplication().getName())
+                                .buildProfileName(profile.getBuildProfile().getName().split(CLONE_METADATA_DELIMITER)[0])
+                                .deploymentProfileName(profile.getDeploymentProfile().getName().split(CLONE_METADATA_DELIMITER)[0])
+                                .buildProfileId(profile.getBuildProfile().getId())
+                                .deploymentProfileId(profile.getDeploymentProfile().getId())
                         .build());
             }
-            environmentResponse.setApplications(applications);
+            environmentResponse.setProfiles(profileResponses);
+            environmentResponse.setApplications(applicationsDropdownDTO);
         }
 
         if (!CollectionUtils.isEmpty(environment.getSharedWith())) {
@@ -326,23 +277,26 @@ public class EphemeralEnvironmentImpl implements EphemeralEnvironmentService {
             throw new CustomException(ErrorCode.USER_NOT_FOUND);
         }
 
-        EphemeralEnvironment environment = environmentRepository.findByIdAndOwner(id, user.get())
-                .orElseThrow(() -> new CustomException(ErrorCode.EPHEMERAL_ENVIRONMENT_NOT_FOUND));
+        List<EphemeralEnvironment> environments = readTransactionService.findByDynamicOrFilters(
+                Map.of("_id", id, "owner", user), EphemeralEnvironment.class);
 
-        EphemeralEnvironmentApplicationResponse response = new EphemeralEnvironmentApplicationResponse();
-        response.setEphemeralEnvironmentName(environment.getName());
-
-        for (Map.Entry<String, Object> itr : environment.getApplications().entrySet()) {
-            if (itr.getKey().equals(applicationId)) {
-                Map<String, Object> profileMetaData = (Map<String, Object>) itr.getValue();
-                for (Map.Entry<String, Object> profileItr : profileMetaData.entrySet()) {
-                    profileMetaData.put(profileItr.getKey(),
-                            Base64Util.convertToPlainText(profileItr.getValue().toString()));
-                }
-                response.setApplications(profileMetaData);
-            }
+        if (environments.isEmpty()) {
+            throw new CustomException(ErrorCode.EPHEMERAL_ENVIRONMENT_NOT_FOUND);
         }
 
+        EphemeralEnvironment ephemeralEnvironment = environments.getFirst();
+        EphemeralEnvironmentApplicationResponse response = new EphemeralEnvironmentApplicationResponse();
+        response.setEphemeralEnvironmentName(ephemeralEnvironment.getName());
+
+        /*Map<String, List<MetaDataResponse>> profileMetaData = new HashMap<>();
+        for(EphemeralEnvironment.Profile profile : ephemeralEnvironment.getAttachedProfiles()) {
+            if(profileMetaData.containsKey(profile.getApplication().getName())) {
+                profileMetaData.get(profile.getApplication().getName()).add(MetaDataResponse.buildResponseObject(profile));
+            } else {
+                profileMetaData.put(profile.getApplication().getName(), List.of(MetaDataResponse.buildResponseObject(profile)));
+            }
+        }
+        response.setApplications(profileMetaData);*/
         return response;
     }
 
@@ -362,5 +316,63 @@ public class EphemeralEnvironmentImpl implements EphemeralEnvironmentService {
         }
 
         return ephemeralEnvironments.getFirst();
+    }
+
+    private void generateUpdatedProfiles(EphemeralEnvironment ephemeralEnvironment, EphemeralEnvironmentRequest request) {
+        if(request == null || request.getProfiles() == null || request.getProfiles().isEmpty()) {
+            log.error("Profiles could not be found inside ephemeral environment request");
+            throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
+        }
+        List<EphemeralEnvironment.Profile> profiles = new ArrayList<>();
+        for(EphemeralEnvironmentRequest.EphemeralEnvironmentRequestApplications application : request.getProfiles()) {
+            switch(application.getActionType().toLowerCase()) {
+                case "remove":
+                    if(ephemeralEnvironment.getAttachedProfiles() != null && !ephemeralEnvironment.getAttachedProfiles().isEmpty()) {
+                        for(EphemeralEnvironment.Profile profile : ephemeralEnvironment.getAttachedProfiles()) {
+                            if(profile.getApplication().getId().equals(application.getApplicationId())
+                                    && profile.getBuildProfile().getId().equals(application.getBuildProfileId())
+                                    && profile.getDeploymentProfile().getId().equals(application.getDeploymentProfileId())) {
+                                ephemeralEnvironment.getAttachedProfiles().remove(profile);
+                                break;
+                            }
+                        }
+                    }
+                    log.info("Deployment profile {} and build profile {} of application {} has been removed", application.getDeploymentProfileId(), application.getBuildProfileId(), application.getApplicationId());
+                    break;
+                case "add":
+                    List<Application> applications = readTransactionService.findApplicationByFilters(Map.of("_id", application.getApplicationId()));
+                    if(applications == null || applications.isEmpty()) {
+                        log.error("Failed to add application to ephemeral environment {}", application.getApplicationId());
+                        throw new CustomException(ErrorCode.APPROVALS_NOT_FOUND);
+                    }
+                    List<Metadata> deploymentProfileList = readTransactionService.findMetaDataByFilters(Map.of("_id", application.getDeploymentProfileId()));
+                    if(deploymentProfileList == null || deploymentProfileList.isEmpty() ) {
+                        log.error("Failed to add deployment profile id {}", application.getDeploymentProfileId());
+                        throw new CustomException(ErrorCode.METADATA_PROFILE_NOT_FOUND);
+                    }
+                    Metadata deploymentProfile = deploymentProfileList.getFirst();
+                    String clonedDeploymentProfileName = deploymentProfile.getName() + CLONE_METADATA_DELIMITER + deploymentProfile.getProfileType().name() + CLONE_METADATA_DELIMITER + ephemeralEnvironment.getName();
+                    Metadata clonedDeploymentProfile = metadataService.cloneProfile(deploymentProfile.getId(), clonedDeploymentProfileName);
+
+                    List<Metadata> buildProfileList = readTransactionService.findMetaDataByFilters(Map.of("_id", application.getBuildProfileId()));
+                    if(buildProfileList == null || buildProfileList.isEmpty()) {
+                        log.error("Failed to add build profile id {}", application.getBuildProfileId());
+                        throw new CustomException(ErrorCode.METADATA_PROFILE_NOT_FOUND);
+                    }
+                    Metadata buildProfile = buildProfileList.getFirst();
+                    String clonedBuildProfileName = buildProfile.getName() + CLONE_METADATA_DELIMITER + buildProfile.getProfileType().name() + CLONE_METADATA_DELIMITER + ephemeralEnvironment.getName();
+                    Metadata clonedBuildProfile = metadataService.cloneProfile(buildProfile.getId(), clonedBuildProfileName);
+
+                    profiles.add(EphemeralEnvironment.Profile.builder()
+                            .application(applications.getFirst())
+                            .buildProfile(clonedBuildProfile)
+                            .deploymentProfile(clonedDeploymentProfile)
+                            .build());
+            }
+        }
+        if(ephemeralEnvironment.getAttachedProfiles() != null && !ephemeralEnvironment.getAttachedProfiles().isEmpty()) {
+            profiles.addAll(ephemeralEnvironment.getAttachedProfiles());
+        }
+        ephemeralEnvironment.setAttachedProfiles(profiles);
     }
 }

@@ -3,6 +3,7 @@ package com.swadeshitech.prodhub.services.impl;
 import java.util.*;
 
 import com.swadeshitech.prodhub.config.AuditorContextHolder;
+import com.swadeshitech.prodhub.constant.Constants;
 import com.swadeshitech.prodhub.enums.RunTimeEnvironment;
 import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -141,7 +142,7 @@ public class OnboardingServiceImpl implements OnboardingService {
         MetaDataResponse response = new MetaDataResponse();
 
         response.setActive(metadata.isActive());
-        response.setName(metadata.getName());
+        response.setName(metadata.getName().split(Constants.CLONE_METADATA_DELIMITER)[0]);
         response.setData(Base64Util.convertToPlainText(metadata.getData()));
         response.setProfileType(metadata.getProfileType());
         response.setDescription(metadata.getDescription());

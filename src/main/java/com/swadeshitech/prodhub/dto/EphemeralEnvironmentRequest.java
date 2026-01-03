@@ -1,16 +1,22 @@
 package com.swadeshitech.prodhub.dto;
 
-import java.util.Map;
+import java.util.List;
 import java.util.Set;
 
 import lombok.Data;
 
 @Data
 public class EphemeralEnvironmentRequest {
-
     private String name;
     private int expiryDuration;
-    private Set<String> applications;
+    private List<EphemeralEnvironmentRequestApplications> profiles;
     private Set<String> sharedWith;
-    private Map<String, Map<String, String>> metadata;
+
+    @Data
+    public static class EphemeralEnvironmentRequestApplications {
+        private String applicationId;
+        private String buildProfileId;
+        private String deploymentProfileId;
+        private String actionType;
+    }
 }
