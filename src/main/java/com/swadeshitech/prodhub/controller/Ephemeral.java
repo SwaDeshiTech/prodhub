@@ -2,23 +2,13 @@ package com.swadeshitech.prodhub.controller;
 
 import java.util.List;
 
+import com.swadeshitech.prodhub.dto.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
-import com.swadeshitech.prodhub.dto.DropdownDTO;
-import com.swadeshitech.prodhub.dto.EphemeralEnvironmentApplicationResponse;
-import com.swadeshitech.prodhub.dto.EphemeralEnvironmentRequest;
-import com.swadeshitech.prodhub.dto.EphemeralEnvironmentResponse;
-import com.swadeshitech.prodhub.dto.Response;
 import com.swadeshitech.prodhub.services.EphemeralEnvironmentService;
-import org.springframework.web.bind.annotation.PutMapping;
 
 @RestController
 @RequestMapping("/ephemeralEnvironment")
@@ -42,9 +32,12 @@ public class Ephemeral {
     }
 
     @GetMapping
-    public ResponseEntity<Response> ephemeralEnvironmentList() {
+    public ResponseEntity<Response> ephemeralEnvironmentList(@RequestParam(defaultValue = "0") Integer page,
+                                                             @RequestParam(defaultValue = "10") Integer size,
+                                                             @RequestParam(defaultValue = "createdTime") String sortBy,
+                                                             @RequestParam(defaultValue = "DESC") String order) {
 
-        List<EphemeralEnvironmentResponse> environmentResponse = environmentService.getEphemeralEnvironmentList();
+        PaginatedResponse<EphemeralEnvironmentResponse> environmentResponse = environmentService.getEphemeralEnvironmentList(page, size, sortBy, order);
 
         Response response = Response.builder()
                 .httpStatus(HttpStatus.ACCEPTED)

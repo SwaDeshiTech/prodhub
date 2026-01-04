@@ -3,6 +3,7 @@ package com.swadeshitech.prodhub.services;
 import com.swadeshitech.prodhub.dto.DeploymentSetRequest;
 import com.swadeshitech.prodhub.dto.DeploymentSetResponse;
 import com.swadeshitech.prodhub.dto.DeploymentSetUpdateRequest;
+import com.swadeshitech.prodhub.dto.PaginatedResponse;
 import com.swadeshitech.prodhub.enums.DeploymentSetStatus;
 import org.springframework.stereotype.Component;
 
@@ -15,7 +16,7 @@ public interface DeploymentSetService {
 
     DeploymentSetResponse getDeploymentSetDetails(String id);
 
-    List<DeploymentSetResponse> getDeploymentResponseList();
+    PaginatedResponse<DeploymentSetResponse> getDeploymentResponseList(Integer page, Integer size, String sortBy, String order);
 
     void updateDeploymentSet(String id, DeploymentSetUpdateRequest request);
 

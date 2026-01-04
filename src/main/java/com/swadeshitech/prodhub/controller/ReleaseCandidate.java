@@ -2,16 +2,13 @@ package com.swadeshitech.prodhub.controller;
 
 import java.util.List;
 
-import com.swadeshitech.prodhub.dto.DropdownDTO;
+import com.swadeshitech.prodhub.dto.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import com.swadeshitech.prodhub.config.ContextHolder;
-import com.swadeshitech.prodhub.dto.ReleaseCandidateRequest;
-import com.swadeshitech.prodhub.dto.ReleaseCandidateResponse;
-import com.swadeshitech.prodhub.dto.Response;
 import com.swadeshitech.prodhub.services.ReleaseCandidateService;
 
 @RestController
@@ -98,11 +95,17 @@ public class ReleaseCandidate {
     }
 
     @GetMapping
-    public ResponseEntity<Response> getAllReleaseCandidates(@RequestHeader(name = "uuid") String uuid) {
+    public ResponseEntity<Response> getAllReleaseCandidates(
+            @RequestHeader(name = "uuid") String uuid,
+            @RequestParam(defaultValue = "0") Integer page,
+            @RequestParam(defaultValue = "10") Integer size,
+            @RequestParam(defaultValue = "createdTime") String sortBy,
+            @RequestParam(defaultValue = "DESC") String order) {
 
         try {
             ContextHolder.setContext("uuid", uuid);
-            List<ReleaseCandidateResponse> releaseCandidateResponse = releaseCandidateService.getAllReleaseCandidates();
+            PaginatedResponse<ReleaseCandidateResponse> releaseCandidateResponse =
+                    releaseCandidateService.getAllReleaseCandidates(page, size, sortBy, order);
 
             Response response = Response.builder()
                     .httpStatus(HttpStatus.OK)
@@ -112,7 +115,6 @@ public class ReleaseCandidate {
 
             return ResponseEntity.ok(response);
         } finally {
-            // Clear the context to avoid memory leaks
             ContextHolder.clearContext();
         }
     }

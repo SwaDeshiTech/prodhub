@@ -4,20 +4,19 @@ import java.time.LocalDateTime;
 import java.util.*;
 
 import com.swadeshitech.prodhub.dto.*;
-import com.swadeshitech.prodhub.entity.Application;
+import com.swadeshitech.prodhub.entity.*;
 import com.swadeshitech.prodhub.services.MetadataService;
 import com.swadeshitech.prodhub.transaction.read.ReadTransactionService;
 import com.swadeshitech.prodhub.transaction.write.WriteTransactionService;
 import org.bson.types.ObjectId;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
-import com.swadeshitech.prodhub.entity.EphemeralEnvironment;
-import com.swadeshitech.prodhub.entity.Metadata;
-import com.swadeshitech.prodhub.entity.User;
 import com.swadeshitech.prodhub.enums.EphemeralEnvrionmentStatus;
 import com.swadeshitech.prodhub.enums.ErrorCode;
 import com.swadeshitech.prodhub.exception.CustomException;
@@ -130,7 +129,7 @@ public class EphemeralEnvironmentImpl implements EphemeralEnvironmentService {
     }
 
     @Override
-    public List<EphemeralEnvironmentResponse> getEphemeralEnvironmentList() {
+    public PaginatedResponse<EphemeralEnvironmentResponse> getEphemeralEnvironmentList(Integer page, Integer size, String sortBy, String order) {
 
         String userId = UserContextUtil.getUserIdFromRequestContext();
         if (Objects.isNull(userId)) {
@@ -147,17 +146,34 @@ public class EphemeralEnvironmentImpl implements EphemeralEnvironmentService {
         filters.put("owner", user.get());
         filters.put("sharedWith", user.get());
 
-        List<EphemeralEnvironment> ephemeralEnvironments = readTransactionService.findByDynamicOrFilters(filters, EphemeralEnvironment.class);
-        if(CollectionUtils.isEmpty(ephemeralEnvironments)) {
-            log.error("No ephemeral environments found for user {}", userId);
-            throw new CustomException(ErrorCode.EPHEMERAL_ENVIRONMENT_LIST_NOT_FOUND);
+        Sort.Direction direction = "ASC".equalsIgnoreCase(order) ? Sort.Direction.ASC : Sort.Direction.DESC;
+
+        Page<EphemeralEnvironment> ephemeralEnvironmentPage = readTransactionService.findByDynamicOrFiltersPaginated(
+                filters,
+                EphemeralEnvironment.class,
+                page,
+                size,
+                sortBy,
+                direction
+        );
+
+        if (ephemeralEnvironmentPage.isEmpty()) {
+            log.warn("No ephemeral environment found");
+            throw new CustomException(ErrorCode.EPHEMERAL_ENVIRONMENT_NOT_FOUND);
         }
 
-        List<EphemeralEnvironmentResponse> responseList = new ArrayList<>();
-        for (EphemeralEnvironment env : ephemeralEnvironments) {
-            responseList.add(mapEntityToResponse(env));
-        }
-        return responseList;
+        List<EphemeralEnvironmentResponse> dtoList = ephemeralEnvironmentPage.getContent().stream()
+                .map(this::mapEntityToResponse)
+                .toList();
+
+        return PaginatedResponse.<EphemeralEnvironmentResponse>builder()
+                .content(dtoList)
+                .pageNumber(ephemeralEnvironmentPage.getNumber())
+                .pageSize(ephemeralEnvironmentPage.getSize())
+                .totalElements(ephemeralEnvironmentPage.getTotalElements())
+                .totalPages(ephemeralEnvironmentPage.getTotalPages())
+                .isLast(ephemeralEnvironmentPage.isLast())
+                .build();
     }
 
     @Override

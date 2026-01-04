@@ -3,6 +3,7 @@ package com.swadeshitech.prodhub.services;
 import java.util.List;
 
 import com.swadeshitech.prodhub.dto.DropdownDTO;
+import com.swadeshitech.prodhub.dto.PaginatedResponse;
 import org.springframework.stereotype.Component;
 
 import com.swadeshitech.prodhub.dto.ReleaseCandidateRequest;
@@ -19,7 +20,7 @@ public interface ReleaseCandidateService {
 
     void deleteReleaseCandidate(String id);
 
-    List<ReleaseCandidateResponse> getAllReleaseCandidates();
+    PaginatedResponse<ReleaseCandidateResponse> getAllReleaseCandidates(Integer page, Integer size, String sortBy, String order);
 
     ReleaseCandidateResponse syncStatus(String buildId, String forceSync);
 

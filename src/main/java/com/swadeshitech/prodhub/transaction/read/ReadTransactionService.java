@@ -2,9 +2,14 @@ package com.swadeshitech.prodhub.transaction.read;
 
 import com.swadeshitech.prodhub.entity.*;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.support.PageableExecutionUtils;
 import org.springframework.stereotype.Service;
 
 import com.swadeshitech.prodhub.enums.ErrorCode;
@@ -12,6 +17,7 @@ import com.swadeshitech.prodhub.exception.CustomException;
 import com.swadeshitech.prodhub.repository.ConstantsRepository;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.util.StringUtils;
 
 import java.util.*;
 
@@ -366,6 +372,49 @@ public class ReadTransactionService {
         Criteria orCriteria = new Criteria().orOperator(orCriterias.toArray(new Criteria[0]));
         Query query = new Query(orCriteria);
         return mongoTemplate.find(query, clazz);
+    }
+
+    public <T> Page<T> findByDynamicOrFiltersPaginated(
+            Map<String, Object> filters,
+            Class<T> clazz,
+            Integer page,
+            Integer size,
+            String sortBy,
+            Sort.Direction direction) {
+
+        int finalPage = (page != null) ? page : 0;
+        int finalSize = (size != null) ? size : 10;
+        String finalSort = StringUtils.hasText(sortBy) ? sortBy : "createdTime";
+        Sort.Direction finalDir = (direction != null) ? direction : Sort.Direction.DESC;
+
+        Query query = new Query();
+
+        if (filters != null && !filters.isEmpty()) {
+            List<Criteria> criteriaList = new ArrayList<>();
+            filters.forEach((key, value) -> {
+                if (value != null) {
+                    criteriaList.add(Criteria.where(key).is(value));
+                }
+            });
+
+            if (criteriaList.size() == 1) {
+                query.addCriteria(criteriaList.get(0));
+            } else if (criteriaList.size() > 1) {
+                query.addCriteria(new Criteria().orOperator(criteriaList.toArray(new Criteria[0])));
+            }
+        }
+
+        Pageable pageable = PageRequest.of(finalPage, finalSize, Sort.by(finalDir, finalSort));
+        query.with(pageable);
+
+        log.info("Executing Mongo Query: {}", query);
+
+        List<T> list = mongoTemplate.find(query, clazz);
+        return PageableExecutionUtils.getPage(
+                list,
+                pageable,
+                () -> mongoTemplate.count(Query.of(query).limit(-1).skip(-1), clazz)
+        );
     }
 
 }

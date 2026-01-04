@@ -6,6 +6,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.swadeshitech.prodhub.dto.DropdownDTO;
+import com.swadeshitech.prodhub.dto.PaginatedResponse;
 import com.swadeshitech.prodhub.entity.Application;
 import com.swadeshitech.prodhub.entity.Metadata;
 import com.swadeshitech.prodhub.integration.cicaptain.config.CiCaptainClient;
@@ -18,11 +19,12 @@ import com.swadeshitech.prodhub.utils.UuidUtil;
 import lombok.RequiredArgsConstructor;
 import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.ObjectUtils;
 
-import com.swadeshitech.prodhub.config.ContextHolder;
 import com.swadeshitech.prodhub.dto.ReleaseCandidateRequest;
 import com.swadeshitech.prodhub.dto.ReleaseCandidateResponse;
 import com.swadeshitech.prodhub.entity.ReleaseCandidate;
@@ -37,21 +39,19 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.StringUtils;
 import reactor.core.publisher.Mono;
 
-import javax.swing.text.html.Option;
-
 @Service
 @Slf4j
 @RequiredArgsConstructor
 public class ReleaseCandidateServiceImpl implements ReleaseCandidateService {
 
     @Autowired
-    private WriteTransactionService writeTransactionService;
+    WriteTransactionService writeTransactionService;
 
     @Autowired
-    private ReadTransactionService readTransactionService;
+    ReadTransactionService readTransactionService;
 
     @Autowired
-    private CiCaptainClient ciCaptainClient;
+    CiCaptainClient ciCaptainClient;
 
     @Autowired
     EphemeralEnvironmentService ephemeralEnvironmentService;
@@ -144,26 +144,38 @@ public class ReleaseCandidateServiceImpl implements ReleaseCandidateService {
     }
 
     @Override
-    public List<ReleaseCandidateResponse> getAllReleaseCandidates() {
-
-        log.info("Fetching all release candidates");
+    public PaginatedResponse<ReleaseCandidateResponse> getAllReleaseCandidates(Integer page, Integer size, String sortBy, String order) {
+        log.info("Fetching release candidates for page {} with size {}", page, size);
         User user = userService.extractUserFromContext();
 
         Map<String, Object> filters = new HashMap<>();
         filters.put("initiatedBy", user);
-
-        List<ReleaseCandidate> releaseCandidates = readTransactionService.findReleaseCandidateDetailsByFilters(filters);
-        if (CollectionUtils.isEmpty(releaseCandidates)) {
+        Sort.Direction direction = "ASC".equalsIgnoreCase(order) ? Sort.Direction.ASC : Sort.Direction.DESC;
+        Page<ReleaseCandidate> rcPage = readTransactionService.findByDynamicOrFiltersPaginated(
+                filters,
+                ReleaseCandidate.class,
+                page,
+                size,
+                sortBy,
+                direction
+        );
+        if (rcPage.isEmpty()) {
             log.warn("No release candidates found");
             throw new CustomException(ErrorCode.RELEASE_CANDIDATE_NOT_FOUND);
         }
 
-        releaseCandidates.sort(Comparator.comparing(ReleaseCandidate::getCreatedTime).reversed());
-
-        log.info("Found {} release candidates", releaseCandidates.size());
-        return releaseCandidates.stream()
+        List<ReleaseCandidateResponse> dtoList = rcPage.getContent().stream()
                 .map(this::buildResponse)
                 .toList();
+
+        return PaginatedResponse.<ReleaseCandidateResponse>builder()
+                .content(dtoList)
+                .pageNumber(rcPage.getNumber())
+                .pageSize(rcPage.getSize())
+                .totalElements(rcPage.getTotalElements())
+                .totalPages(rcPage.getTotalPages())
+                .isLast(rcPage.isLast())
+                .build();
     }
 
     @Override

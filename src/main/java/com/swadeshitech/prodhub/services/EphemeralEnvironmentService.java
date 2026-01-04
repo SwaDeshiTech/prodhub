@@ -3,12 +3,8 @@ package com.swadeshitech.prodhub.services;
 import java.util.List;
 import java.util.Map;
 
+import com.swadeshitech.prodhub.dto.*;
 import org.springframework.stereotype.Component;
-
-import com.swadeshitech.prodhub.dto.DropdownDTO;
-import com.swadeshitech.prodhub.dto.EphemeralEnvironmentApplicationResponse;
-import com.swadeshitech.prodhub.dto.EphemeralEnvironmentRequest;
-import com.swadeshitech.prodhub.dto.EphemeralEnvironmentResponse;
 
 @Component
 public interface EphemeralEnvironmentService {
@@ -22,7 +18,7 @@ public interface EphemeralEnvironmentService {
 
     public List<DropdownDTO> getEphemeralEnvironmentDropdownList();
 
-    public List<EphemeralEnvironmentResponse> getEphemeralEnvironmentList();
+    public PaginatedResponse<EphemeralEnvironmentResponse> getEphemeralEnvironmentList(Integer page, Integer size, String sortBy, String order);
 
     public EphemeralEnvironmentResponse updateEphemeralEnvironment(String environmentId,
             EphemeralEnvironmentRequest request);

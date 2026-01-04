@@ -14,6 +14,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
@@ -123,19 +125,32 @@ public class DeploymentSetServiceImpl implements DeploymentSetService {
     }
 
     @Override
-    public List<DeploymentSetResponse> getDeploymentResponseList() {
+    public PaginatedResponse<DeploymentSetResponse> getDeploymentResponseList(Integer page, Integer size, String sortBy, String order) {
 
+        log.info("Fetching deployment sets for page {} with size {}", page, size);
         User user = userService.extractUserFromContext();
 
-        List<DeploymentSet> deploymentSets = readTransactionService.findByDynamicOrFilters(Map.of("createdBy", user.getEmailId()), DeploymentSet.class);
-        if (CollectionUtils.isEmpty(deploymentSets)) {
-            log.error("Deployment sets could not be found");
+        Map<String, Object> filters = new HashMap<>();
+        filters.put("createdBy", user.getEmailId());
+        Sort.Direction direction = "ASC".equalsIgnoreCase(order) ? Sort.Direction.ASC : Sort.Direction.DESC;
+
+        Page<DeploymentSet> deploymentSetsPage = readTransactionService.findByDynamicOrFiltersPaginated(
+                filters,
+                DeploymentSet.class,
+                page,
+                size,
+                sortBy,
+                direction
+        );
+
+        if (deploymentSetsPage.isEmpty()) {
+            log.warn("No deployment sets found");
             throw new CustomException(ErrorCode.DEPLOYMENT_SET_NOT_FOUND);
         }
 
         List<DeploymentSetResponse> deploymentSetResponses = new ArrayList<>();
 
-        for(DeploymentSet deploymentSet : deploymentSets) {
+        for(DeploymentSet deploymentSet : deploymentSetsPage.getContent()) {
             deploymentSetResponses.add(DeploymentSetResponse.builder()
                     .id(deploymentSet.getId())
                     .status(deploymentSet.getStatus().getMessage())
@@ -147,9 +162,14 @@ public class DeploymentSetServiceImpl implements DeploymentSetService {
                     .build());
         }
 
-        deploymentSetResponses.sort(Comparator.comparing(DeploymentSetResponse::getCreatedTime).reversed());
-
-        return deploymentSetResponses;
+        return PaginatedResponse.<DeploymentSetResponse>builder()
+                .content(deploymentSetResponses)
+                .pageNumber(deploymentSetsPage.getNumber())
+                .pageSize(deploymentSetsPage.getSize())
+                .totalElements(deploymentSetsPage.getTotalElements())
+                .totalPages(deploymentSetsPage.getTotalPages())
+                .isLast(deploymentSetsPage.isLast())
+                .build();
     }
 
     @Override

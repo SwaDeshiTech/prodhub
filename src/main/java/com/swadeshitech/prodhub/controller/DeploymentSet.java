@@ -31,9 +31,12 @@ public class DeploymentSet {
     }
 
     @GetMapping
-    public ResponseEntity<Response> getDeploymentSetDetails() {
+    public ResponseEntity<Response> getDeploymentSetList(@RequestParam(defaultValue = "0") Integer page,
+                                                         @RequestParam(defaultValue = "10") Integer size,
+                                                         @RequestParam(defaultValue = "createdTime") String sortBy,
+                                                         @RequestParam(defaultValue = "DESC") String order) {
 
-        List<DeploymentSetResponse> deploymentSetResponses = deploymentSetService.getDeploymentResponseList();
+        PaginatedResponse<DeploymentSetResponse> deploymentSetResponses = deploymentSetService.getDeploymentResponseList(page, size, sortBy, order);
 
         Response response = Response.builder()
                 .httpStatus(HttpStatus.OK)
