@@ -1,8 +1,6 @@
 package com.swadeshitech.prodhub.services;
 
-import com.swadeshitech.prodhub.dto.DeploymentRequestResponse;
-import com.swadeshitech.prodhub.dto.DeploymentResponse;
-import com.swadeshitech.prodhub.dto.DeploymentUpdateKafka;
+import com.swadeshitech.prodhub.dto.*;
 import com.swadeshitech.prodhub.integration.deplorch.DeploymentPodResponse;
 import org.springframework.stereotype.Component;
 
@@ -20,4 +18,6 @@ public interface DeploymentService {
     DeploymentResponse getDeploymentDetails(String deploymentId);
 
     DeploymentPodResponse getDeployedPodDetails(String deploymentId);
+
+    PaginatedResponse<DeploymentRequestResponse> getAllDeployments(Integer page, Integer size, String sortBy, String order);
 }

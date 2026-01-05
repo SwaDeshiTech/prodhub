@@ -11,13 +11,15 @@ import java.util.List;
 @Component
 public interface CredentialProviderService {
 
-    public CredentialProviderResponse onboardCredentialProvider(CredentialProviderRequest request);
+    CredentialProviderResponse onboardCredentialProvider(CredentialProviderRequest request);
 
-    public CredentialProviderResponse credentialProviderDetails(String serviceId, String credentialId);
+    CredentialProviderResponse credentialProviderDetails(String serviceId, String credentialId);
 
-    public CredentialProviderResponse credentialProviderDetails(String credentialId);
+    CredentialProviderResponse credentialProviderDetails(String credentialId);
 
-    public List<CredentialProviderResponse> credentialProviders(CredentialProviderFilter credentialProviderFilter);
+    List<CredentialProviderResponse> credentialProviders(CredentialProviderFilter credentialProviderFilter);
 
-    public List<DropdownDTO> getCredentialProvidersByType(String type);
+    List<DropdownDTO> getCredentialProvidersByType(String type);
+
+    String extractSCMURL(String id);
 }

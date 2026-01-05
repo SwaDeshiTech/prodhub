@@ -61,3 +61,6 @@ deplorch:
 cron:
   codeFreezeScheduler: "15 * * * * *"
   ephemeralCleanup: "15 * * * * *"
+
+github:
+  baseURL: https://github.com

@@ -233,7 +233,7 @@ public class DeploymentSetServiceImpl implements DeploymentSetService {
                 .status(deploymentSet.getStatus().getMessage())
                 .serviceName(deploymentSet.getApplication().getName())
                 .deploymentProfileName(deploymentSet.getDeploymentProfile().getName().split("::")[0])
-                .buildProfileName(deploymentSet.getReleaseCandidate().getBuildProfile())
+                .buildProfileName(deploymentSet.getReleaseCandidate().getBuildProfile().getName())
                 .approvalId(deploymentSet.getApprovals().getId())
                 .metaData(Map.of("COMMIT_ID", deploymentSet.getReleaseCandidate().getMetaData().get("commitId")))
                 .deployments(deploymentResponse)

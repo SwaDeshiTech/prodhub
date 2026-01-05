@@ -13,7 +13,7 @@ import com.swadeshitech.prodhub.integration.cicaptain.config.CiCaptainClient;
 import com.swadeshitech.prodhub.integration.cicaptain.dto.BuildStatusResponse;
 import com.swadeshitech.prodhub.integration.cicaptain.dto.BuildTriggerRequest;
 import com.swadeshitech.prodhub.integration.cicaptain.dto.BuildTriggerResponse;
-import com.swadeshitech.prodhub.services.EphemeralEnvironmentService;
+import com.swadeshitech.prodhub.services.CredentialProviderService;
 import com.swadeshitech.prodhub.utils.Base64Util;
 import com.swadeshitech.prodhub.utils.UuidUtil;
 import lombok.RequiredArgsConstructor;
@@ -54,12 +54,13 @@ public class ReleaseCandidateServiceImpl implements ReleaseCandidateService {
     CiCaptainClient ciCaptainClient;
 
     @Autowired
-    EphemeralEnvironmentService ephemeralEnvironmentService;
-
-    private final ObjectMapper objectMapper;
+    ObjectMapper objectMapper;
 
     @Autowired
     UserServiceImpl userService;
+
+    @Autowired
+    CredentialProviderService credentialProviderService;
 
     @Override
     public ReleaseCandidateResponse createReleaseCandidate(ReleaseCandidateRequest request) {
@@ -76,18 +77,31 @@ public class ReleaseCandidateServiceImpl implements ReleaseCandidateService {
             throw new CustomException(ErrorCode.RELEASE_CANDIDATE_COULD_NOT_BE_CREATED);
         }
 
+        List<Metadata> buildProfiles = readTransactionService.findByDynamicOrFilters(
+                Map.of("_id", new ObjectId(request.getBuildProfile())),
+                Metadata.class
+        );
+        if (CollectionUtils.isEmpty(buildProfiles)) {
+            log.error("Build profile could not be found {}", request.getBuildProfile());
+            throw new CustomException(ErrorCode.METADATA_PROFILE_NOT_FOUND);
+        }
+
+        Metadata buildProfile = buildProfiles.getFirst();
+
         ReleaseCandidate releaseCandidate = new ReleaseCandidate();
-        releaseCandidate.setBuildProfile(request.getBuildProfile());
+        releaseCandidate.setBuildProfile(buildProfile);
         releaseCandidate.setStatus(ReleaseCandidateStatus.CREATED);
         releaseCandidate.setInitiatedBy(user);
         releaseCandidate.setMetaData(request.getMetadata());
         releaseCandidate.setService(applications.getFirst());
         releaseCandidate.setBuildRefId(UuidUtil.generateRandomUuid());
 
+        if(StringUtils.hasText(request.getEphemeralEnvironmentName())) {
+            releaseCandidate.setEphemeralEnvironmentName(request.getEphemeralEnvironmentName());
+        }
+
         releaseCandidate = writeTransactionService.saveReleaseCandidateToRepository(releaseCandidate);
-
         triggerBuild(releaseCandidate);
-
         return buildResponse(releaseCandidate);
     }
 
@@ -129,17 +143,14 @@ public class ReleaseCandidateServiceImpl implements ReleaseCandidateService {
         List<ReleaseCandidate> releaseCandidate = readTransactionService.findReleaseCandidateDetailsByFilters(filters);
         if (CollectionUtils.isEmpty(releaseCandidate)) {
             log.warn("Release candidate with ID: {} not found", id);
-            return null; // or throw an exception
+            throw new CustomException(ErrorCode.RELEASE_CANDIDATE_NOT_FOUND);
         }
 
-        ReleaseCandidate existingReleaseCandidate = releaseCandidate.get(0);
-
+        ReleaseCandidate existingReleaseCandidate = releaseCandidate.getFirst();
         log.info("Updating release candidate with ID: {}", id);
         existingReleaseCandidate.setStatus(ReleaseCandidateStatus.valueOf(request.getReleaseCandidateStatus()));
         existingReleaseCandidate.setMetaData(request.getMetadata());
-
         writeTransactionService.saveReleaseCandidateToRepository(existingReleaseCandidate);
-
         return buildResponse(existingReleaseCandidate);
     }
 
@@ -167,7 +178,6 @@ public class ReleaseCandidateServiceImpl implements ReleaseCandidateService {
         List<ReleaseCandidateResponse> dtoList = rcPage.getContent().stream()
                 .map(this::buildResponse)
                 .toList();
-
         return PaginatedResponse.<ReleaseCandidateResponse>builder()
                 .content(dtoList)
                 .pageNumber(rcPage.getNumber())
@@ -193,21 +203,16 @@ public class ReleaseCandidateServiceImpl implements ReleaseCandidateService {
         List<ReleaseCandidate> releaseCandidates = readTransactionService.findReleaseCandidateDetailsByFilters(filters);
         if (CollectionUtils.isEmpty(releaseCandidates)) {
             log.warn("Release candidate with ID: {} not found", buildId);
-            return null; // or throw an exception
+            throw new CustomException(ErrorCode.RELEASE_CANDIDATE_NOT_FOUND);
         }
 
         ReleaseCandidate releaseCandidate = releaseCandidates.getFirst();
-
         String providerID = releaseCandidate.getMetaData().get("providerID");
-
         Mono<BuildStatusResponse> buildStatusResponseMono = ciCaptainClient.getBuildStatus(providerID,
                 releaseCandidate.getBuildRefId(), forceSync);
         BuildStatusResponse response = buildStatusResponseMono.blockOptional().get();
-
         releaseCandidate.setStatus(mapStatusFromCICaptain(response.status()));
-
         writeTransactionService.saveReleaseCandidateToRepository(releaseCandidate);
-
         return buildResponse(releaseCandidate);
     }
 
@@ -256,8 +261,6 @@ public class ReleaseCandidateServiceImpl implements ReleaseCandidateService {
         }
 
         ReleaseCandidate releaseCandidate = releaseCandidates.getFirst();
-
-        //trigger the pipeline
         User certifiedBy = userService.extractUserFromContext();
         releaseCandidate.setStatus(ReleaseCandidateStatus.CERTIFIED);
         releaseCandidate.setCertifiedBy(certifiedBy);
@@ -287,14 +290,7 @@ public class ReleaseCandidateServiceImpl implements ReleaseCandidateService {
             initiatedBy = initiatedUser.getName() + " (" + initiatedUser.getEmailId() + ")";
         }
 
-        List<Metadata> metadataList = readTransactionService
-                .findMetaDataByFilters(Map.of("_id", new ObjectId(releaseCandidate.getBuildProfile())));
-        if (CollectionUtils.isEmpty(metadataList)) {
-            log.error("Metadata could not be found {}", releaseCandidate.getId());
-            throw new CustomException(ErrorCode.RELEASE_CANDIDATE_NOT_FOUND);
-        }
-
-        Metadata metadata = metadataList.getFirst();
+        Metadata metadata = releaseCandidate.getBuildProfile();
 
         ReleaseCandidateResponse response = getReleaseCandidateResponse(releaseCandidate, certifiedBy, initiatedBy);
         response.setBuildProfile(metadata.getName());
@@ -321,8 +317,6 @@ public class ReleaseCandidateServiceImpl implements ReleaseCandidateService {
         return response;
     }
 
-
-
     private void triggerBuild(ReleaseCandidate releaseCandidate) {
 
         String providerId = "";
@@ -330,44 +324,19 @@ public class ReleaseCandidateServiceImpl implements ReleaseCandidateService {
         JsonNode data = null;
         String commitId = releaseCandidate.getMetaData().get("commitId");
         String decodedData = "";
+        Metadata buildProfile = releaseCandidate.getBuildProfile();
 
-        if (StringUtils.hasText(releaseCandidate.getEphemeralEnvironmentName())) {
+        try {
+            decodedData = Base64Util.convertToPlainText(buildProfile.getData());
+            data = objectMapper.readTree(decodedData);
+            providerId = data.path("buildProviderId").asText();
+        } catch (JsonProcessingException e) {
+            log.error("Fail to read metadata of profile {}", buildProfile.getName());
+            throw new CustomException(ErrorCode.METADATA_PROFILE_INVALID_DATA);
+        }
+
+        if(StringUtils.hasText(releaseCandidate.getEphemeralEnvironmentName())) {
             jobName += "-" + releaseCandidate.getEphemeralEnvironmentName();
-            Map<String, Object> applications = ephemeralEnvironmentService.getMetadataFromEphemeralEnvironment(releaseCandidate.getEphemeralEnvironmentName());
-            for (Map.Entry<String, Object> itr : applications.entrySet()) {
-                if (itr.getKey().equals(releaseCandidate.getService().getId())) {
-                    Map<String, String> profiles = (Map<String, String>) itr.getValue();
-                    for(Map.Entry<String, String> profile : profiles.entrySet()) {
-                        if (profile.getKey().equals(releaseCandidate.getBuildProfile())) {
-                            decodedData = Base64Util.convertToPlainText(profile.getValue());
-                            try {
-                                data = objectMapper.readTree(decodedData);
-                                providerId = data.path("buildProviderId").asText();
-                            } catch (JsonProcessingException e) {
-                                log.error("Fail to read metadata of profile {} in ephemeral environment {}", releaseCandidate.getBuildProfile(), releaseCandidate.getEphemeralEnvironmentName());
-                                throw new CustomException(ErrorCode.METADATA_PROFILE_INVALID_DATA);
-                            }
-                            break;
-                        }
-                    }
-                    break;
-                }
-            }
-        } else {
-            Set<Metadata> metadataList = releaseCandidate.getService().getProfiles();
-            for (Metadata metadata : metadataList) {
-                if (metadata.getId().equals(releaseCandidate.getBuildProfile())) {
-                    try {
-                        decodedData = Base64Util.convertToPlainText(metadata.getData());
-                        data = objectMapper.readTree(decodedData);
-                        providerId = data.path("buildProviderId").asText();
-                    } catch (JsonProcessingException e) {
-                        log.error("Fail to read metadata of profile {}", metadata.getName());
-                        throw new CustomException(ErrorCode.METADATA_PROFILE_INVALID_DATA);
-                    }
-                    break;
-                }
-            }
         }
 
         String dockerImageHashValue = releaseCandidate.getService().getName().toLowerCase() + "-"
@@ -378,9 +347,9 @@ public class ReleaseCandidateServiceImpl implements ReleaseCandidateService {
         params.put("COMMIT_ID", commitId);
         params.put("BASE_IMAGE", data.path("baseImage").asText());
         params.put("BUILD_COMMAND", data.path("buildCommand").asText());
-        params.put("REPO_URL", "https://github.com/SwaDeshiTech/" + data.path("repo").asText());
+        params.put("REPO_URL", credentialProviderService.extractSCMURL(providerId) + "/" + data.path("repo").asText());
         params.put("ARTIFACT_PATH", data.path("artifactPath").asText());
-        params.put("JOB_TEMPLATE", "prodhub_build");
+        params.put("JOB_TEMPLATE", data.path("buildTemplate").asText());
         params.put("SERVICE_NAME", releaseCandidate.getService().getName());
         params.put("PROFILE_PATH", data.path("profilePath").asText());
         params.put("DOCKER_IMAGE_HASH_VALUE", dockerImageHashValue);
@@ -404,16 +373,11 @@ public class ReleaseCandidateServiceImpl implements ReleaseCandidateService {
     }
 
     private ReleaseCandidateStatus mapStatusFromCICaptain(String status) {
-        switch (status) {
-            case "SUCCESS":
-                return ReleaseCandidateStatus.CERTIFIABLE;
-            case "FAILURE":
-            case "FAILED":
-                return ReleaseCandidateStatus.FAILED;
-            case "ABORTED":
-            case "CANCELLED":
-                return ReleaseCandidateStatus.CANCELLED;
-        }
-        return ReleaseCandidateStatus.REJECTED;
+        return switch (status) {
+            case "SUCCESS" -> ReleaseCandidateStatus.CERTIFIABLE;
+            case "FAILURE", "FAILED" -> ReleaseCandidateStatus.FAILED;
+            case "ABORTED", "CANCELLED" -> ReleaseCandidateStatus.CANCELLED;
+            default -> ReleaseCandidateStatus.REJECTED;
+        };
     }
 }

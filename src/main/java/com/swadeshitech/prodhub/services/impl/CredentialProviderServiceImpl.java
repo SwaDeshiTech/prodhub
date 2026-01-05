@@ -1,5 +1,8 @@
 package com.swadeshitech.prodhub.services.impl;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.swadeshitech.prodhub.dto.CredentialProviderFilter;
 import com.swadeshitech.prodhub.dto.CredentialProviderRequest;
 import com.swadeshitech.prodhub.dto.CredentialProviderResponse;
@@ -17,6 +20,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
@@ -35,6 +39,12 @@ public class CredentialProviderServiceImpl implements CredentialProviderService 
 
     @Autowired
     VaultApiService vaultService;
+
+    @Autowired
+    ObjectMapper objectMapper;
+
+    @Value("${github.baseURL}")
+    String githubBaseURL;
 
     @Override
     public CredentialProviderResponse onboardCredentialProvider(CredentialProviderRequest request) {
@@ -162,6 +172,38 @@ public class CredentialProviderServiceImpl implements CredentialProviderService 
                     .build());
         }
         return dropdownDTOS;
+    }
+
+    @Override
+    public String extractSCMURL(String credentialId) {
+        List<CredentialProvider> credentialProviders = readTransactionService.findByDynamicOrFilters(Map.of("_id", new ObjectId(credentialId)), CredentialProvider.class);
+        if(CollectionUtils.isEmpty(credentialProviders)) {
+            log.info("Fail to fetch credential providers list {}", credentialId);
+            throw new CustomException(ErrorCode.CREDENTIAL_PROVIDER_LIST_NOT_FOUND);
+        }
+
+        CredentialProvider credentialProvider = credentialProviders.getFirst();
+        Map<String, Object> vaultResponse = vaultService.getSecret(credentialProvider.getCredentialPath());
+        String scmStoredData = vaultResponse.get("secret").toString();
+        try {
+            JsonNode node = objectMapper.readTree(scmStoredData);
+            return extractURLKey(credentialProvider, node);
+        } catch (JsonProcessingException e) {
+            log.error("Failed to parse SCM data", e);
+            throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    private String extractURLKey(CredentialProvider credentialProvider, JsonNode scmData) {
+        if (Objects.requireNonNull(credentialProvider.getCredentialProvider()) == com.swadeshitech.prodhub.enums.CredentialProvider.GITHUB) {
+            if (org.springframework.util.StringUtils.hasText(scmData.path("github_org").asText())) {
+                return githubBaseURL + "/" + scmData.path("github_org").asText();
+            }
+            if (org.springframework.util.StringUtils.hasText(scmData.path("github_owner").asText())) {
+                return githubBaseURL + "/" + scmData.path("github_owner").asText();
+            }
+        }
+        return null;
     }
 
     private Map<String, Object> createFilterObject(CredentialProviderFilter credentialProviderFilter) {

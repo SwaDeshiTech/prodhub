@@ -4,14 +4,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.swadeshitech.prodhub.constant.KafkaConstants;
-import com.swadeshitech.prodhub.dto.DeploymentRequestResponse;
-import com.swadeshitech.prodhub.dto.DeploymentResponse;
-import com.swadeshitech.prodhub.dto.DeploymentTemplateResponse;
-import com.swadeshitech.prodhub.dto.DeploymentUpdateKafka;
-import com.swadeshitech.prodhub.entity.CredentialProvider;
-import com.swadeshitech.prodhub.entity.Deployment;
-import com.swadeshitech.prodhub.entity.DeploymentSet;
-import com.swadeshitech.prodhub.entity.DeploymentTemplate;
+import com.swadeshitech.prodhub.dto.*;
+import com.swadeshitech.prodhub.entity.*;
 import com.swadeshitech.prodhub.enums.DeploymentStatus;
 import com.swadeshitech.prodhub.enums.ErrorCode;
 import com.swadeshitech.prodhub.enums.RunTimeEnvironment;
@@ -27,6 +21,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.bson.types.ObjectId;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.ObjectUtils;
@@ -52,6 +48,9 @@ public class DeploymentServiceImpl implements DeploymentService {
 
     @Autowired
     DeplOrchClient deplOrchClient;
+
+    @Autowired
+    UserServiceImpl userService;
 
     @Override
     public DeploymentRequestResponse triggerDeployment(String deploymentSetID) {
@@ -213,6 +212,42 @@ public class DeploymentServiceImpl implements DeploymentService {
         deploymentPodResponse.setClusterId(credentialProviders.getFirst().getName());
 
         return deploymentPodResponse;
+    }
+
+    @Override
+    public PaginatedResponse<DeploymentRequestResponse> getAllDeployments(Integer page, Integer size, String sortBy, String order) {
+
+        log.info("Fetching deployments for page {} with size {}", page, size);
+        User user = userService.extractUserFromContext();
+
+        Map<String, Object> filters = new HashMap<>();
+        filters.put("createdBy", user.getEmailId());
+        Sort.Direction direction = "ASC".equalsIgnoreCase(order) ? Sort.Direction.ASC : Sort.Direction.DESC;
+        Page<Deployment> deploymentsPage = readTransactionService.findByDynamicOrFiltersPaginated(
+                filters,
+                Deployment.class,
+                page,
+                size,
+                sortBy,
+                direction
+        );
+        if (deploymentsPage.isEmpty()) {
+            log.warn("No deployment found");
+            throw new CustomException(ErrorCode.DEPLOYMENT_NOT_FOUND);
+        }
+
+        List<DeploymentRequestResponse> dtoList = deploymentsPage.getContent().stream()
+                .map(this::mapEntityToDTO)
+                .toList();
+
+        return PaginatedResponse.<DeploymentRequestResponse>builder()
+                .content(dtoList)
+                .pageNumber(deploymentsPage.getNumber())
+                .pageSize(deploymentsPage.getSize())
+                .totalElements(deploymentsPage.getTotalElements())
+                .totalPages(deploymentsPage.getTotalPages())
+                .isLast(deploymentsPage.isLast())
+                .build();
     }
 
     private Deployment findDeployment(String deploymentId) {

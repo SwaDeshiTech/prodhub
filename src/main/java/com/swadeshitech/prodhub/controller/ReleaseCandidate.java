@@ -19,23 +19,16 @@ public class ReleaseCandidate {
     private ReleaseCandidateService releaseCandidateService;
 
     @PostMapping
-    public ResponseEntity<Response> createReleaseCandidate(@RequestHeader(name = "uuid") String uuid,
-            @RequestBody ReleaseCandidateRequest request) {
+    public ResponseEntity<Response> createReleaseCandidate(@RequestBody ReleaseCandidateRequest request) {
 
-        try {
-            ContextHolder.setContext("uuid", uuid);
-            ReleaseCandidateResponse releaseCandidateResponse = releaseCandidateService.createReleaseCandidate(request);
+        ReleaseCandidateResponse releaseCandidateResponse = releaseCandidateService.createReleaseCandidate(request);
 
-            Response response = Response.builder()
-                    .httpStatus(HttpStatus.CREATED)
-                    .message("Successfully created release candidate")
-                    .response(releaseCandidateResponse)
-                    .build();
-            return ResponseEntity.status(HttpStatus.CREATED).body(response);
-        } finally {
-            // Clear the context to avoid memory leaks
-            ContextHolder.clearContext();
-        }
+        Response response = Response.builder()
+                .httpStatus(HttpStatus.CREATED)
+                .message("Successfully created release candidate")
+                .response(releaseCandidateResponse)
+                .build();
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @PutMapping("/syncStatus/{id}")
@@ -53,32 +46,23 @@ public class ReleaseCandidate {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Response> updateReleaseCandidate(@RequestHeader(name = "uuid") String uuid,
-            @RequestBody ReleaseCandidateRequest request, String id) {
+    public ResponseEntity<Response> updateReleaseCandidate(@RequestBody ReleaseCandidateRequest request, String id) {
 
-        try {
-            ContextHolder.setContext("uuid", uuid);
-            ReleaseCandidateResponse releaseCandidateResponse = releaseCandidateService.updateReleaseCandidate(id,
-                    request);
+        ReleaseCandidateResponse releaseCandidateResponse = releaseCandidateService.updateReleaseCandidate(id,
+                request);
 
-            Response response = Response.builder()
-                    .httpStatus(HttpStatus.OK)
-                    .message("Successfully updated release candidate")
-                    .response(releaseCandidateResponse)
-                    .build();
+        Response response = Response.builder()
+                .httpStatus(HttpStatus.OK)
+                .message("Successfully updated release candidate")
+                .response(releaseCandidateResponse)
+                .build();
 
-            return ResponseEntity.ok(response);
-        } finally {
-            // Clear the context to avoid memory leaks
-            ContextHolder.clearContext();
-        }
+        return ResponseEntity.ok(response);
     }
 
     @PutMapping("/{id}/certifyProduction")
-    public ResponseEntity<Response> certifyReleaseCandidateForProduction(@RequestHeader(name = "uuid") String uuid, @PathVariable String id) {
+    public ResponseEntity<Response> certifyReleaseCandidateForProduction(@PathVariable String id) {
 
-        try {
-            ContextHolder.setContext("uuid", uuid);
         ReleaseCandidateResponse releaseCandidateResponse = releaseCandidateService.certifyRelaseCandidateForProduction(id);
 
         Response response = Response.builder()
@@ -88,35 +72,25 @@ public class ReleaseCandidate {
                 .build();
 
         return ResponseEntity.ok(response);
-        } finally {
-            // Clear the context to avoid memory leaks
-            ContextHolder.clearContext();
-        }
     }
 
     @GetMapping
     public ResponseEntity<Response> getAllReleaseCandidates(
-            @RequestHeader(name = "uuid") String uuid,
             @RequestParam(defaultValue = "0") Integer page,
             @RequestParam(defaultValue = "10") Integer size,
             @RequestParam(defaultValue = "createdTime") String sortBy,
             @RequestParam(defaultValue = "DESC") String order) {
 
-        try {
-            ContextHolder.setContext("uuid", uuid);
-            PaginatedResponse<ReleaseCandidateResponse> releaseCandidateResponse =
-                    releaseCandidateService.getAllReleaseCandidates(page, size, sortBy, order);
+        PaginatedResponse<ReleaseCandidateResponse> releaseCandidateResponse =
+                releaseCandidateService.getAllReleaseCandidates(page, size, sortBy, order);
 
-            Response response = Response.builder()
-                    .httpStatus(HttpStatus.OK)
-                    .message("Successfully retrieved all release candidates")
-                    .response(releaseCandidateResponse)
-                    .build();
+        Response response = Response.builder()
+                .httpStatus(HttpStatus.OK)
+                .message("Successfully retrieved all release candidates")
+                .response(releaseCandidateResponse)
+                .build();
 
-            return ResponseEntity.ok(response);
-        } finally {
-            ContextHolder.clearContext();
-        }
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/details/{id}")

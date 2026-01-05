@@ -1,8 +1,6 @@
 package com.swadeshitech.prodhub.controller;
 
-import com.swadeshitech.prodhub.dto.DeploymentRequestResponse;
-import com.swadeshitech.prodhub.dto.DeploymentResponse;
-import com.swadeshitech.prodhub.dto.Response;
+import com.swadeshitech.prodhub.dto.*;
 import com.swadeshitech.prodhub.integration.deplorch.DeploymentPodResponse;
 import com.swadeshitech.prodhub.services.DeploymentService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,6 +14,25 @@ public class Deployment {
 
     @Autowired
     DeploymentService deploymentService;
+
+    @GetMapping("/history")
+    public ResponseEntity<Response> getDeploymentHistory(@RequestParam(defaultValue = "0") Integer page,
+                                                         @RequestParam(defaultValue = "10") Integer size,
+                                                         @RequestParam(defaultValue = "createdTime") String sortBy,
+                                                         @RequestParam(defaultValue = "DESC") String order) {
+
+        PaginatedResponse<DeploymentRequestResponse> deploymentsResponse =
+                deploymentService.getAllDeployments(page, size, sortBy, order);
+
+        Response response = Response.builder()
+                .httpStatus(HttpStatus.OK)
+                .message("Successfully retrieved all deployments")
+                .response(deploymentsResponse)
+                .build();
+
+        return ResponseEntity.ok(response);
+
+    }
 
     @PostMapping("/{deploymentSetId}")
     public ResponseEntity<Response> triggerDeployment(@PathVariable String deploymentSetId) {

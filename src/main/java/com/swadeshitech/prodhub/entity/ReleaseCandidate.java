@@ -30,8 +30,6 @@ public class ReleaseCandidate extends BaseEntity implements Serializable {
 
     private ReleaseCandidateStatus status;
 
-    private String buildProfile;
-
     private String ephemeralEnvironmentName;
 
     private String buildRefId;
@@ -44,4 +42,7 @@ public class ReleaseCandidate extends BaseEntity implements Serializable {
 
     @DBRef
     private Application service;
+
+    @DBRef
+    private Metadata buildProfile;
 }
