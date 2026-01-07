@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.swadeshitech.prodhub.constant.Constants;
 import com.swadeshitech.prodhub.transaction.write.WriteTransactionService;
 import org.bson.types.ObjectId;
 import org.springframework.beans.BeanUtils;
@@ -73,7 +74,7 @@ public class MetadataServiceImpl implements MetadataService {
         }
 
         Map<String, Object> filters = new HashMap<>();
-        filters.put("application", applications.get(0));
+        filters.put("application", applications.getFirst());
 
         if (type != null) {
             filters.put("profileType", type);
@@ -88,15 +89,18 @@ public class MetadataServiceImpl implements MetadataService {
         List<DropdownDTO> dropdownDTOs = new ArrayList<>();
 
         if (type != null) {
-            metadataList.forEach(
-                    metadata -> dropdownDTOs.add(new DropdownDTO(metadata.getId().toString(), metadata.getName())));
+            for(Metadata metadata : metadataList) {
+                if(metadata.getName().split(Constants.CLONE_METADATA_DELIMITER).length == 1) {
+                    dropdownDTOs.add(new DropdownDTO(metadata.getId(), metadata.getName()));
+                }
+            }
         } else {
             for (Metadata metadata : metadataList) {
                 var referencedProfile = metadata.getReferencedProfile();
                 if (!ObjectUtils.isEmpty(referencedProfile)) {
                     String label = metadata.getName() + " (" + metadata.getProfileType() + " Profile) " + " -> "
                             + referencedProfile.getName() + " (" + referencedProfile.getProfileType() + " Profile)";
-                    dropdownDTOs.add(new DropdownDTO(metadata.getId().toString(), label));
+                    dropdownDTOs.add(new DropdownDTO(metadata.getId(), label));
                 }
             }
         }

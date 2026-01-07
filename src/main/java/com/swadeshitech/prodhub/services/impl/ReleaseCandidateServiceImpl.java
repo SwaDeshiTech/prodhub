@@ -319,8 +319,8 @@ public class ReleaseCandidateServiceImpl implements ReleaseCandidateService {
 
     private void triggerBuild(ReleaseCandidate releaseCandidate) {
 
-        String providerId = "";
-        String jobName = releaseCandidate.getService().getName() + "-" + releaseCandidate.getBuildProfile();
+        String providerId = "", scmProviderId = "";
+        String jobName = releaseCandidate.getService().getName() + "-" + releaseCandidate.getBuildProfile().getName();
         JsonNode data = null;
         String commitId = releaseCandidate.getMetaData().get("commitId");
         String decodedData = "";
@@ -330,6 +330,7 @@ public class ReleaseCandidateServiceImpl implements ReleaseCandidateService {
             decodedData = Base64Util.convertToPlainText(buildProfile.getData());
             data = objectMapper.readTree(decodedData);
             providerId = data.path("buildProviderId").asText();
+            scmProviderId = data.path("scmId").asText();
         } catch (JsonProcessingException e) {
             log.error("Fail to read metadata of profile {}", buildProfile.getName());
             throw new CustomException(ErrorCode.METADATA_PROFILE_INVALID_DATA);
@@ -347,7 +348,7 @@ public class ReleaseCandidateServiceImpl implements ReleaseCandidateService {
         params.put("COMMIT_ID", commitId);
         params.put("BASE_IMAGE", data.path("baseImage").asText());
         params.put("BUILD_COMMAND", data.path("buildCommand").asText());
-        params.put("REPO_URL", credentialProviderService.extractSCMURL(providerId) + "/" + data.path("repo").asText());
+        params.put("REPO_URL", credentialProviderService.extractSCMURL(scmProviderId) + "/" + data.path("repo").asText());
         params.put("ARTIFACT_PATH", data.path("artifactPath").asText());
         params.put("JOB_TEMPLATE", data.path("buildTemplate").asText());
         params.put("SERVICE_NAME", releaseCandidate.getService().getName());
