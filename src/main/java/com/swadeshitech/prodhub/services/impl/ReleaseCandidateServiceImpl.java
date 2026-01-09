@@ -97,7 +97,7 @@ public class ReleaseCandidateServiceImpl implements ReleaseCandidateService {
         releaseCandidate.setBuildRefId(UuidUtil.generateRandomUuid());
 
         if(StringUtils.hasText(request.getEphemeralEnvironmentName())) {
-            releaseCandidate.setEphemeralEnvironmentName(request.getEphemeralEnvironmentName());
+            releaseCandidate.setEphemeralEnvironment(request.getEphemeralEnvironmentName());
         }
 
         releaseCandidate = writeTransactionService.saveReleaseCandidateToRepository(releaseCandidate);
@@ -155,12 +155,11 @@ public class ReleaseCandidateServiceImpl implements ReleaseCandidateService {
     }
 
     @Override
-    public PaginatedResponse<ReleaseCandidateResponse> getAllReleaseCandidates(Integer page, Integer size, String sortBy, String order) {
+    public PaginatedResponse<ReleaseCandidateResponse> getAllReleaseCandidates(String ephemeralEnvironment, Integer page, Integer size, String sortBy, String order) {
         log.info("Fetching release candidates for page {} with size {}", page, size);
-        User user = userService.extractUserFromContext();
 
-        Map<String, Object> filters = new HashMap<>();
-        filters.put("initiatedBy", user);
+        Map<String, Object> filters = createFiltersForReleaseCandidateList(ephemeralEnvironment);
+
         Sort.Direction direction = "ASC".equalsIgnoreCase(order) ? Sort.Direction.ASC : Sort.Direction.DESC;
         Page<ReleaseCandidate> rcPage = readTransactionService.findByDynamicOrFiltersPaginated(
                 filters,
@@ -336,8 +335,8 @@ public class ReleaseCandidateServiceImpl implements ReleaseCandidateService {
             throw new CustomException(ErrorCode.METADATA_PROFILE_INVALID_DATA);
         }
 
-        if(StringUtils.hasText(releaseCandidate.getEphemeralEnvironmentName())) {
-            jobName += "-" + releaseCandidate.getEphemeralEnvironmentName();
+        if(StringUtils.hasText(releaseCandidate.getEphemeralEnvironment())) {
+            jobName += "-" + releaseCandidate.getEphemeralEnvironment();
         }
 
         String dockerImageHashValue = releaseCandidate.getService().getName().toLowerCase() + "-"
@@ -380,5 +379,16 @@ public class ReleaseCandidateServiceImpl implements ReleaseCandidateService {
             case "ABORTED", "CANCELLED" -> ReleaseCandidateStatus.CANCELLED;
             default -> ReleaseCandidateStatus.REJECTED;
         };
+    }
+
+    private Map<String, Object> createFiltersForReleaseCandidateList(String ephemeralEnvironment) {
+        Map<String, Object> filters = new HashMap<>();
+        User user = userService.extractUserFromContext();
+        if(StringUtils.hasText(ephemeralEnvironment)) {
+            filters.put("ephemeralEnvironmentName", ephemeralEnvironment);
+        } else {
+            filters.put("initiatedBy", user);
+        }
+        return filters;
     }
 }

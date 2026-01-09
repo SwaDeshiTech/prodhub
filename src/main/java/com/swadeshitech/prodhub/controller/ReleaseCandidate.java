@@ -76,13 +76,14 @@ public class ReleaseCandidate {
 
     @GetMapping
     public ResponseEntity<Response> getAllReleaseCandidates(
+            @RequestParam(required = false) String ephemeralEnvironment,
             @RequestParam(defaultValue = "0") Integer page,
             @RequestParam(defaultValue = "10") Integer size,
             @RequestParam(defaultValue = "createdTime") String sortBy,
             @RequestParam(defaultValue = "DESC") String order) {
 
         PaginatedResponse<ReleaseCandidateResponse> releaseCandidateResponse =
-                releaseCandidateService.getAllReleaseCandidates(page, size, sortBy, order);
+                releaseCandidateService.getAllReleaseCandidates(ephemeralEnvironment, page, size, sortBy, order);
 
         Response response = Response.builder()
                 .httpStatus(HttpStatus.OK)

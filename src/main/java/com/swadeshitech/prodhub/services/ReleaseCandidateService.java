@@ -20,7 +20,7 @@ public interface ReleaseCandidateService {
 
     void deleteReleaseCandidate(String id);
 
-    PaginatedResponse<ReleaseCandidateResponse> getAllReleaseCandidates(Integer page, Integer size, String sortBy, String order);
+    PaginatedResponse<ReleaseCandidateResponse> getAllReleaseCandidates(String ephemeralEnvironment, Integer page, Integer size, String sortBy, String order);
 
     ReleaseCandidateResponse syncStatus(String buildId, String forceSync);
 
