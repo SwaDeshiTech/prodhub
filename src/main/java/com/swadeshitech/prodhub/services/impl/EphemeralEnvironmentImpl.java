@@ -3,14 +3,18 @@ package com.swadeshitech.prodhub.services.impl;
 import java.time.LocalDateTime;
 import java.util.*;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.swadeshitech.prodhub.dto.*;
 import com.swadeshitech.prodhub.entity.*;
+import com.swadeshitech.prodhub.integration.kafka.producer.KafkaProducer;
 import com.swadeshitech.prodhub.services.MetadataService;
 import com.swadeshitech.prodhub.transaction.read.ReadTransactionService;
 import com.swadeshitech.prodhub.transaction.write.WriteTransactionService;
 import org.bson.types.ObjectId;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -45,6 +49,18 @@ public class EphemeralEnvironmentImpl implements EphemeralEnvironmentService {
 
     @Autowired
     MetadataService metadataService;
+
+    @Autowired
+    KafkaProducer kafkaProducer;
+
+    @Autowired
+    ObjectMapper objectMapper;
+
+    @Autowired
+    UserServiceImpl userService;
+
+    @Value("${spring.kafka.topic.ephemeralEnvironmentBuildAndDeployment}")
+    String ephemeralEnvironmentBuildAndDeploymentTopic;
 
     @Override
     public EphemeralEnvironmentResponse createEphemeralEnvironment(EphemeralEnvironmentRequest request) {
@@ -219,16 +235,23 @@ public class EphemeralEnvironmentImpl implements EphemeralEnvironmentService {
     }
 
     @Override
-    public Map<String, Object> getMetadataFromEphemeralEnvironment(String id) {
-        EphemeralEnvironment environment = fetchEphemeralEnvironmentFromDB(id);
-        return null;//environment.getApplications();
-    }
-
-    @Override
     public void setUpProfiles(String ephemeralEnvironmentId, String profileType) {
         EphemeralEnvironment ephemeralEnvironment = fetchEphemeralEnvironmentFromDB(ephemeralEnvironmentId);
 
 
+    }
+
+    @Override
+    public String buildAndDeployment(EphemeralEnvironmentBuildAndDeployRequest request) {
+
+        try {
+            request.setUserId(userService.extractUserFromContext().getUuid());
+            kafkaProducer.sendMessage(ephemeralEnvironmentBuildAndDeploymentTopic, objectMapper.writeValueAsString(request));
+        } catch (JsonProcessingException e) {
+            log.error("Failed to produce the message", e);
+            throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
+        }
+        return "Build and Deploy has been registered successfully";
     }
 
     private EphemeralEnvironmentResponse mapEntityToResponse(EphemeralEnvironment environment) {

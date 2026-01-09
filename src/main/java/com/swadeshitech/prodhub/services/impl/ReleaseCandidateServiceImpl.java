@@ -5,6 +5,7 @@ import java.util.*;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.swadeshitech.prodhub.constant.Constants;
 import com.swadeshitech.prodhub.dto.DropdownDTO;
 import com.swadeshitech.prodhub.dto.PaginatedResponse;
 import com.swadeshitech.prodhub.entity.Application;
@@ -292,7 +293,7 @@ public class ReleaseCandidateServiceImpl implements ReleaseCandidateService {
         Metadata metadata = releaseCandidate.getBuildProfile();
 
         ReleaseCandidateResponse response = getReleaseCandidateResponse(releaseCandidate, certifiedBy, initiatedBy);
-        response.setBuildProfile(metadata.getName());
+        response.setBuildProfile(metadata.getName().split(Constants.CLONE_METADATA_DELIMITER)[0]);
 
         return response;
     }
@@ -319,7 +320,8 @@ public class ReleaseCandidateServiceImpl implements ReleaseCandidateService {
     private void triggerBuild(ReleaseCandidate releaseCandidate) {
 
         String providerId = "", scmProviderId = "";
-        String jobName = releaseCandidate.getService().getName() + "-" + releaseCandidate.getBuildProfile().getName();
+        String jobName = releaseCandidate.getService().getName() + "-" + releaseCandidate.getBuildProfile().getName()
+                .split(Constants.CLONE_METADATA_DELIMITER)[0];
         JsonNode data = null;
         String commitId = releaseCandidate.getMetaData().get("commitId");
         String decodedData = "";
@@ -385,7 +387,7 @@ public class ReleaseCandidateServiceImpl implements ReleaseCandidateService {
         Map<String, Object> filters = new HashMap<>();
         User user = userService.extractUserFromContext();
         if(StringUtils.hasText(ephemeralEnvironment)) {
-            filters.put("ephemeralEnvironmentName", ephemeralEnvironment);
+            filters.put("ephemeralEnvironment", ephemeralEnvironment);
         } else {
             filters.put("initiatedBy", user);
         }

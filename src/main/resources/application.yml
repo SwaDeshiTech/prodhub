@@ -34,6 +34,7 @@ spring:
       deploymentUpdates: deployment-update
       ephemeralEnvironmentUpdate: ephemeral-environment-update
       deploymentSetStatusUpdate: deploymentSet-status-update
+      ephemeralEnvironmentBuildAndDeployment: ephemeral-environment-build-and-deployment
 
 management:
   endpoints:

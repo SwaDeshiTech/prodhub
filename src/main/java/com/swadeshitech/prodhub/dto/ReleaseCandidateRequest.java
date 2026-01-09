@@ -4,10 +4,12 @@ import java.util.Map;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
+import lombok.Builder;
 import lombok.Data;
 
 @Data
 @JsonIgnoreProperties(ignoreUnknown = true)
+@Builder
 public class ReleaseCandidateRequest {
     private String serviceName;
     private String buildProfile;

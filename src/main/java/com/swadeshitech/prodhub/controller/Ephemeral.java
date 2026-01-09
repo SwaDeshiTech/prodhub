@@ -15,7 +15,7 @@ import com.swadeshitech.prodhub.services.EphemeralEnvironmentService;
 public class Ephemeral {
 
     @Autowired
-    private EphemeralEnvironmentService environmentService;
+    EphemeralEnvironmentService environmentService;
 
     @GetMapping("/dropdown")
     public ResponseEntity<Response> ephemeralEnvironmentDropdownList() {
@@ -80,7 +80,7 @@ public class Ephemeral {
 
     @PostMapping
     public ResponseEntity<Response> ephemeralEnvironmentDetail(@RequestBody EphemeralEnvironmentRequest request) {
-        System.out.println(request);
+
         EphemeralEnvironmentResponse environmentResponse = environmentService.createEphemeralEnvironment(request);
 
         Response response = Response.builder()
@@ -105,5 +105,19 @@ public class Ephemeral {
                 .build();
 
         return ResponseEntity.status(HttpStatus.OK).body(response);
+    }
+
+    @PostMapping("/buildAndDeploy")
+    public ResponseEntity<Response> buildAndDeploy(@RequestBody EphemeralEnvironmentBuildAndDeployRequest request) {
+
+        String message = environmentService.buildAndDeployment(request);
+
+        Response response = Response.builder()
+                .httpStatus(HttpStatus.CREATED)
+                .message("Build and deployment in Ephemeral Environment has been triggered successfully")
+                .response(message)
+                .build();
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 }

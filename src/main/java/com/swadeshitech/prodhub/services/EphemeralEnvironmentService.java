@@ -23,7 +23,7 @@ public interface EphemeralEnvironmentService {
     public EphemeralEnvironmentResponse updateEphemeralEnvironment(String environmentId,
             EphemeralEnvironmentRequest request);
 
-    public Map<String, Object> getMetadataFromEphemeralEnvironment(String id);
-
     public void setUpProfiles(String ephemeralEnvironmentId, String profileType);
+
+    String buildAndDeployment(EphemeralEnvironmentBuildAndDeployRequest request);
 }
