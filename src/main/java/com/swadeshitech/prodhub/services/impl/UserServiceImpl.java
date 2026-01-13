@@ -1,19 +1,14 @@
 package com.swadeshitech.prodhub.services.impl;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
-import java.util.Set;
-import java.util.HashMap;
-import java.util.HashSet;
 
 import com.swadeshitech.prodhub.config.ContextHolder;
 import org.apache.logging.log4j.util.Strings;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.mapping.MappingException;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
@@ -72,10 +67,19 @@ public class UserServiceImpl implements UserService {
             userResponse.setTeams(new HashSet<>());
         }
 
-        // Handle null departments collection
         Set<Department> departments = user.get().getDepartments();
-        if (departments != null) {
-            userResponse.setDepartments(departments.stream().map(Department::getName).collect(Collectors.toSet()));
+        if (departments != null && !departments.isEmpty()) {
+            try {
+                Set<String> names = departments.stream()
+                        .map(Department::getName)
+                        .collect(Collectors.toSet());
+                userResponse.setDepartments(names);
+            } catch (NullPointerException e) {
+                log.error("Failed to map departments to userResponse: Data is missing", e);
+                userResponse.setDepartments(Collections.emptySet());
+            } catch (Exception e) {
+                log.error("Unexpected error during department mapping", e);
+            }
         } else {
             userResponse.setDepartments(new HashSet<>());
         }

@@ -7,6 +7,7 @@ import com.swadeshitech.prodhub.enums.ErrorCode;
 import com.swadeshitech.prodhub.enums.ProfileType;
 import com.swadeshitech.prodhub.exception.CustomException;
 import com.swadeshitech.prodhub.integration.kafka.producer.KafkaProducer;
+import com.swadeshitech.prodhub.services.CodeFreezeService;
 import com.swadeshitech.prodhub.services.UserService;
 import com.swadeshitech.prodhub.transaction.read.ReadTransactionService;
 import com.swadeshitech.prodhub.transaction.write.WriteTransactionService;
@@ -43,6 +44,9 @@ public class DeploymentApprovalImpl implements ApprovalService {
 
     @Value("${spring.kafka.topic.deploymentSetStatusUpdate}")
     String deploymentSetStatusUpdate;
+
+    @Autowired
+    CodeFreezeService codeFreezeService;
 
     @Override
     public ApprovalResponse createApprovalRequest(ApprovalRequest request) {
@@ -241,6 +245,17 @@ public class DeploymentApprovalImpl implements ApprovalService {
         managerApproval.setMandatory(true);
         managerApproval.setStatus(ApprovalStatus.PENDING);
         stages.add(managerApproval);
+
+        CodeFreeze codeFreeze = codeFreezeService.fetchActiveCodeFreeze(application.getId());
+        if(Objects.nonNull(codeFreeze)) {
+            ApprovalStage.Stage codeFreezeApproval = new ApprovalStage.Stage();
+            codeFreezeApproval.setName("Code Freeze Approval");
+            codeFreezeApproval.setApprovers(codeFreeze.getApprovers().stream().map(User::getUuid).collect(Collectors.toList()));
+            codeFreezeApproval.setSequence(3);
+            codeFreezeApproval.setMandatory(true);
+            codeFreezeApproval.setStatus(ApprovalStatus.PENDING);
+            stages.add(codeFreezeApproval);
+        }
 
         ApprovalStage approvalStage = ApprovalStage.builder()
                 .description("Deployment Approval")

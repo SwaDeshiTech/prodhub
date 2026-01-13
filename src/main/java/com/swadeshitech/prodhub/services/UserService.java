@@ -14,13 +14,13 @@ import com.swadeshitech.prodhub.dto.DropdownDTO;
 @Component
 public interface UserService {
 
-    public UserResponse getUserDetail(String uuid);
+    UserResponse getUserDetail(String uuid);
 
-    public UserResponse addUser(UserRequest userRequest);
+    UserResponse addUser(UserRequest userRequest);
 
-    public UserResponse updateUser(String uuid, UserUpdateRequest updateRequest);
+    UserResponse updateUser(String uuid, UserUpdateRequest updateRequest);
 
-    public List<DropdownDTO> getAllUsersForDropdown();
+    List<DropdownDTO> getAllUsersForDropdown();
 
-    public Set<Role> getUserRoles(String uuid);
+    Set<Role> getUserRoles(String uuid);
 }

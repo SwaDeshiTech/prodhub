@@ -109,6 +109,26 @@ public class CodeFreezeServiceImpl implements CodeFreezeService {
         writeTransactionService.saveCodeFreezeToRepository(codeFreeze);
     }
 
+    @Override
+    public CodeFreeze fetchActiveCodeFreeze(String applicationId) {
+
+        List<Application> applications = readTransactionService.findApplicationByFilters(Map
+                .of("_id", new ObjectId(applicationId)));
+        if (CollectionUtils.isEmpty(applications)) {
+            log.error("Application could not be found {}", applicationId);
+            throw new CustomException(ErrorCode.APPLICATION_NOT_FOUND);
+        }
+
+        List<CodeFreeze> codeFreezeList = readTransactionService.findCodeFreezeByFilters(Map
+                .of("applications", applications.getFirst()));
+        if(CollectionUtils.isEmpty(codeFreezeList)) {
+            log.error("Code freeze could not be found for the applicationId {}", applicationId);
+            return null;
+        }
+
+        return codeFreezeList.getFirst();
+    }
+
     private CodeFreezeResponse mapEntityToDTO(CodeFreeze codeFreeze) {
 
         if (Objects.isNull(codeFreeze)) {
@@ -165,16 +185,4 @@ public class CodeFreezeServiceImpl implements CodeFreezeService {
         codeFreeze.setApprovers(approvers);
         codeFreeze.setApplications(applications);
     }
-
-    /*public CodeFreeze isCodeFreezeEnabled(String applicationId) {
-
-        LocalDateTime currentTime = LocalDateTime.now();
-
-        Map<String, Object> filters = new HashMap<>();
-        filters.put("startTime", currentTime);
-        filters.put("endTime", currentTime);
-        filters.put("applications", applicationId);
-
-
-    }*/
 }
