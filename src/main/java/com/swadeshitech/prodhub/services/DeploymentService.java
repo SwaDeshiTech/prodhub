@@ -1,6 +1,9 @@
 package com.swadeshitech.prodhub.services;
 
 import com.swadeshitech.prodhub.dto.*;
+import com.swadeshitech.prodhub.entity.EphemeralEnvironment;
+import com.swadeshitech.prodhub.entity.Metadata;
+import com.swadeshitech.prodhub.entity.ReleaseCandidate;
 import com.swadeshitech.prodhub.integration.deplorch.DeploymentPodResponse;
 import org.springframework.stereotype.Component;
 
@@ -20,4 +23,6 @@ public interface DeploymentService {
     DeploymentPodResponse getDeployedPodDetails(String deploymentId);
 
     PaginatedResponse<DeploymentRequestResponse> getAllDeployments(Integer page, Integer size, String sortBy, String order);
+
+    void triggerDeploymentForEphemeralEnvironment(EphemeralEnvironment ephemeralEnvironment, Metadata deploymentProfile, ReleaseCandidate releaseCandidate);
 }

@@ -8,8 +8,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.swadeshitech.prodhub.constant.Constants;
 import com.swadeshitech.prodhub.dto.DropdownDTO;
 import com.swadeshitech.prodhub.dto.PaginatedResponse;
-import com.swadeshitech.prodhub.entity.Application;
-import com.swadeshitech.prodhub.entity.Metadata;
+import com.swadeshitech.prodhub.entity.*;
 import com.swadeshitech.prodhub.integration.cicaptain.config.CiCaptainClient;
 import com.swadeshitech.prodhub.integration.cicaptain.dto.BuildStatusResponse;
 import com.swadeshitech.prodhub.integration.cicaptain.dto.BuildTriggerRequest;
@@ -28,8 +27,6 @@ import org.springframework.util.ObjectUtils;
 
 import com.swadeshitech.prodhub.dto.ReleaseCandidateRequest;
 import com.swadeshitech.prodhub.dto.ReleaseCandidateResponse;
-import com.swadeshitech.prodhub.entity.ReleaseCandidate;
-import com.swadeshitech.prodhub.entity.User;
 import com.swadeshitech.prodhub.enums.ErrorCode;
 import com.swadeshitech.prodhub.enums.ReleaseCandidateStatus;
 import com.swadeshitech.prodhub.exception.CustomException;
@@ -98,7 +95,13 @@ public class ReleaseCandidateServiceImpl implements ReleaseCandidateService {
         releaseCandidate.setBuildRefId(UuidUtil.generateRandomUuid());
 
         if(StringUtils.hasText(request.getEphemeralEnvironmentName())) {
-            releaseCandidate.setEphemeralEnvironment(request.getEphemeralEnvironmentName());
+            List<EphemeralEnvironment> ephemeralEnvironments = readTransactionService.findByDynamicOrFilters(Map.of("_id", request.getEphemeralEnvironmentName())
+                    , EphemeralEnvironment.class);
+            if (CollectionUtils.isEmpty(ephemeralEnvironments)) {
+                log.error("Ephemeral environment could not be found {}", request.getEphemeralEnvironmentName());
+                throw new CustomException(ErrorCode.EPHEMERAL_ENVIRONMENT_NOT_FOUND);
+            }
+            releaseCandidate.setEphemeralEnvironment(ephemeralEnvironments.getFirst());
         }
 
         releaseCandidate = writeTransactionService.saveReleaseCandidateToRepository(releaseCandidate);
@@ -250,7 +253,7 @@ public class ReleaseCandidateServiceImpl implements ReleaseCandidateService {
     }
 
     @Override
-    public ReleaseCandidateResponse certifyRelaseCandidateForProduction(String id) {
+    public ReleaseCandidateResponse certifyReleaseCandidateForProduction(String id) {
 
         List<ReleaseCandidate> releaseCandidates = readTransactionService.findReleaseCandidateDetailsByFilters(Map.of(
                 "_id", new ObjectId(id),
@@ -319,12 +322,12 @@ public class ReleaseCandidateServiceImpl implements ReleaseCandidateService {
 
     private void triggerBuild(ReleaseCandidate releaseCandidate) {
 
-        String providerId = "", scmProviderId = "";
+        String providerId, scmProviderId;
         String jobName = releaseCandidate.getService().getName() + "-" + releaseCandidate.getBuildProfile().getName()
                 .split(Constants.CLONE_METADATA_DELIMITER)[0];
-        JsonNode data = null;
+        JsonNode data;
         String commitId = releaseCandidate.getMetaData().get("commitId");
-        String decodedData = "";
+        String decodedData;
         Metadata buildProfile = releaseCandidate.getBuildProfile();
 
         try {
@@ -337,8 +340,8 @@ public class ReleaseCandidateServiceImpl implements ReleaseCandidateService {
             throw new CustomException(ErrorCode.METADATA_PROFILE_INVALID_DATA);
         }
 
-        if(StringUtils.hasText(releaseCandidate.getEphemeralEnvironment())) {
-            jobName += "-" + releaseCandidate.getEphemeralEnvironment();
+        if(Objects.nonNull(releaseCandidate.getEphemeralEnvironment())) {
+            jobName += "-" + releaseCandidate.getEphemeralEnvironment().getName();
         }
 
         String dockerImageHashValue = releaseCandidate.getService().getName().toLowerCase() + "-"
@@ -374,7 +377,7 @@ public class ReleaseCandidateServiceImpl implements ReleaseCandidateService {
         writeTransactionService.saveReleaseCandidateToRepository(releaseCandidate);
     }
 
-    private ReleaseCandidateStatus mapStatusFromCICaptain(String status) {
+    public ReleaseCandidateStatus mapStatusFromCICaptain(String status) {
         return switch (status) {
             case "SUCCESS" -> ReleaseCandidateStatus.CERTIFIABLE;
             case "FAILURE", "FAILED" -> ReleaseCandidateStatus.FAILED;

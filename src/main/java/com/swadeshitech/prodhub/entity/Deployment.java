@@ -26,9 +26,9 @@ public class Deployment extends BaseEntity {
     private DeploymentTemplate deploymentTemplate;
 
     @DBRef
-    private transient DeploymentSet deploymentSet;
+    private DeploymentSet deploymentSet;
 
     @DBRef
-    private transient Application application;
+    private Application application;
 }
 

@@ -1,9 +1,6 @@
 package com.swadeshitech.prodhub.services.approval;
 
-import com.swadeshitech.prodhub.dto.ApprovalRequest;
-import com.swadeshitech.prodhub.dto.ApprovalRequestFilter;
-import com.swadeshitech.prodhub.dto.ApprovalResponse;
-import com.swadeshitech.prodhub.dto.ApprovalUpdateRequest;
+import com.swadeshitech.prodhub.dto.*;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -13,5 +10,5 @@ public interface ApprovalService {
     ApprovalResponse createApprovalRequest(ApprovalRequest request);
     ApprovalResponse getApprovalById(String requestId);
     boolean updateApprovalStatus(String requestId, ApprovalUpdateRequest request);
-    List<ApprovalResponse> getApprovalsList(ApprovalRequestFilter requestFilter);
+    PaginatedResponse<ApprovalResponse> getApprovalsList(ApprovalRequestFilter requestFilter, Integer page, Integer size, String sortBy, String order);
 }

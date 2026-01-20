@@ -24,9 +24,9 @@ public class Tab {
     private TabService tabService;
 
     @GetMapping
-    public ResponseEntity<Response> getActiveTabsByUser(@RequestHeader(name = "uuid") String uuid) {
+    public ResponseEntity<Response> getActiveTabsByUser() {
 
-        List<TabResponse> tabs = tabService.getActiveTabsByUser(uuid);
+        List<TabResponse> tabs = tabService.getActiveTabsByUser();
 
         Response response = Response.builder()
                 .httpStatus(HttpStatus.OK)

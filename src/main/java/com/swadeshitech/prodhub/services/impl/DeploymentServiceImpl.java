@@ -30,6 +30,8 @@ import reactor.core.publisher.Mono;
 
 import java.util.*;
 
+import static com.swadeshitech.prodhub.constant.Constants.NAMESPACE_KEY;
+
 @Service
 @Slf4j
 public class DeploymentServiceImpl implements DeploymentService {
@@ -248,6 +250,76 @@ public class DeploymentServiceImpl implements DeploymentService {
                 .totalPages(deploymentsPage.getTotalPages())
                 .isLast(deploymentsPage.isLast())
                 .build();
+    }
+
+    @Override
+    public void triggerDeploymentForEphemeralEnvironment(EphemeralEnvironment ephemeralEnvironment, Metadata deploymentProfile, ReleaseCandidate releaseCandidate) {
+        writeTransactionService.saveDeploymentToRepository(generateDeploymentConfigForEphemeralEnvironment(ephemeralEnvironment,
+                releaseCandidate, deploymentProfile));
+    }
+
+    private Deployment generateDeploymentConfigForEphemeralEnvironment(EphemeralEnvironment ephemeralEnvironment,
+                                                                       ReleaseCandidate releaseCandidate, Metadata deploymentProfile) {
+        String deploymentTemplateName = "DeploymentK8s";
+
+        List<DeploymentTemplate> deploymentTemplates = readTransactionService.findByDynamicOrFilters(Map.of("templateName", deploymentTemplateName), DeploymentTemplate.class);
+        if(CollectionUtils.isEmpty(deploymentTemplates)) {
+            log.error("Deployment template could not be found {}", deploymentTemplateName);
+            throw new CustomException(ErrorCode.DEPLOYMENT_TEMPLATE_COULD_NOT_BE_CREATED);
+        }
+
+        DeploymentTemplate deploymentTemplate = deploymentTemplates.getFirst();
+        DeploymentTemplate clonedDeploymentTemplate = new DeploymentTemplate();
+        BeanUtils.copyProperties(deploymentTemplate, clonedDeploymentTemplate, "id");
+
+        JsonNode deploymentProfileConfig;
+        try {
+            deploymentProfileConfig = objectMapper.readTree(Base64Util.convertToPlainText(deploymentProfile.getData()));
+        } catch (JsonProcessingException e) {
+            log.error("Unable to parse the deployment profile", e);
+            throw new CustomException(ErrorCode.METADATA_PROFILE_INVALID_DATA);
+        }
+
+        Deployment deployment = Deployment.builder()
+                .status(DeploymentStatus.CREATED)
+                .application(deploymentProfile.getApplication())
+                .deploymentTemplate(clonedDeploymentTemplate)
+                .metaData(Map.of("runtimeEnvironment", deploymentProfile.getRunTimeEnvironment().getRunTimeEnvironment(),
+                        "deploymentTemplate", deploymentProfile.getRunTimeEnvironment().getDeploymentTemplate(),
+                        "releaseName", deploymentProfile.getApplication().getName() + "-" + deploymentProfile.extractMetaDataName(),
+                        "imageTag", releaseCandidate.getMetaData().get("dockerImageHashValue")))
+                .build();
+
+        for(DeploymentTemplate.DeploymentStep deploymentStep : clonedDeploymentTemplate.getSteps()) {
+            if(!CollectionUtils.isEmpty(deploymentStep.getParams()) && !deploymentStep.isSkipStep()) {
+                Map<String, Object> configs = new HashMap<>();
+                for(String key : deploymentStep.getParams()) {
+                    if(ObjectUtils.isEmpty(deploymentProfileConfig.path(key))) {
+                        configs.put(key, "");
+                    } else {
+                        if (NAMESPACE_KEY.equals(key)) {
+                            configs.put(key, ephemeralEnvironment.getName());
+                        } else {
+                            configs.put(key, deploymentProfileConfig.path(key).asText());
+                        }
+                    }
+                }
+                deploymentStep.setValues(configs);
+            }
+            deploymentStep.setMetadata(new HashMap<>());
+            deploymentStep.setStatus(DeploymentStatus.IN_PROGRESS);
+        }
+
+        if (RunTimeEnvironment.K8s.getRunTimeEnvironment().equals(deployment.getMetaData().get("runtimeEnvironment").toString())) {
+            deployment.getMetaData().put("k8sClusterId", deploymentProfileConfig.path("k8sClusterName").asText());
+            deployment.getMetaData().put("dockerContainerRegistry", deploymentProfileConfig.path("dockerContainerRegistry").asText());
+        }
+
+        deployment.getMetaData().put("namespace", ephemeralEnvironment.getName());
+        deployment.setStatus(DeploymentStatus.IN_PROGRESS);
+        deployment.setDeploymentTemplate(clonedDeploymentTemplate);
+
+        return deployment;
     }
 
     private Deployment findDeployment(String deploymentId) {

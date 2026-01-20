@@ -30,9 +30,10 @@ public class ReleaseCandidate extends BaseEntity implements Serializable {
 
     private ReleaseCandidateStatus status;
 
-    private String ephemeralEnvironment;
-
     private String buildRefId;
+
+    @DBRef
+    private EphemeralEnvironment ephemeralEnvironment;
 
     @DBRef
     private User initiatedBy;

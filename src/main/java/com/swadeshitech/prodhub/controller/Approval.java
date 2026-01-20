@@ -62,9 +62,13 @@ public class Approval {
     }
 
     @GetMapping("/all")
-    public ResponseEntity<Response> getAllApprovalRequest(@ModelAttribute ApprovalRequestFilter filter) {
+    public ResponseEntity<Response> getAllApprovalRequest(@ModelAttribute ApprovalRequestFilter filter,
+                                                          @RequestParam(defaultValue = "0") Integer page,
+                                                          @RequestParam(defaultValue = "10") Integer size,
+                                                          @RequestParam(defaultValue = "createdTime") String sortBy,
+                                                          @RequestParam(defaultValue = "DESC") String order) {
 
-        List<ApprovalResponse> approvalResponseList = approvalService.getApprovalsList(filter);
+        PaginatedResponse<ApprovalResponse> approvalResponseList = approvalService.getApprovalsList(filter, page, size, sortBy, order);
 
         Response response = Response.builder()
                 .httpStatus(HttpStatus.OK)

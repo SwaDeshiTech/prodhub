@@ -8,7 +8,6 @@ import com.swadeshitech.prodhub.enums.ApprovalStatus;
 import com.swadeshitech.prodhub.enums.ErrorCode;
 import com.swadeshitech.prodhub.enums.ProfileType;
 import com.swadeshitech.prodhub.exception.CustomException;
-import com.swadeshitech.prodhub.services.MetadataService;
 import com.swadeshitech.prodhub.services.OnboardingService;
 import com.swadeshitech.prodhub.services.UserService;
 import com.swadeshitech.prodhub.transaction.read.ReadTransactionService;
@@ -19,6 +18,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -32,16 +33,13 @@ import java.util.stream.Collectors;
 public class ApprovalServiceImpl implements ApprovalService {
 
     @Autowired
-    private ReadTransactionService readTransactionService;
+    ReadTransactionService readTransactionService;
 
     @Autowired
-    private WriteTransactionService writeTransactionService;
+    WriteTransactionService writeTransactionService;
 
     @Autowired
-    private UserService userService;
-
-    @Autowired
-    private MetadataService metadataService;
+    UserService userService;
 
     @Autowired
     ObjectMapper objectMapper;
@@ -138,25 +136,41 @@ public class ApprovalServiceImpl implements ApprovalService {
     }
 
     @Override
-    public List<ApprovalResponse> getApprovalsList(ApprovalRequestFilter requestFilter) {
+    public PaginatedResponse<ApprovalResponse> getApprovalsList(ApprovalRequestFilter requestFilter, Integer page, Integer size, String sortBy, String order) {
 
         Map<String, Object> filters = generateApprovalFilters(requestFilter);
-        List<ApprovalStage> approvalList = readTransactionService.findByDynamicOrFilters(filters, ApprovalStage.class);
-        List<ApprovalResponse> approvalResponseList = new ArrayList<>();
+        Sort.Direction direction = "ASC".equalsIgnoreCase(order) ? Sort.Direction.ASC : Sort.Direction.DESC;
+        Page<ApprovalStage> pageApprovalStageList = readTransactionService.findByDynamicOrFiltersPaginated(
+                filters,
+                ApprovalStage.class,
+                page,
+                size,
+                sortBy,
+                direction
+        );
 
-        for (ApprovalStage stage : approvalList) {
+        List<ApprovalResponse> approvalResponseList = new ArrayList<>();
+        for (ApprovalStage stage : pageApprovalStageList.getContent()) {
             Approvals approvals = stage.getApprovals();
             approvalResponseList.add(ApprovalResponse.builder()
                     .requestId(approvals.getId())
                     .serviceName(approvals.getApplication().getName())
                     .profileType(approvals.getProfileType().getMessage())
-                    .createdBy(approvals.getCreatedBy())
                     .description(approvals.getComment())
                     .status(approvals.getApprovalStatus().getDisplayName())
+                    .createdBy(approvals.getCreatedBy())
+                    .createdTime(approvals.getCreatedTime())
                     .build());
         }
 
-        return approvalResponseList;
+        return PaginatedResponse.<ApprovalResponse>builder()
+                .content(approvalResponseList)
+                .pageNumber(pageApprovalStageList.getNumber())
+                .pageSize(pageApprovalStageList.getSize())
+                .totalElements(pageApprovalStageList.getTotalElements())
+                .totalPages(pageApprovalStageList.getTotalPages())
+                .isLast(pageApprovalStageList.isLast())
+                .build();
     }
 
     private Map<String, Object> generateApprovalFilters(ApprovalRequestFilter requestFilter) {
@@ -240,7 +254,6 @@ public class ApprovalServiceImpl implements ApprovalService {
     private ApprovalStage createApprovalStage(Application application, Metadata profile) {
 
         Team team = application.getTeam();
-
         List<ApprovalStage.Stage> stages = new ArrayList<>();
 
         ApprovalStage.Stage qaApproval = new ApprovalStage.Stage();

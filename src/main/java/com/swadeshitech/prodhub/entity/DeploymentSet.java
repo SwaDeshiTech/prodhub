@@ -27,17 +27,17 @@ public class DeploymentSet extends BaseEntity {
     private DeploymentSetStatus status;
 
     @DBRef
-    private transient Application application;
+    private Application application;
 
     @DBRef
-    private transient Metadata deploymentProfile;
+    private Metadata deploymentProfile;
 
     @DBRef
-    private transient Approvals approvals;
+    private Approvals approvals;
 
     @DBRef
-    private transient ReleaseCandidate releaseCandidate;
+    private ReleaseCandidate releaseCandidate;
 
     @DBRef
-    private transient List<Deployment> deployments;
+    private List<Deployment> deployments;
 }

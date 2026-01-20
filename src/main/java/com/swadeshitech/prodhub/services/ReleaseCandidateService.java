@@ -26,5 +26,5 @@ public interface ReleaseCandidateService {
 
     List<DropdownDTO> getDropdownCertifiable(String applicationId);
 
-    ReleaseCandidateResponse certifyRelaseCandidateForProduction(String id);
+    ReleaseCandidateResponse certifyReleaseCandidateForProduction(String id);
 }

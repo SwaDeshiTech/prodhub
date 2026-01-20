@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
+import com.swadeshitech.prodhub.utils.UserContextUtil;
 import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -86,10 +87,10 @@ public class TabServiceImpl implements TabService {
     }
 
     @Override
-    public List<TabResponse> getActiveTabsByUser(String uuid) {
+    public List<TabResponse> getActiveTabsByUser() {
 
+        String uuid = UserContextUtil.getUserIdFromRequestContext();
         Set<Role> roles = userService.getUserRoles(uuid);
-
         List<ObjectId> ids = new ArrayList<>();
 
         if (Objects.nonNull(roles)) {
@@ -100,6 +101,7 @@ public class TabServiceImpl implements TabService {
 
         Map<String, Object> filters = new HashMap<>();
         filters.put("roles._id", ids);
+        filters.put("children.roles._id", ids);
 
         List<Tab> tabs = readTransactionService.findTabDetailsByFilters(filters);
         if (CollectionUtils.isEmpty(tabs)) {

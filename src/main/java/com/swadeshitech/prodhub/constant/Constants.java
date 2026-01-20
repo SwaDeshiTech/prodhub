@@ -6,4 +6,5 @@ public class Constants {
     public static final String USER_ID_CONTEXT_NAME = "uidx";
     public static final String DEPLOYMENT_SET_ID_KEY = "deploymentSetUUID";
     public static final String CLONE_METADATA_DELIMITER = "::";
+    public static final String NAMESPACE_KEY = "namespace";
 }

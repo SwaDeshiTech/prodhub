@@ -12,5 +12,5 @@ public interface TabService {
 
     public TabResponse addTab(TabRequest request);
 
-    public List<TabResponse> getActiveTabsByUser(String uuid);
+    public List<TabResponse> getActiveTabsByUser();
 }

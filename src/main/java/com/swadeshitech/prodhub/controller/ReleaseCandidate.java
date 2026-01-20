@@ -63,7 +63,7 @@ public class ReleaseCandidate {
     @PutMapping("/{id}/certifyProduction")
     public ResponseEntity<Response> certifyReleaseCandidateForProduction(@PathVariable String id) {
 
-        ReleaseCandidateResponse releaseCandidateResponse = releaseCandidateService.certifyRelaseCandidateForProduction(id);
+        ReleaseCandidateResponse releaseCandidateResponse = releaseCandidateService.certifyReleaseCandidateForProduction(id);
 
         Response response = Response.builder()
                 .httpStatus(HttpStatus.OK)

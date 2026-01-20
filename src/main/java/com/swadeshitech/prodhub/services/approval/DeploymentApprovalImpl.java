@@ -129,45 +129,8 @@ public class DeploymentApprovalImpl implements ApprovalService {
     }
 
     @Override
-    public List<ApprovalResponse> getApprovalsList(ApprovalRequestFilter requestFilter) {
-
-        List<Application> applications = readTransactionService.findApplicationByFilters(
-                Map.of("_id", new ObjectId(requestFilter.getServiceId())));
-        if (applications.isEmpty()) {
-            log.error("No application found for id: {}", requestFilter.getServiceId());
-            throw new CustomException(ErrorCode.APPLICATION_NOT_FOUND);
-        }
-
-        List<Metadata> metadataList = readTransactionService.findMetaDataByFilters(
-                Map.of("_id", new ObjectId(requestFilter.getProfileId())));
-        if (metadataList.isEmpty()) {
-            log.error("No metadata found for id: {}", requestFilter.getProfileId());
-            throw new CustomException(ErrorCode.METADATA_PROFILE_NOT_FOUND);
-        }
-
-        Application application = applications.getFirst();
-        Metadata metadata = metadataList.getFirst();
-
-        List<Approvals> approvalList = readTransactionService.findApprovalsByFilters(
-                Map.of("application", application,
-                        "profileName", metadata.getName(),
-                        "approvalStatus", ApprovalStatus.fromDisplayName(requestFilter.getStatus())
-                )
-        );
-
-        List<ApprovalResponse> approvalResponseList = new ArrayList<>();
-
-        for(Approvals approvals : approvalList) {
-            approvalResponseList.add(ApprovalResponse.builder()
-                    .requestId(approvals.getId())
-                    .serviceName(approvals.getApplication().getName())
-                    .profileType(approvals.getProfileType().getMessage())
-                    .createdBy(approvals.getCreatedBy())
-                    .description(approvals.getComment())
-                    .build());
-        }
-
-        return approvalResponseList;
+    public PaginatedResponse<ApprovalResponse> getApprovalsList(ApprovalRequestFilter requestFilter, Integer page, Integer size, String sortBy, String order) {
+        return null;
     }
 
     public void validateAndUpdateStatus(ApprovalStage stage, ApprovalUpdateRequest request) {
