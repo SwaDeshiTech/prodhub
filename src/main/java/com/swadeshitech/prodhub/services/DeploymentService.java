@@ -1,6 +1,7 @@
 package com.swadeshitech.prodhub.services;
 
 import com.swadeshitech.prodhub.dto.*;
+import com.swadeshitech.prodhub.entity.Deployment;
 import com.swadeshitech.prodhub.entity.EphemeralEnvironment;
 import com.swadeshitech.prodhub.entity.Metadata;
 import com.swadeshitech.prodhub.entity.ReleaseCandidate;
@@ -22,7 +23,7 @@ public interface DeploymentService {
 
     DeploymentPodResponse getDeployedPodDetails(String deploymentId);
 
-    PaginatedResponse<DeploymentRequestResponse> getAllDeployments(Integer page, Integer size, String sortBy, String order);
+    PaginatedResponse<DeploymentRequestResponse> getAllDeployments(Integer page, Integer size, String sortBy, String order, String ephemeralEnvironment);
 
-    void triggerDeploymentForEphemeralEnvironment(EphemeralEnvironment ephemeralEnvironment, Metadata deploymentProfile, ReleaseCandidate releaseCandidate);
+    Deployment triggerDeploymentForEphemeralEnvironment(EphemeralEnvironment ephemeralEnvironment, Metadata deploymentProfile, ReleaseCandidate releaseCandidate);
 }

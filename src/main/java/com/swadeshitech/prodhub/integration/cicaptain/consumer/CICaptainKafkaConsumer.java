@@ -1,5 +1,6 @@
 package com.swadeshitech.prodhub.integration.cicaptain.consumer;
 
+import com.swadeshitech.prodhub.entity.Deployment;
 import com.swadeshitech.prodhub.entity.EphemeralEnvironment;
 import com.swadeshitech.prodhub.entity.ReleaseCandidate;
 import com.swadeshitech.prodhub.enums.ErrorCode;
@@ -49,16 +50,17 @@ public class CICaptainKafkaConsumer {
     }
 
     private void triggerDeployment(String buildRefId) {
+        log.info("Starting triggering the deployment for buildProfile with refId {}", buildRefId);
         ReleaseCandidate releaseCandidate = fetchReleaseCandidate(buildRefId);
         if(Objects.nonNull(releaseCandidate.getEphemeralEnvironment())) {
-            if(ReleaseCandidateStatus.CERTIFIABLE.equals(releaseCandidate.getStatus())) {
-                log.info("Triggering the deployment for ephemeral environment for buildRefId {}", buildRefId);
-                for(EphemeralEnvironment.Profile profile : releaseCandidate.getEphemeralEnvironment().getAttachedProfiles()) {
-                    if(profile.getBuildProfile().equals(releaseCandidate.getBuildProfile())) {
-                        deploymentService.triggerDeploymentForEphemeralEnvironment(releaseCandidate.getEphemeralEnvironment(),
-                                profile.getDeploymentProfile(), releaseCandidate);
-                        return;
-                    }
+            for(EphemeralEnvironment.Profile profile : releaseCandidate.getEphemeralEnvironment().getAttachedProfiles()) {
+                if(profile.getBuildProfile().equals(releaseCandidate.getBuildProfile())) {
+                    log.info("Triggering the deployment for ephemeral environment {} for deployment profile {}",
+                            releaseCandidate.getEphemeralEnvironment().getName(), profile.getDeploymentProfile().getName());
+                    Deployment deployment = deploymentService.triggerDeploymentForEphemeralEnvironment(releaseCandidate.getEphemeralEnvironment(),
+                            profile.getDeploymentProfile(), releaseCandidate);
+                    deploymentService.submitDeploymentRequest(deployment.getId());
+                    return;
                 }
             }
         }
@@ -67,7 +69,6 @@ public class CICaptainKafkaConsumer {
     private ReleaseCandidate fetchReleaseCandidate(String buildRefId){
         Map<String, Object> filters = new HashMap<>();
         filters.put("buildRefId", buildRefId);
-
         List<ReleaseCandidate> releaseCandidates = readTransactionService.findReleaseCandidateDetailsByFilters(filters);
         if (CollectionUtils.isEmpty(releaseCandidates)) {
             log.error("Failed to fetch the release candidate for buildRefId {}", buildRefId);

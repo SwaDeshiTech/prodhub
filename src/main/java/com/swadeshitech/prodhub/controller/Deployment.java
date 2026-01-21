@@ -19,10 +19,11 @@ public class Deployment {
     public ResponseEntity<Response> getDeploymentHistory(@RequestParam(defaultValue = "0") Integer page,
                                                          @RequestParam(defaultValue = "10") Integer size,
                                                          @RequestParam(defaultValue = "createdTime") String sortBy,
-                                                         @RequestParam(defaultValue = "DESC") String order) {
+                                                         @RequestParam(defaultValue = "DESC") String order,
+                                                         @RequestParam(defaultValue = "") String ephemeralEnvironment) {
 
         PaginatedResponse<DeploymentRequestResponse> deploymentsResponse =
-                deploymentService.getAllDeployments(page, size, sortBy, order);
+                deploymentService.getAllDeployments(page, size, sortBy, order, ephemeralEnvironment);
 
         Response response = Response.builder()
                 .httpStatus(HttpStatus.OK)

@@ -62,6 +62,9 @@ public class EphemeralEnvironmentImpl implements EphemeralEnvironmentService {
     @Value("${spring.kafka.topic.ephemeralEnvironmentBuildAndDeployment}")
     String ephemeralEnvironmentBuildAndDeploymentTopic;
 
+    @Value("${spring.kafka.topic.ephemeralEnvironmentUpdate}")
+    String ephemeralEnvironmentUpdateTopic;
+
     @Override
     public EphemeralEnvironmentResponse createEphemeralEnvironment(EphemeralEnvironmentRequest request) {
 
@@ -85,7 +88,9 @@ public class EphemeralEnvironmentImpl implements EphemeralEnvironmentService {
 
         generateUpdatedProfiles(environment, request);
 
-        writeTransactionService.saveEphemeralEnvironmentToRepository(environment);
+        environment = writeTransactionService.saveEphemeralEnvironmentToRepository(environment);
+
+        kafkaProducer.sendMessage(ephemeralEnvironmentUpdateTopic, environment.getId());
 
         return modelMapper.map(environment, EphemeralEnvironmentResponse.class);
     }

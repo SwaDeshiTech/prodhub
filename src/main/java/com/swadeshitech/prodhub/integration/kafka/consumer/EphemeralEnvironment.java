@@ -17,6 +17,7 @@ import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -35,7 +36,7 @@ public class EphemeralEnvironment {
 
     @KafkaListener(topics = "${spring.kafka.topic.ephemeralEnvironmentUpdate}", groupId = "default_group")
     public void listen(String message) {
-
+        log.info("{} Message received for ephemeralEnvironmentUpdate {}", this.getClass().getCanonicalName(), message);
     }
 
     @KafkaListener(topics = "${spring.kafka.topic.ephemeralEnvironmentBuildAndDeployment}", groupId = "default_group")
@@ -66,12 +67,14 @@ public class EphemeralEnvironment {
                 }
                 Metadata metadata = metadataList.getFirst();
                 JsonNode data = objectMapper.readTree(Base64Util.convertToPlainText(metadata.getData()));
+                Map<String, String> metaData = new HashMap<>();
+                metaData.put("branchName", data.path("branchName").asText());
+                metaData.put("commitId", data.path("commitId").asText());
                 releaseCandidateService.createReleaseCandidate(ReleaseCandidateRequest.builder()
                                 .buildProfile(metadata.getId())
                                 .ephemeralEnvironmentName(ephemeralEnvironment.getId())
                                 .serviceName(metadata.getApplication().getId())
-                                .metadata(Map.of("branchName", data.path("branchName").asText(),
-                                        "commitId", data.path("commitId").asText()))
+                                .metadata(metaData)
                         .build());
             }
         } catch (JsonProcessingException e) {

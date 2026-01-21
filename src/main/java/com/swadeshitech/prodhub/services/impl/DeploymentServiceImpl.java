@@ -26,6 +26,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.ObjectUtils;
+import org.springframework.util.StringUtils;
 import reactor.core.publisher.Mono;
 
 import java.util.*;
@@ -181,10 +182,9 @@ public class DeploymentServiceImpl implements DeploymentService {
 
         Deployment deployment = findDeployment(deploymentId);
 
-        return DeploymentResponse.builder()
+        DeploymentResponse deploymentResponse = DeploymentResponse.builder()
                 .id(deployment.getId())
                 .applicationId(deployment.getApplication().getName())
-                .deploymentSetId(deployment.getDeploymentSet().getId())
                 .status(deployment.getStatus().getMessage())
                 .deploymentTemplateResponse(DeploymentTemplateResponse.mapDTOToEntity(deployment.getDeploymentTemplate()))
                 .createdBy(deployment.getCreatedBy())
@@ -192,6 +192,12 @@ public class DeploymentServiceImpl implements DeploymentService {
                 .lastModifiedBy(deployment.getLastModifiedBy())
                 .lastModifiedTime(deployment.getLastModifiedTime())
                 .build();
+
+        if(deployment.getDeploymentSet() != null) {
+            deploymentResponse.setDeploymentSetId(deployment.getDeploymentSet().getId());
+        }
+
+        return deploymentResponse;
     }
 
     @Override
@@ -217,13 +223,16 @@ public class DeploymentServiceImpl implements DeploymentService {
     }
 
     @Override
-    public PaginatedResponse<DeploymentRequestResponse> getAllDeployments(Integer page, Integer size, String sortBy, String order) {
+    public PaginatedResponse<DeploymentRequestResponse> getAllDeployments(Integer page, Integer size, String sortBy, String order, String ephemeralEnvironment) {
 
         log.info("Fetching deployments for page {} with size {}", page, size);
         User user = userService.extractUserFromContext();
 
         Map<String, Object> filters = new HashMap<>();
         filters.put("createdBy", user.getEmailId());
+        if (StringUtils.hasText(ephemeralEnvironment)) {
+            filters.put("metaData.ephemeralEnvironment", ephemeralEnvironment);
+        }
         Sort.Direction direction = "ASC".equalsIgnoreCase(order) ? Sort.Direction.ASC : Sort.Direction.DESC;
         Page<Deployment> deploymentsPage = readTransactionService.findByDynamicOrFiltersPaginated(
                 filters,
@@ -253,8 +262,8 @@ public class DeploymentServiceImpl implements DeploymentService {
     }
 
     @Override
-    public void triggerDeploymentForEphemeralEnvironment(EphemeralEnvironment ephemeralEnvironment, Metadata deploymentProfile, ReleaseCandidate releaseCandidate) {
-        writeTransactionService.saveDeploymentToRepository(generateDeploymentConfigForEphemeralEnvironment(ephemeralEnvironment,
+    public Deployment triggerDeploymentForEphemeralEnvironment(EphemeralEnvironment ephemeralEnvironment, Metadata deploymentProfile, ReleaseCandidate releaseCandidate) {
+        return writeTransactionService.saveDeploymentToRepository(generateDeploymentConfigForEphemeralEnvironment(ephemeralEnvironment,
                 releaseCandidate, deploymentProfile));
     }
 
@@ -280,14 +289,18 @@ public class DeploymentServiceImpl implements DeploymentService {
             throw new CustomException(ErrorCode.METADATA_PROFILE_INVALID_DATA);
         }
 
+        Map<String, Object> configMap = new HashMap<>();
+        configMap.put("runtimeEnvironment", deploymentProfile.getRunTimeEnvironment().getRunTimeEnvironment());
+        configMap.put("deploymentTemplate", deploymentProfile.getRunTimeEnvironment().getDeploymentTemplate());
+        configMap.put("releaseName", deploymentProfile.getApplication().getName() + "-" + deploymentProfile.extractMetaDataName());
+        configMap.put("imageTag", releaseCandidate.getMetaData().get("dockerImageHashValue"));
+        configMap.put("ephemeralEnvironment", releaseCandidate.getEphemeralEnvironment().getId());
+
         Deployment deployment = Deployment.builder()
                 .status(DeploymentStatus.CREATED)
                 .application(deploymentProfile.getApplication())
                 .deploymentTemplate(clonedDeploymentTemplate)
-                .metaData(Map.of("runtimeEnvironment", deploymentProfile.getRunTimeEnvironment().getRunTimeEnvironment(),
-                        "deploymentTemplate", deploymentProfile.getRunTimeEnvironment().getDeploymentTemplate(),
-                        "releaseName", deploymentProfile.getApplication().getName() + "-" + deploymentProfile.extractMetaDataName(),
-                        "imageTag", releaseCandidate.getMetaData().get("dockerImageHashValue")))
+                .metaData(configMap)
                 .build();
 
         for(DeploymentTemplate.DeploymentStep deploymentStep : clonedDeploymentTemplate.getSteps()) {
@@ -350,7 +363,7 @@ public class DeploymentServiceImpl implements DeploymentService {
 
     private DeploymentRequestResponse mapEntityToDTO(Deployment deployment) {
         return DeploymentRequestResponse.builder()
-                .deploymentSetId(deployment.getId())
+                .id(deployment.getId())
                 .runId(deployment.getId())
                 .status(deployment.getStatus().name())
                 .createdBy(deployment.getCreatedBy())
