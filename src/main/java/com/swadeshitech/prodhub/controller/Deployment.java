@@ -20,10 +20,10 @@ public class Deployment {
                                                          @RequestParam(defaultValue = "10") Integer size,
                                                          @RequestParam(defaultValue = "createdTime") String sortBy,
                                                          @RequestParam(defaultValue = "DESC") String order,
-                                                         @RequestParam(defaultValue = "") String ephemeralEnvironment) {
+                                                         @RequestParam(defaultValue = "") String ephemeralEnvironmentId) {
 
         PaginatedResponse<DeploymentRequestResponse> deploymentsResponse =
-                deploymentService.getAllDeployments(page, size, sortBy, order, ephemeralEnvironment);
+                deploymentService.getAllDeployments(page, size, sortBy, order, ephemeralEnvironmentId);
 
         Response response = Response.builder()
                 .httpStatus(HttpStatus.OK)

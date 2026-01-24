@@ -79,30 +79,40 @@ public class ReadTransactionService {
 
     public List<Tab> findTabDetailsByFilters(Map<String, Object> filters) {
         Query query = new Query();
+        List<Criteria> orCriteriaList = new ArrayList<>();
+        List<Criteria> andCriteriaList = new ArrayList<>();
 
         filters.forEach((key, value) -> {
             if (value != null) {
-                if (value instanceof Iterable) {
-                    Iterable<?> iterable = (Iterable<?>) value;
-                    // Convert Iterable to List and check emptiness
-                    List<Object> list = new ArrayList<>();
-                    iterable.forEach(list::add);
-                    if (!list.isEmpty()) {
-                        query.addCriteria(Criteria.where(key).in(list));
-                    }
-                } else if (value.getClass().isArray()) {
-                    // Convert array to List and check emptiness
-                    Object[] arr = (Object[]) value;
-                    if (arr.length > 0) {
-                        query.addCriteria(Criteria.where(key).in(Arrays.asList(arr)));
-                    }
+                Criteria criteria = createCriteria(key, value);
+
+                // Group specific fields that should be treated as OR
+                if (key.equals("roles._id") || key.equals("children.roles._id")) {
+                    orCriteriaList.add(criteria);
                 } else {
-                    // Single value - use is()
-                    query.addCriteria(Criteria.where(key).is(value));
+                    andCriteriaList.add(criteria);
                 }
             }
         });
+
+        if (!orCriteriaList.isEmpty()) {
+            query.addCriteria(new Criteria().orOperator(orCriteriaList.toArray(new Criteria[0])));
+        }
+
+        andCriteriaList.forEach(query::addCriteria);
         return mongoTemplate.find(query, Tab.class);
+    }
+
+    // Helper to keep logic clean
+    private Criteria createCriteria(String key, Object value) {
+        if (value instanceof Iterable) {
+            List<Object> list = new ArrayList<>();
+            ((Iterable<?>) value).forEach(list::add);
+            return Criteria.where(key).in(list);
+        } else if (value.getClass().isArray()) {
+            return Criteria.where(key).in(Arrays.asList((Object[]) value));
+        }
+        return Criteria.where(key).is(value);
     }
 
     public List<User> findUserDetailsByFilters(Map<String, Object> filters) {

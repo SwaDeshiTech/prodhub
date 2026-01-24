@@ -229,10 +229,12 @@ public class DeploymentServiceImpl implements DeploymentService {
         User user = userService.extractUserFromContext();
 
         Map<String, Object> filters = new HashMap<>();
-        filters.put("createdBy", user.getEmailId());
         if (StringUtils.hasText(ephemeralEnvironment)) {
             filters.put("metaData.ephemeralEnvironment", ephemeralEnvironment);
+        } else {
+            filters.put("createdBy", user.getEmailId());
         }
+
         Sort.Direction direction = "ASC".equalsIgnoreCase(order) ? Sort.Direction.ASC : Sort.Direction.DESC;
         Page<Deployment> deploymentsPage = readTransactionService.findByDynamicOrFiltersPaginated(
                 filters,

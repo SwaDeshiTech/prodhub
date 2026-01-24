@@ -168,7 +168,7 @@ public class UserServiceImpl implements UserService {
             throw new CustomException(ErrorCode.USER_NOT_FOUND);
         }
 
-        return users.get(0).getRoles();
+        return users.getFirst().getRoles();
     }
 
     private Set<Role> getDefaultRoles() {
