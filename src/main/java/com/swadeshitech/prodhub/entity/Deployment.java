@@ -23,7 +23,7 @@ public class Deployment extends BaseEntity {
 
     private Map<String, Object> metaData;
 
-    private DeploymentTemplate deploymentTemplate;
+    private Template template;
 
     @DBRef
     private DeploymentSet deploymentSet;

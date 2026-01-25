@@ -1,10 +1,10 @@
 package com.swadeshitech.prodhub.services;
 
 import com.swadeshitech.prodhub.dto.DeploymentTemplateRequest;
-import com.swadeshitech.prodhub.dto.DeploymentTemplateResponse;
+import com.swadeshitech.prodhub.dto.TemplateResponse;
 import org.springframework.stereotype.Component;
 
 @Component
 public interface DeploymentTemplateService {
-    DeploymentTemplateResponse createDeploymentTemplate(DeploymentTemplateRequest request);
+    TemplateResponse createDeploymentTemplate(DeploymentTemplateRequest request);
 }

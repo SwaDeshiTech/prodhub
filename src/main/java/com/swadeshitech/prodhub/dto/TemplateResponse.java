@@ -1,6 +1,6 @@
 package com.swadeshitech.prodhub.dto;
 
-import com.swadeshitech.prodhub.entity.DeploymentTemplate;
+import com.swadeshitech.prodhub.entity.Template;
 import lombok.Builder;
 import lombok.Data;
 import lombok.experimental.SuperBuilder;
@@ -12,16 +12,16 @@ import java.util.Objects;
 
 @Data
 @SuperBuilder
-public class DeploymentTemplateResponse extends BaseResponse {
+public class TemplateResponse extends BaseResponse {
     private String id;
     private String templateName;
     private String version;
     private String description;
-    List<DeploymentTemplateStepResponse> stepResponses;
+    List<TemplateStepResponse> stepResponses;
 
     @Data
     @Builder
-    public static class DeploymentTemplateStepResponse {
+    public static class TemplateStepResponse {
         private int order;
         private String stepName;
         private ChartDetailsResponse chartDetails;
@@ -42,26 +42,26 @@ public class DeploymentTemplateResponse extends BaseResponse {
         }
     }
 
-    public static DeploymentTemplateResponse mapDTOToEntity(DeploymentTemplate deploymentTemplate) {
-        return DeploymentTemplateResponse.builder()
-                .id(deploymentTemplate.getId())
-                .templateName(deploymentTemplate.getTemplateName())
-                .description(deploymentTemplate.getDescription())
-                .version(deploymentTemplate.getVersion())
-                .stepResponses(generateDeploymentTemplateResponse(deploymentTemplate.getSteps()))
-                .createdTime(deploymentTemplate.getCreatedTime())
-                .createdBy(deploymentTemplate.getCreatedBy())
-                .lastModifiedTime(deploymentTemplate.getLastModifiedTime())
-                .lastModifiedBy(deploymentTemplate.getLastModifiedBy())
+    public static TemplateResponse mapDTOToEntity(Template template) {
+        return TemplateResponse.builder()
+                .id(template.getId())
+                .templateName(template.getTemplateName())
+                .description(template.getDescription())
+                .version(template.getVersion())
+                .stepResponses(generateDeploymentTemplateResponse(template.getSteps()))
+                .createdTime(template.getCreatedTime())
+                .createdBy(template.getCreatedBy())
+                .lastModifiedTime(template.getLastModifiedTime())
+                .lastModifiedBy(template.getLastModifiedBy())
                 .build();
     }
 
-    private static List<DeploymentTemplateResponse.DeploymentTemplateStepResponse> generateDeploymentTemplateResponse(List<DeploymentTemplate.DeploymentStep> steps) {
+    private static List<TemplateResponse.TemplateStepResponse> generateDeploymentTemplateResponse(List<Template.Step> steps) {
 
-        List<DeploymentTemplateResponse.DeploymentTemplateStepResponse> deploymentTemplateStepResponseList = new ArrayList<>();
+        List<TemplateResponse.TemplateStepResponse> deploymentTemplateStepResponseList = new ArrayList<>();
 
-        for(DeploymentTemplate.DeploymentStep step : steps) {
-            deploymentTemplateStepResponseList.add(DeploymentTemplateStepResponse.builder()
+        for(Template.Step step : steps) {
+            deploymentTemplateStepResponseList.add(TemplateStepResponse.builder()
                     .status(step.getStatus().getMessage())
                     .stepName(step.getStepName())
                     .wait(step.isWait())
@@ -75,11 +75,11 @@ public class DeploymentTemplateResponse extends BaseResponse {
         return deploymentTemplateStepResponseList;
     }
 
-    private static DeploymentTemplateResponse.DeploymentTemplateStepResponse.ChartDetailsResponse generateChartDetailsResponse(DeploymentTemplate.DeploymentStep.ChartDetails chartDetails) {
+    private static TemplateResponse.TemplateStepResponse.ChartDetailsResponse generateChartDetailsResponse(Template.Step.ChartDetails chartDetails) {
         if (Objects.isNull(chartDetails)) {
             return null;
         }
-        return DeploymentTemplateResponse.DeploymentTemplateStepResponse.ChartDetailsResponse.builder()
+        return TemplateResponse.TemplateStepResponse.ChartDetailsResponse.builder()
                 .chartName(chartDetails.getChartName())
                 .repository(chartDetails.getRepository())
                 .version(chartDetails.getVersion())

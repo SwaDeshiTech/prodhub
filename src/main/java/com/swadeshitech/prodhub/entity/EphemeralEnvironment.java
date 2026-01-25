@@ -3,6 +3,7 @@ package com.swadeshitech.prodhub.entity;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import lombok.Builder;
@@ -34,6 +35,8 @@ public class EphemeralEnvironment extends BaseEntity implements Serializable {
     private EphemeralEnvrionmentStatus status;
 
     private List<Profile> attachedProfiles;
+
+    private Map<String, Object> metaData;
 
     @DBRef
     private User owner;

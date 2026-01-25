@@ -1,8 +1,8 @@
 package com.swadeshitech.prodhub.controller;
 
 import com.swadeshitech.prodhub.dto.DeploymentTemplateRequest;
-import com.swadeshitech.prodhub.dto.DeploymentTemplateResponse;
 import com.swadeshitech.prodhub.dto.Response;
+import com.swadeshitech.prodhub.dto.TemplateResponse;
 import com.swadeshitech.prodhub.services.DeploymentTemplateService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -22,7 +22,7 @@ public class DeploymentTemplate {
     @PostMapping
     public ResponseEntity<Response> createDeploymentTemplate(@RequestBody DeploymentTemplateRequest request) {
 
-        DeploymentTemplateResponse deploymentTemplateResponse = deploymentTemplateService.createDeploymentTemplate(request);
+        TemplateResponse deploymentTemplateResponse = deploymentTemplateService.createDeploymentTemplate(request);
 
         Response response = Response.builder()
                 .httpStatus(HttpStatus.CREATED)

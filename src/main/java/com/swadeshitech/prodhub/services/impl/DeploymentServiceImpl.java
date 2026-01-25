@@ -94,17 +94,17 @@ public class DeploymentServiceImpl implements DeploymentService {
 
         String deploymentTemplateName = "DeploymentK8s";
 
-        List<DeploymentTemplate> deploymentTemplates = readTransactionService.findByDynamicOrFilters(Map.of("templateName", deploymentTemplateName), DeploymentTemplate.class);
-        if(CollectionUtils.isEmpty(deploymentTemplates)) {
+        List<Template> templates = readTransactionService.findByDynamicOrFilters(Map.of("templateName", deploymentTemplateName), Template.class);
+        if(CollectionUtils.isEmpty(templates)) {
             log.error("Deployment template could not be found {}", deploymentTemplateName);
             throw new CustomException(ErrorCode.DEPLOYMENT_TEMPLATE_COULD_NOT_BE_CREATED);
         }
 
         Deployment deployment = findDeployment(deploymentID);
-        DeploymentTemplate deploymentTemplate = deploymentTemplates.getFirst();
+        Template template = templates.getFirst();
 
-        DeploymentTemplate clonedDeploymentTemplate = new DeploymentTemplate();
-        BeanUtils.copyProperties(deploymentTemplate, clonedDeploymentTemplate, "id");
+        Template clonedTemplate = new Template();
+        BeanUtils.copyProperties(template, clonedTemplate, "id");
         JsonNode deploymentProfileConfig;
         try {
             deploymentProfileConfig = objectMapper.readTree(Base64Util.convertToPlainText(deployment.getDeploymentSet().getDeploymentProfile().getData()));
@@ -113,7 +113,7 @@ public class DeploymentServiceImpl implements DeploymentService {
             throw new CustomException(ErrorCode.METADATA_PROFILE_INVALID_DATA);
         }
 
-        for(DeploymentTemplate.DeploymentStep deploymentStep : clonedDeploymentTemplate.getSteps()) {
+        for(Template.Step deploymentStep : clonedTemplate.getSteps()) {
             if(!CollectionUtils.isEmpty(deploymentStep.getParams()) && !deploymentStep.isSkipStep()) {
                 Map<String, Object> configs = new HashMap<>();
                 for(String key : deploymentStep.getParams()) {
@@ -136,7 +136,7 @@ public class DeploymentServiceImpl implements DeploymentService {
 
         deployment.getMetaData().put("namespace", deploymentProfileConfig.path("namespace").asText());
         deployment.setStatus(DeploymentStatus.IN_PROGRESS);
-        deployment.setDeploymentTemplate(clonedDeploymentTemplate);
+        deployment.setTemplate(clonedTemplate);
         writeTransactionService.saveDeploymentToRepository(deployment);
     }
 
@@ -158,16 +158,16 @@ public class DeploymentServiceImpl implements DeploymentService {
             isDeploymentStepFailed = true;
         }
 
-        for(int iCounter = 0; iCounter < deployment.getDeploymentTemplate().getSteps().size(); iCounter++) {
-            DeploymentTemplate.DeploymentStep step = deployment.getDeploymentTemplate().getSteps().get(iCounter);
+        for(int iCounter = 0; iCounter < deployment.getTemplate().getSteps().size(); iCounter++) {
+            Template.Step step = deployment.getTemplate().getSteps().get(iCounter);
             if(step.getStepName().equalsIgnoreCase(deploymentUpdateKafka.getStepName())) {
                 step.setStatus(DeploymentStatus.valueOf(deploymentUpdateKafka.getStatus()));
                 step.getMetadata().put("timestamp", deploymentUpdateKafka.getTimestamp());
                 step.getMetadata().put("details", deploymentUpdateKafka.getDetails());
                 updateDeploymentStatus(deployment);
                 iCounter++;
-                while(isDeploymentStepFailed && iCounter < deployment.getDeploymentTemplate().getSteps().size()) {
-                    step = deployment.getDeploymentTemplate().getSteps().get(iCounter);
+                while(isDeploymentStepFailed && iCounter < deployment.getTemplate().getSteps().size()) {
+                    step = deployment.getTemplate().getSteps().get(iCounter);
                     step.setStatus(DeploymentStatus.SKIPPED);
                     iCounter++;
                 }
@@ -186,7 +186,7 @@ public class DeploymentServiceImpl implements DeploymentService {
                 .id(deployment.getId())
                 .applicationId(deployment.getApplication().getName())
                 .status(deployment.getStatus().getMessage())
-                .deploymentTemplateResponse(DeploymentTemplateResponse.mapDTOToEntity(deployment.getDeploymentTemplate()))
+                .deploymentTemplateResponse(TemplateResponse.mapDTOToEntity(deployment.getTemplate()))
                 .createdBy(deployment.getCreatedBy())
                 .createdTime(deployment.getCreatedTime())
                 .lastModifiedBy(deployment.getLastModifiedBy())
@@ -273,15 +273,15 @@ public class DeploymentServiceImpl implements DeploymentService {
                                                                        ReleaseCandidate releaseCandidate, Metadata deploymentProfile) {
         String deploymentTemplateName = "DeploymentK8s";
 
-        List<DeploymentTemplate> deploymentTemplates = readTransactionService.findByDynamicOrFilters(Map.of("templateName", deploymentTemplateName), DeploymentTemplate.class);
-        if(CollectionUtils.isEmpty(deploymentTemplates)) {
+        List<Template> templates = readTransactionService.findByDynamicOrFilters(Map.of("templateName", deploymentTemplateName), Template.class);
+        if(CollectionUtils.isEmpty(templates)) {
             log.error("Deployment template could not be found {}", deploymentTemplateName);
             throw new CustomException(ErrorCode.DEPLOYMENT_TEMPLATE_COULD_NOT_BE_CREATED);
         }
 
-        DeploymentTemplate deploymentTemplate = deploymentTemplates.getFirst();
-        DeploymentTemplate clonedDeploymentTemplate = new DeploymentTemplate();
-        BeanUtils.copyProperties(deploymentTemplate, clonedDeploymentTemplate, "id");
+        Template template = templates.getFirst();
+        Template clonedTemplate = new Template();
+        BeanUtils.copyProperties(template, clonedTemplate, "id");
 
         JsonNode deploymentProfileConfig;
         try {
@@ -301,11 +301,11 @@ public class DeploymentServiceImpl implements DeploymentService {
         Deployment deployment = Deployment.builder()
                 .status(DeploymentStatus.CREATED)
                 .application(deploymentProfile.getApplication())
-                .deploymentTemplate(clonedDeploymentTemplate)
+                .template(clonedTemplate)
                 .metaData(configMap)
                 .build();
 
-        for(DeploymentTemplate.DeploymentStep deploymentStep : clonedDeploymentTemplate.getSteps()) {
+        for(Template.Step deploymentStep : clonedTemplate.getSteps()) {
             if(!CollectionUtils.isEmpty(deploymentStep.getParams()) && !deploymentStep.isSkipStep()) {
                 Map<String, Object> configs = new HashMap<>();
                 for(String key : deploymentStep.getParams()) {
@@ -332,7 +332,7 @@ public class DeploymentServiceImpl implements DeploymentService {
 
         deployment.getMetaData().put("namespace", ephemeralEnvironment.getName());
         deployment.setStatus(DeploymentStatus.IN_PROGRESS);
-        deployment.setDeploymentTemplate(clonedDeploymentTemplate);
+        deployment.setTemplate(clonedTemplate);
 
         return deployment;
     }
@@ -348,9 +348,9 @@ public class DeploymentServiceImpl implements DeploymentService {
 
     private void updateDeploymentStatus(Deployment deployment) {
 
-        int stepExecutedSuccessfully = 0, totalStep = deployment.getDeploymentTemplate().getSteps().size();
+        int stepExecutedSuccessfully = 0, totalStep = deployment.getTemplate().getSteps().size();
 
-        for(DeploymentTemplate.DeploymentStep deploymentStep : deployment.getDeploymentTemplate().getSteps()) {
+        for(Template.Step deploymentStep : deployment.getTemplate().getSteps()) {
             if (deploymentStep.getStatus().equals(DeploymentStatus.COMPLETED) || deploymentStep.isSkipStep()) {
                 stepExecutedSuccessfully++;
             } else if (deploymentStep.getStatus().equals(DeploymentStatus.FAILED)){

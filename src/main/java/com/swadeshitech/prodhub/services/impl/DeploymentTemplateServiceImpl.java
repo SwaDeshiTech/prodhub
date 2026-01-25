@@ -1,8 +1,8 @@
 package com.swadeshitech.prodhub.services.impl;
 
 import com.swadeshitech.prodhub.dto.DeploymentTemplateRequest;
-import com.swadeshitech.prodhub.dto.DeploymentTemplateResponse;
-import com.swadeshitech.prodhub.entity.DeploymentTemplate;
+import com.swadeshitech.prodhub.dto.TemplateResponse;
+import com.swadeshitech.prodhub.entity.Template;
 import com.swadeshitech.prodhub.services.DeploymentTemplateService;
 import com.swadeshitech.prodhub.transaction.write.WriteTransactionService;
 import lombok.extern.slf4j.Slf4j;
@@ -20,26 +20,26 @@ public class DeploymentTemplateServiceImpl implements DeploymentTemplateService 
     WriteTransactionService writeTransactionService;
 
     @Override
-    public DeploymentTemplateResponse createDeploymentTemplate(DeploymentTemplateRequest request) {
+    public TemplateResponse createDeploymentTemplate(DeploymentTemplateRequest request) {
 
-        DeploymentTemplate deploymentTemplate = DeploymentTemplate.builder()
+        Template template = Template.builder()
                 .templateName(request.getTemplateName())
                 .description(request.getDescription())
                 .version(request.getVersion())
                 .steps(generateDeploymentStep(request.getStepRequests()))
                 .build();
 
-        deploymentTemplate = writeTransactionService.saveDeploymentTemplate(deploymentTemplate);
+        template = writeTransactionService.saveDeploymentTemplate(template);
 
-        return DeploymentTemplateResponse.mapDTOToEntity(deploymentTemplate);
+        return TemplateResponse.mapDTOToEntity(template);
     }
 
-    private List<DeploymentTemplate.DeploymentStep> generateDeploymentStep(List<DeploymentTemplateRequest.DeploymentTemplateStepRequest> stepRequests) {
+    private List<Template.Step> generateDeploymentStep(List<DeploymentTemplateRequest.DeploymentTemplateStepRequest> stepRequests) {
 
-        List<DeploymentTemplate.DeploymentStep> steps = new ArrayList<>();
+        List<Template.Step> steps = new ArrayList<>();
 
         for(DeploymentTemplateRequest.DeploymentTemplateStepRequest itr : stepRequests) {
-            steps.add(DeploymentTemplate.DeploymentStep.builder()
+            steps.add(Template.Step.builder()
                             .order(itr.getOrder())
                             .wait(itr.isWait())
                             .stepName(itr.getStepName())
@@ -52,8 +52,8 @@ public class DeploymentTemplateServiceImpl implements DeploymentTemplateService 
         return steps;
     }
 
-    private DeploymentTemplate.DeploymentStep.ChartDetails generateChartDetails(DeploymentTemplateRequest.DeploymentTemplateStepRequest.ChartDetailsRequest chartDetailsRequest) {
-        return DeploymentTemplate.DeploymentStep.ChartDetails.builder()
+    private Template.Step.ChartDetails generateChartDetails(DeploymentTemplateRequest.DeploymentTemplateStepRequest.ChartDetailsRequest chartDetailsRequest) {
+        return Template.Step.ChartDetails.builder()
                 .chartName(chartDetailsRequest.getChartName())
                 .repository(chartDetailsRequest.getRepository())
                 .version(chartDetailsRequest.getVersion())

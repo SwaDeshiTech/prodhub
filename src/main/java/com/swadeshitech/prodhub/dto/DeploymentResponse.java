@@ -11,7 +11,7 @@ public class DeploymentResponse extends BaseResponse {
     private String deploymentID;
     private String status;
     private Map<String, String> metaData;
-    private DeploymentTemplateResponse deploymentTemplateResponse;
+    private TemplateResponse deploymentTemplateResponse;
     private String deploymentSetId;
     private String applicationId;
 }

@@ -13,8 +13,8 @@ import java.util.Map;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Document(collection = "deployment_templates")
-public class DeploymentTemplate extends BaseEntity {
+@Document(collection = "templates")
+public class Template extends BaseEntity {
 
     @Id
     private String id;
@@ -25,11 +25,11 @@ public class DeploymentTemplate extends BaseEntity {
 
     private String description;
 
-    private List<DeploymentStep> steps;
+    private List<Step> steps;
 
     @Data
     @Builder
-    public static class DeploymentStep {
+    public static class Step {
 
         private int order;
 

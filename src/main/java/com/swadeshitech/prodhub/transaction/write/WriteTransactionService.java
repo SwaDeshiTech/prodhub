@@ -64,7 +64,7 @@ public class WriteTransactionService {
     private DeploymentRepository deploymentRepository;
 
     @Autowired
-    private DeploymentTemplateRepository deploymentTemplateRepository;
+    private TemplateRepository templateRepository;
 
     @Autowired
     EphemeralEnvironmentRepository environmentRepository;
@@ -288,9 +288,9 @@ public class WriteTransactionService {
         }
     }
 
-    public DeploymentTemplate saveDeploymentTemplate(DeploymentTemplate deploymentTemplate) {
+    public Template saveDeploymentTemplate(Template template) {
         try {
-            return deploymentTemplateRepository.save(deploymentTemplate);
+            return templateRepository.save(template);
         } catch (DataIntegrityViolationException ex) {
             log.error("DataIntegrity error ", ex);
             throw new CustomException(ErrorCode.DATA_INTEGRITY_FAILURE);
