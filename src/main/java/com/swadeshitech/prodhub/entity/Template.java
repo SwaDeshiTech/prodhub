@@ -1,6 +1,6 @@
 package com.swadeshitech.prodhub.entity;
 
-import com.swadeshitech.prodhub.enums.DeploymentStatus;
+import com.swadeshitech.prodhub.enums.StepExecutionStatus;
 import lombok.*;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
@@ -43,7 +43,7 @@ public class Template extends BaseEntity {
 
         private Map<String, Object> values;
 
-        private DeploymentStatus status;
+        private StepExecutionStatus status;
 
         private List<String> params;
 

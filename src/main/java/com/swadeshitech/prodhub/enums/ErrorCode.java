@@ -97,7 +97,12 @@ public enum ErrorCode {
         DEPLOYMENT_RUN_NOT_FOUND("PH-19002", "Deployment run could not be found", HttpStatus.NOT_FOUND),
 
         DEPLOYMENT_TEMPLATE_COULD_NOT_BE_CREATED("PH-20001", "Deployment template could not be created", HttpStatus.INTERNAL_SERVER_ERROR),
-        DEPLOYMENT_TEMPLATE_COULD_NOT_BE_FOUND("PH-20002", "Deployment template could not be found", HttpStatus.NOT_FOUND);
+        DEPLOYMENT_TEMPLATE_COULD_NOT_BE_FOUND("PH-20002", "Deployment template could not be found", HttpStatus.NOT_FOUND),
+
+        PIPELINE_TEMPLATE_COULD_NOT_BE_CREATED("PH-210001", "Pipeline template could not be created", HttpStatus.INTERNAL_SERVER_ERROR),
+        PIPELINE_TEMPLATE_COULD_NOT_BE_FOUND("PH-210002", "Pipeline template could not be found", HttpStatus.NOT_FOUND),
+
+        PIPELINE_EXECUTION_COULD_NOT_BE_CREATED("PH-220001", "Pipeline execution could not be created", HttpStatus.INTERNAL_SERVER_ERROR);
 
         private final String code;
         private final String description;

@@ -69,6 +69,12 @@ public class WriteTransactionService {
     @Autowired
     EphemeralEnvironmentRepository environmentRepository;
 
+    @Autowired
+    PipelineExecutionRepository pipelineExecutionRepository;
+
+    @Autowired
+    PipelineTemplateRepository pipelineTemplateRepository;
+
     public Application saveApplicationToRepository(Application application) {
         try {
             return applicationRepository.save(application);
@@ -309,6 +315,30 @@ public class WriteTransactionService {
         } catch (Exception ex) {
             log.error("Failed to save data ", ex);
             throw new CustomException(ErrorCode.USER_UPDATE_FAILED);
+        }
+    }
+
+    public PipelineTemplate savePipelineTemplateToRepository(PipelineTemplate pipelineTemplate) {
+        try {
+            return pipelineTemplateRepository.save(pipelineTemplate);
+        } catch (DataIntegrityViolationException ex) {
+            log.error("DataIntegrity error ", ex);
+            throw new CustomException(ErrorCode.DATA_INTEGRITY_FAILURE);
+        } catch (Exception ex) {
+            log.error("Failed to save data ", ex);
+            throw new CustomException(ErrorCode.PIPELINE_TEMPLATE_COULD_NOT_BE_CREATED);
+        }
+    }
+
+    public PipelineExecution savePipelineExecutionToRepository(PipelineExecution pipelineExecution) {
+        try {
+            return pipelineExecutionRepository.save(pipelineExecution);
+        } catch (DataIntegrityViolationException ex) {
+            log.error("DataIntegrity error ", ex);
+            throw new CustomException(ErrorCode.DATA_INTEGRITY_FAILURE);
+        } catch (Exception ex) {
+            log.error("Failed to save data ", ex);
+            throw new CustomException(ErrorCode.PIPELINE_EXECUTION_COULD_NOT_BE_CREATED);
         }
     }
 }

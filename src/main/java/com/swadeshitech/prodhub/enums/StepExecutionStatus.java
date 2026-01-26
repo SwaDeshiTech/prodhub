@@ -3,7 +3,7 @@ package com.swadeshitech.prodhub.enums;
 import lombok.Getter;
 
 @Getter
-public enum DeploymentStatus {
+public enum StepExecutionStatus {
     CREATED("Created"),
     IN_PROGRESS("In progress"),
     COMPLETED("Completed"),
@@ -12,7 +12,7 @@ public enum DeploymentStatus {
 
     private final String message;
 
-    DeploymentStatus(String message) {
+    StepExecutionStatus(String message) {
         this.message = message;
     }
 }
