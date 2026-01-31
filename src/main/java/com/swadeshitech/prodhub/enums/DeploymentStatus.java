@@ -1,6 +1,6 @@
 package com.swadeshitech.prodhub.enums;
 
-public enum DeploymentRunStatus {
+public enum DeploymentStatus {
     CREATED("Created"),
     IN_PROGRESS("In progress"),
     COMPLETED("Completed"),
@@ -8,7 +8,7 @@ public enum DeploymentRunStatus {
 
     private final String message;
 
-    DeploymentRunStatus(String message) {
+    DeploymentStatus(String message) {
         this.message = message;
     }
 }

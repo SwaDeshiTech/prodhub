@@ -9,6 +9,7 @@ import com.swadeshitech.prodhub.entity.*;
 import com.swadeshitech.prodhub.enums.DeploymentStatus;
 import com.swadeshitech.prodhub.enums.ErrorCode;
 import com.swadeshitech.prodhub.enums.RunTimeEnvironment;
+import com.swadeshitech.prodhub.enums.StepExecutionStatus;
 import com.swadeshitech.prodhub.exception.CustomException;
 import com.swadeshitech.prodhub.integration.deplorch.DeplOrchClient;
 import com.swadeshitech.prodhub.integration.deplorch.DeploymentPodResponse;
@@ -58,8 +59,9 @@ public class DeploymentServiceImpl implements DeploymentService {
     @Override
     public DeploymentRequestResponse triggerDeployment(String deploymentSetID) {
 
-        List<DeploymentSet> deploymentSets = readTransactionService.findByDynamicOrFilters(Map.of("_id", new ObjectId(deploymentSetID)), DeploymentSet.class);
-        if(CollectionUtils.isEmpty(deploymentSets)) {
+        List<DeploymentSet> deploymentSets = readTransactionService
+                .findByDynamicOrFilters(Map.of("_id", new ObjectId(deploymentSetID)), DeploymentSet.class);
+        if (CollectionUtils.isEmpty(deploymentSets)) {
             log.error("Deployment set could not be found {}", deploymentSetID);
             throw new CustomException(ErrorCode.DEPLOYMENT_SET_NOT_FOUND);
         }
@@ -69,11 +71,14 @@ public class DeploymentServiceImpl implements DeploymentService {
                 .status(DeploymentStatus.CREATED)
                 .application(deploymentSet.getApplication())
                 .metaData(Map.of(
-                        "runtimeEnvironment", deploymentSet.getDeploymentProfile().getRunTimeEnvironment().getRunTimeEnvironment(),
-                        "deploymentTemplate", deploymentSet.getDeploymentProfile().getRunTimeEnvironment().getDeploymentTemplate(),
-                        "releaseName", deploymentSet.getDeploymentProfile().getApplication().getName() + "-" + deploymentSet.getDeploymentProfile().extractMetaDataName(),
-                        "imageTag", deploymentSet.getReleaseCandidate().getMetaData().get("dockerImageHashValue"))
-                )
+                        "runtimeEnvironment",
+                        deploymentSet.getDeploymentProfile().getRunTimeEnvironment().getRunTimeEnvironment(),
+                        "deploymentTemplate",
+                        deploymentSet.getDeploymentProfile().getRunTimeEnvironment().getDeploymentTemplate(),
+                        "releaseName",
+                        deploymentSet.getDeploymentProfile().getApplication().getName() + "-"
+                                + deploymentSet.getDeploymentProfile().extractMetaDataName(),
+                        "imageTag", deploymentSet.getReleaseCandidate().getMetaData().get("dockerImageHashValue")))
                 .deploymentSet(deploymentSet)
                 .build();
 
@@ -94,8 +99,9 @@ public class DeploymentServiceImpl implements DeploymentService {
 
         String deploymentTemplateName = "DeploymentK8s";
 
-        List<Template> templates = readTransactionService.findByDynamicOrFilters(Map.of("templateName", deploymentTemplateName), Template.class);
-        if(CollectionUtils.isEmpty(templates)) {
+        List<Template> templates = readTransactionService
+                .findByDynamicOrFilters(Map.of("templateName", deploymentTemplateName), Template.class);
+        if (CollectionUtils.isEmpty(templates)) {
             log.error("Deployment template could not be found {}", deploymentTemplateName);
             throw new CustomException(ErrorCode.DEPLOYMENT_TEMPLATE_COULD_NOT_BE_CREATED);
         }
@@ -107,17 +113,18 @@ public class DeploymentServiceImpl implements DeploymentService {
         BeanUtils.copyProperties(template, clonedTemplate, "id");
         JsonNode deploymentProfileConfig;
         try {
-            deploymentProfileConfig = objectMapper.readTree(Base64Util.convertToPlainText(deployment.getDeploymentSet().getDeploymentProfile().getData()));
+            deploymentProfileConfig = objectMapper.readTree(
+                    Base64Util.convertToPlainText(deployment.getDeploymentSet().getDeploymentProfile().getData()));
         } catch (JsonProcessingException e) {
             log.error("Unable to parse the deployment profile", e);
             throw new CustomException(ErrorCode.METADATA_PROFILE_INVALID_DATA);
         }
 
-        for(Template.Step deploymentStep : clonedTemplate.getSteps()) {
-            if(!CollectionUtils.isEmpty(deploymentStep.getParams()) && !deploymentStep.isSkipStep()) {
+        for (Template.Step deploymentStep : clonedTemplate.getSteps()) {
+            if (!CollectionUtils.isEmpty(deploymentStep.getParams()) && !deploymentStep.isSkipStep()) {
                 Map<String, Object> configs = new HashMap<>();
-                for(String key : deploymentStep.getParams()) {
-                    if(ObjectUtils.isEmpty(deploymentProfileConfig.path(key))) {
+                for (String key : deploymentStep.getParams()) {
+                    if (ObjectUtils.isEmpty(deploymentProfileConfig.path(key))) {
                         configs.put(key, "");
                     } else {
                         configs.put(key, deploymentProfileConfig.path(key).asText());
@@ -126,12 +133,14 @@ public class DeploymentServiceImpl implements DeploymentService {
                 deploymentStep.setValues(configs);
             }
             deploymentStep.setMetadata(new HashMap<>());
-            deploymentStep.setStatus(DeploymentStatus.IN_PROGRESS);
+            deploymentStep.setStatus(StepExecutionStatus.IN_PROGRESS);
         }
 
-        if (RunTimeEnvironment.K8s.getRunTimeEnvironment().equals(deployment.getMetaData().get("runtimeEnvironment").toString())) {
+        if (RunTimeEnvironment.K8s.getRunTimeEnvironment()
+                .equals(deployment.getMetaData().get("runtimeEnvironment").toString())) {
             deployment.getMetaData().put("k8sClusterId", deploymentProfileConfig.path("k8sClusterName").asText());
-            deployment.getMetaData().put("dockerContainerRegistry", deploymentProfileConfig.path("dockerContainerRegistry").asText());
+            deployment.getMetaData().put("dockerContainerRegistry",
+                    deploymentProfileConfig.path("dockerContainerRegistry").asText());
         }
 
         deployment.getMetaData().put("namespace", deploymentProfileConfig.path("namespace").asText());
@@ -142,8 +151,8 @@ public class DeploymentServiceImpl implements DeploymentService {
 
     @Override
     public void submitDeploymentRequest(String deploymentID) {
-        Mono<com.swadeshitech.prodhub.integration.deplorch.DeploymentResponse> responseMono =
-                deplOrchClient.triggerDeployment(deploymentID);
+        Mono<com.swadeshitech.prodhub.integration.deplorch.DeploymentResponse> responseMono = deplOrchClient
+                .triggerDeployment(deploymentID);
         com.swadeshitech.prodhub.integration.deplorch.DeploymentResponse response = responseMono.blockOptional().get();
         log.info("Printing the response {}", response);
     }
@@ -154,21 +163,21 @@ public class DeploymentServiceImpl implements DeploymentService {
         Deployment deployment = findDeployment(deploymentUpdateKafka.getDeploymentRequestId());
         boolean isDeploymentStepFailed = false;
 
-        if(DeploymentStatus.valueOf(deploymentUpdateKafka.getStatus()).equals(DeploymentStatus.FAILED)) {
+        if (DeploymentStatus.valueOf(deploymentUpdateKafka.getStatus()).equals(DeploymentStatus.FAILED)) {
             isDeploymentStepFailed = true;
         }
 
-        for(int iCounter = 0; iCounter < deployment.getTemplate().getSteps().size(); iCounter++) {
+        for (int iCounter = 0; iCounter < deployment.getTemplate().getSteps().size(); iCounter++) {
             Template.Step step = deployment.getTemplate().getSteps().get(iCounter);
-            if(step.getStepName().equalsIgnoreCase(deploymentUpdateKafka.getStepName())) {
-                step.setStatus(DeploymentStatus.valueOf(deploymentUpdateKafka.getStatus()));
+            if (step.getStepName().equalsIgnoreCase(deploymentUpdateKafka.getStepName())) {
+                step.setStatus(StepExecutionStatus.valueOf(deploymentUpdateKafka.getStatus()));
                 step.getMetadata().put("timestamp", deploymentUpdateKafka.getTimestamp());
                 step.getMetadata().put("details", deploymentUpdateKafka.getDetails());
                 updateDeploymentStatus(deployment);
                 iCounter++;
-                while(isDeploymentStepFailed && iCounter < deployment.getTemplate().getSteps().size()) {
+                while (isDeploymentStepFailed && iCounter < deployment.getTemplate().getSteps().size()) {
                     step = deployment.getTemplate().getSteps().get(iCounter);
-                    step.setStatus(DeploymentStatus.SKIPPED);
+                    step.setStatus(StepExecutionStatus.SKIPPED);
                     iCounter++;
                 }
             }
@@ -185,7 +194,7 @@ public class DeploymentServiceImpl implements DeploymentService {
         DeploymentResponse deploymentResponse = DeploymentResponse.builder()
                 .id(deployment.getId())
                 .applicationId(deployment.getApplication().getName())
-                .status(deployment.getStatus().getMessage())
+                .status(deployment.getStatus().name())
                 .deploymentTemplateResponse(TemplateResponse.mapDTOToEntity(deployment.getTemplate()))
                 .createdBy(deployment.getCreatedBy())
                 .createdTime(deployment.getCreatedTime())
@@ -193,7 +202,7 @@ public class DeploymentServiceImpl implements DeploymentService {
                 .lastModifiedTime(deployment.getLastModifiedTime())
                 .build();
 
-        if(deployment.getDeploymentSet() != null) {
+        if (deployment.getDeploymentSet() != null) {
             deploymentResponse.setDeploymentSetId(deployment.getDeploymentSet().getId());
         }
 
@@ -205,13 +214,17 @@ public class DeploymentServiceImpl implements DeploymentService {
 
         Deployment deployment = findDeployment(deploymentId);
 
-        DeploymentPodResponse deploymentPodResponse = deplOrchClient.getDeployedPodDetails(deployment.getMetaData().get("k8sClusterId").toString(), deployment.getMetaData().get("namespace").toString()).block();
+        DeploymentPodResponse deploymentPodResponse = deplOrchClient
+                .getDeployedPodDetails(deployment.getMetaData().get("k8sClusterId").toString(),
+                        deployment.getMetaData().get("namespace").toString())
+                .block();
 
-        if(Objects.isNull(deploymentPodResponse)) {
+        if (Objects.isNull(deploymentPodResponse)) {
             throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
 
-        List<CredentialProvider> credentialProviders = readTransactionService.findCredentialProviderByFilters(Map.of("_id", new ObjectId(deployment.getMetaData().get("k8sClusterId").toString())));
+        List<CredentialProvider> credentialProviders = readTransactionService.findCredentialProviderByFilters(
+                Map.of("_id", new ObjectId(deployment.getMetaData().get("k8sClusterId").toString())));
         if (credentialProviders.isEmpty()) {
             log.error("K8s cluster could not be found in vault {}", deployment.getMetaData().get("k8sClusterId"));
             throw new CustomException(ErrorCode.CREDENTIAL_PROVIDER_NOT_FOUND);
@@ -223,7 +236,8 @@ public class DeploymentServiceImpl implements DeploymentService {
     }
 
     @Override
-    public PaginatedResponse<DeploymentRequestResponse> getAllDeployments(Integer page, Integer size, String sortBy, String order, String ephemeralEnvironment) {
+    public PaginatedResponse<DeploymentRequestResponse> getAllDeployments(Integer page, Integer size, String sortBy,
+            String order, String ephemeralEnvironment) {
 
         log.info("Fetching deployments for page {} with size {}", page, size);
         User user = userService.extractUserFromContext();
@@ -242,8 +256,7 @@ public class DeploymentServiceImpl implements DeploymentService {
                 page,
                 size,
                 sortBy,
-                direction
-        );
+                direction);
         if (deploymentsPage.isEmpty()) {
             log.warn("No deployment found");
             throw new CustomException(ErrorCode.DEPLOYMENT_NOT_FOUND);
@@ -264,17 +277,20 @@ public class DeploymentServiceImpl implements DeploymentService {
     }
 
     @Override
-    public Deployment triggerDeploymentForEphemeralEnvironment(EphemeralEnvironment ephemeralEnvironment, Metadata deploymentProfile, ReleaseCandidate releaseCandidate) {
-        return writeTransactionService.saveDeploymentToRepository(generateDeploymentConfigForEphemeralEnvironment(ephemeralEnvironment,
-                releaseCandidate, deploymentProfile));
+    public Deployment triggerDeploymentForEphemeralEnvironment(EphemeralEnvironment ephemeralEnvironment,
+            Metadata deploymentProfile, ReleaseCandidate releaseCandidate) {
+        return writeTransactionService
+                .saveDeploymentToRepository(generateDeploymentConfigForEphemeralEnvironment(ephemeralEnvironment,
+                        releaseCandidate, deploymentProfile));
     }
 
     private Deployment generateDeploymentConfigForEphemeralEnvironment(EphemeralEnvironment ephemeralEnvironment,
-                                                                       ReleaseCandidate releaseCandidate, Metadata deploymentProfile) {
+            ReleaseCandidate releaseCandidate, Metadata deploymentProfile) {
         String deploymentTemplateName = "DeploymentK8s";
 
-        List<Template> templates = readTransactionService.findByDynamicOrFilters(Map.of("templateName", deploymentTemplateName), Template.class);
-        if(CollectionUtils.isEmpty(templates)) {
+        List<Template> templates = readTransactionService
+                .findByDynamicOrFilters(Map.of("templateName", deploymentTemplateName), Template.class);
+        if (CollectionUtils.isEmpty(templates)) {
             log.error("Deployment template could not be found {}", deploymentTemplateName);
             throw new CustomException(ErrorCode.DEPLOYMENT_TEMPLATE_COULD_NOT_BE_CREATED);
         }
@@ -294,7 +310,8 @@ public class DeploymentServiceImpl implements DeploymentService {
         Map<String, Object> configMap = new HashMap<>();
         configMap.put("runtimeEnvironment", deploymentProfile.getRunTimeEnvironment().getRunTimeEnvironment());
         configMap.put("deploymentTemplate", deploymentProfile.getRunTimeEnvironment().getDeploymentTemplate());
-        configMap.put("releaseName", deploymentProfile.getApplication().getName() + "-" + deploymentProfile.extractMetaDataName());
+        configMap.put("releaseName",
+                deploymentProfile.getApplication().getName() + "-" + deploymentProfile.extractMetaDataName());
         configMap.put("imageTag", releaseCandidate.getMetaData().get("dockerImageHashValue"));
         configMap.put("ephemeralEnvironment", releaseCandidate.getEphemeralEnvironment().getId());
 
@@ -305,11 +322,11 @@ public class DeploymentServiceImpl implements DeploymentService {
                 .metaData(configMap)
                 .build();
 
-        for(Template.Step deploymentStep : clonedTemplate.getSteps()) {
-            if(!CollectionUtils.isEmpty(deploymentStep.getParams()) && !deploymentStep.isSkipStep()) {
+        for (Template.Step deploymentStep : clonedTemplate.getSteps()) {
+            if (!CollectionUtils.isEmpty(deploymentStep.getParams()) && !deploymentStep.isSkipStep()) {
                 Map<String, Object> configs = new HashMap<>();
-                for(String key : deploymentStep.getParams()) {
-                    if(ObjectUtils.isEmpty(deploymentProfileConfig.path(key))) {
+                for (String key : deploymentStep.getParams()) {
+                    if (ObjectUtils.isEmpty(deploymentProfileConfig.path(key))) {
                         configs.put(key, "");
                     } else {
                         if (NAMESPACE_KEY.equals(key)) {
@@ -322,12 +339,14 @@ public class DeploymentServiceImpl implements DeploymentService {
                 deploymentStep.setValues(configs);
             }
             deploymentStep.setMetadata(new HashMap<>());
-            deploymentStep.setStatus(DeploymentStatus.IN_PROGRESS);
+            deploymentStep.setStatus(StepExecutionStatus.IN_PROGRESS);
         }
 
-        if (RunTimeEnvironment.K8s.getRunTimeEnvironment().equals(deployment.getMetaData().get("runtimeEnvironment").toString())) {
+        if (RunTimeEnvironment.K8s.getRunTimeEnvironment()
+                .equals(deployment.getMetaData().get("runtimeEnvironment").toString())) {
             deployment.getMetaData().put("k8sClusterId", deploymentProfileConfig.path("k8sClusterName").asText());
-            deployment.getMetaData().put("dockerContainerRegistry", deploymentProfileConfig.path("dockerContainerRegistry").asText());
+            deployment.getMetaData().put("dockerContainerRegistry",
+                    deploymentProfileConfig.path("dockerContainerRegistry").asText());
         }
 
         deployment.getMetaData().put("namespace", ephemeralEnvironment.getName());
@@ -338,8 +357,9 @@ public class DeploymentServiceImpl implements DeploymentService {
     }
 
     private Deployment findDeployment(String deploymentId) {
-        List<Deployment> deployments = readTransactionService.findByDynamicOrFilters(Map.of("_id", new ObjectId(deploymentId)), Deployment.class);
-        if(CollectionUtils.isEmpty(deployments)) {
+        List<Deployment> deployments = readTransactionService
+                .findByDynamicOrFilters(Map.of("_id", new ObjectId(deploymentId)), Deployment.class);
+        if (CollectionUtils.isEmpty(deployments)) {
             log.error("Deployment could not be found {}", deploymentId);
             throw new CustomException(ErrorCode.DEPLOYMENT_NOT_FOUND);
         }
@@ -350,15 +370,15 @@ public class DeploymentServiceImpl implements DeploymentService {
 
         int stepExecutedSuccessfully = 0, totalStep = deployment.getTemplate().getSteps().size();
 
-        for(Template.Step deploymentStep : deployment.getTemplate().getSteps()) {
-            if (deploymentStep.getStatus().equals(DeploymentStatus.COMPLETED) || deploymentStep.isSkipStep()) {
+        for (Template.Step deploymentStep : deployment.getTemplate().getSteps()) {
+            if (StepExecutionStatus.COMPLETED.equals(deploymentStep.getStatus()) || deploymentStep.isSkipStep()) {
                 stepExecutedSuccessfully++;
-            } else if (deploymentStep.getStatus().equals(DeploymentStatus.FAILED)){
+            } else if (deploymentStep.getStatus().equals(StepExecutionStatus.FAILED)) {
                 deployment.setStatus(DeploymentStatus.FAILED);
                 return;
             }
         }
-        if(stepExecutedSuccessfully == totalStep) {
+        if (stepExecutedSuccessfully == totalStep) {
             deployment.setStatus(DeploymentStatus.COMPLETED);
         }
     }

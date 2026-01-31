@@ -30,5 +30,6 @@ public class PipelineTemplate extends BaseEntity {
         private String templateName;
         private int order;
         private boolean stopOnFailure;
+        private String version;
     }
 }

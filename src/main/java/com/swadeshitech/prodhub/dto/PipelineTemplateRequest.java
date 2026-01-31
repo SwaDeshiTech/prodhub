@@ -1,6 +1,5 @@
 package com.swadeshitech.prodhub.dto;
 
-import com.swadeshitech.prodhub.entity.PipelineTemplate;
 import lombok.Data;
 
 import java.util.List;
@@ -17,5 +16,6 @@ public class PipelineTemplateRequest {
         private String templateName;
         private int order;
         private boolean stopOnFailure;
+        private String version;
     }
 }

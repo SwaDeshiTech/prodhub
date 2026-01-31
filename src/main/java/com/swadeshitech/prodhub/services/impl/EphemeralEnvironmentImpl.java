@@ -243,7 +243,6 @@ public class EphemeralEnvironmentImpl implements EphemeralEnvironmentService {
     public void setUpProfiles(String ephemeralEnvironmentId, String profileType) {
         EphemeralEnvironment ephemeralEnvironment = fetchEphemeralEnvironmentFromDB(ephemeralEnvironmentId);
 
-
     }
 
     @Override

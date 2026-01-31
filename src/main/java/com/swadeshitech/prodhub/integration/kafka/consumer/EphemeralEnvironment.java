@@ -37,6 +37,12 @@ public class EphemeralEnvironment {
     @KafkaListener(topics = "${spring.kafka.topic.ephemeralEnvironmentUpdate}", groupId = "default_group")
     public void listen(String message) {
         log.info("{} Message received for ephemeralEnvironmentUpdate {}", this.getClass().getCanonicalName(), message);
+
+        // fetch pipeline template
+
+        // generate the pipeline configs
+
+        // start pipeline executiom
     }
 
     @KafkaListener(topics = "${spring.kafka.topic.ephemeralEnvironmentBuildAndDeployment}", groupId = "default_group")

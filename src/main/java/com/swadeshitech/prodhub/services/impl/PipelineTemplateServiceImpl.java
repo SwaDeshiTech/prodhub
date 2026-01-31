@@ -78,6 +78,7 @@ public class PipelineTemplateServiceImpl implements PipelineTemplateService {
                             .order(stageDefinition.getOrder())
                             .templateName(stageDefinition.getTemplateName())
                             .stopOnFailure(stageDefinition.isStopOnFailure())
+                            .version(stageDefinition.getVersion())
                     .build());
         }
         return stageDefinitions;
