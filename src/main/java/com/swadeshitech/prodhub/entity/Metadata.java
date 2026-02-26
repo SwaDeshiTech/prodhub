@@ -41,10 +41,10 @@ public class Metadata extends BaseEntity implements Serializable {
     private RunTimeEnvironment runTimeEnvironment;
 
     @DBRef
-    private transient Metadata referencedProfile;
+    private Metadata referencedProfile;
 
     @DBRef
-    private transient Application application;
+    private Application application;
 
     public String extractMetaDataName() {
         return this.name.split("::")[0];

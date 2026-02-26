@@ -2,8 +2,6 @@ package com.swadeshitech.prodhub.services.impl;
 
 import java.util.*;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.swadeshitech.prodhub.constant.Constants;
 import com.swadeshitech.prodhub.dto.DropdownDTO;
@@ -11,14 +9,12 @@ import com.swadeshitech.prodhub.dto.PaginatedResponse;
 import com.swadeshitech.prodhub.entity.*;
 import com.swadeshitech.prodhub.integration.cicaptain.config.CiCaptainClient;
 import com.swadeshitech.prodhub.integration.cicaptain.dto.BuildStatusResponse;
-import com.swadeshitech.prodhub.integration.cicaptain.dto.BuildTriggerRequest;
-import com.swadeshitech.prodhub.integration.cicaptain.dto.BuildTriggerResponse;
-import com.swadeshitech.prodhub.services.CredentialProviderService;
-import com.swadeshitech.prodhub.utils.Base64Util;
+import com.swadeshitech.prodhub.integration.kafka.producer.KafkaProducer;
 import com.swadeshitech.prodhub.utils.UuidUtil;
 import lombok.RequiredArgsConstructor;
 import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -52,13 +48,7 @@ public class ReleaseCandidateServiceImpl implements ReleaseCandidateService {
     CiCaptainClient ciCaptainClient;
 
     @Autowired
-    ObjectMapper objectMapper;
-
-    @Autowired
     UserServiceImpl userService;
-
-    @Autowired
-    CredentialProviderService credentialProviderService;
 
     @Override
     public ReleaseCandidateResponse createReleaseCandidate(ReleaseCandidateRequest request) {
@@ -92,7 +82,6 @@ public class ReleaseCandidateServiceImpl implements ReleaseCandidateService {
         releaseCandidate.setInitiatedBy(user);
         releaseCandidate.setMetaData(request.getMetadata());
         releaseCandidate.setService(applications.getFirst());
-        releaseCandidate.setBuildRefId(UuidUtil.generateRandomUuid());
 
         if(StringUtils.hasText(request.getEphemeralEnvironmentName())) {
             List<EphemeralEnvironment> ephemeralEnvironments = readTransactionService.findByDynamicOrFilters(Map.of("_id", request.getEphemeralEnvironmentName())
@@ -105,7 +94,6 @@ public class ReleaseCandidateServiceImpl implements ReleaseCandidateService {
         }
 
         releaseCandidate = writeTransactionService.saveReleaseCandidateToRepository(releaseCandidate);
-        triggerBuild(releaseCandidate);
         return buildResponse(releaseCandidate);
     }
 
@@ -212,7 +200,7 @@ public class ReleaseCandidateServiceImpl implements ReleaseCandidateService {
         ReleaseCandidate releaseCandidate = releaseCandidates.getFirst();
         String providerID = releaseCandidate.getMetaData().get("providerID");
         Mono<BuildStatusResponse> buildStatusResponseMono = ciCaptainClient.getBuildStatus(providerID,
-                releaseCandidate.getBuildRefId(), forceSync);
+                releaseCandidate.getMetaData().get("buildRefId"), forceSync);
         BuildStatusResponse response = buildStatusResponseMono.blockOptional().get();
         releaseCandidate.setStatus(mapStatusFromCICaptain(response.status()));
         writeTransactionService.saveReleaseCandidateToRepository(releaseCandidate);
@@ -311,70 +299,12 @@ public class ReleaseCandidateServiceImpl implements ReleaseCandidateService {
         response.setCertifiedBy(certifiedBy);
         response.setInitiatedBy(initiatedBy);
         response.setMetaData(releaseCandidate.getMetaData());
-        response.setBuildRefId(releaseCandidate.getBuildRefId());
 
         response.setCreatedBy(releaseCandidate.getCreatedBy());
         response.setCreatedTime(releaseCandidate.getCreatedTime());
         response.setLastModifiedTime(releaseCandidate.getLastModifiedTime());
         response.setLastModifiedBy(releaseCandidate.getLastModifiedBy());
         return response;
-    }
-
-    private void triggerBuild(ReleaseCandidate releaseCandidate) {
-
-        String providerId, scmProviderId;
-        String jobName = releaseCandidate.getService().getName() + "-" + releaseCandidate.getBuildProfile().getName()
-                .split(Constants.CLONE_METADATA_DELIMITER)[0];
-        JsonNode data;
-        String commitId = releaseCandidate.getMetaData().get("commitId");
-        String decodedData;
-        Metadata buildProfile = releaseCandidate.getBuildProfile();
-
-        try {
-            decodedData = Base64Util.convertToPlainText(buildProfile.getData());
-            data = objectMapper.readTree(decodedData);
-            providerId = data.path("buildProviderId").asText();
-            scmProviderId = data.path("scmId").asText();
-        } catch (JsonProcessingException e) {
-            log.error("Fail to read metadata of profile {}", buildProfile.getName());
-            throw new CustomException(ErrorCode.METADATA_PROFILE_INVALID_DATA);
-        }
-
-        if(Objects.nonNull(releaseCandidate.getEphemeralEnvironment())) {
-            jobName += "-" + releaseCandidate.getEphemeralEnvironment().getName();
-        }
-
-        String dockerImageHashValue = releaseCandidate.getService().getName().toLowerCase() + "-"
-                + Base64Util.generate7DigitHash(decodedData) + ":" + commitId.substring(0, 7);
-
-        Map<String, String> params = new HashMap<>();
-        params.put("BRANCH_NAME", data.path("branchName").asText());
-        params.put("COMMIT_ID", commitId);
-        params.put("BASE_IMAGE", data.path("baseImage").asText());
-        params.put("BUILD_COMMAND", data.path("buildCommand").asText());
-        params.put("REPO_URL", credentialProviderService.extractSCMURL(scmProviderId) + "/" + data.path("repo").asText());
-        params.put("ARTIFACT_PATH", data.path("artifactPath").asText());
-        params.put("JOB_TEMPLATE", data.path("buildTemplate").asText());
-        params.put("SERVICE_NAME", releaseCandidate.getService().getName());
-        params.put("PROFILE_PATH", data.path("profilePath").asText());
-        params.put("DOCKER_IMAGE_HASH_VALUE", dockerImageHashValue);
-        params.put("BUILD_PATH", data.path("buildPath").asText());
-
-        BuildTriggerRequest request = BuildTriggerRequest.builder()
-                .triggeredBy(releaseCandidate.getInitiatedBy().getName() + " ("
-                        + releaseCandidate.getInitiatedBy().getEmailId() + ")")
-                .parameters(params)
-                .refId(releaseCandidate.getBuildRefId())
-                .build();
-
-        Mono<BuildTriggerResponse> buildTriggerResponse = ciCaptainClient.triggerBuild(providerId, jobName, request);
-        BuildTriggerResponse response = buildTriggerResponse.blockOptional().get();
-        log.info("Printing ci-captain build response {}", response);
-        releaseCandidate.setStatus(ReleaseCandidateStatus.IN_PROGRESS);
-        releaseCandidate.getMetaData().put("providerID", providerId);
-        releaseCandidate.getMetaData().put("dockerImageHashValue", dockerImageHashValue);
-
-        writeTransactionService.saveReleaseCandidateToRepository(releaseCandidate);
     }
 
     public ReleaseCandidateStatus mapStatusFromCICaptain(String status) {

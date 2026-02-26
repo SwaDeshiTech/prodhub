@@ -34,6 +34,10 @@ spring:
       deploymentUpdates: deployment-update
       ephemeralEnvironmentUpdate: ephemeral-environment-update
       deploymentSetStatusUpdate: deploymentSet-status-update
+      ephemeralEnvironmentBuildAndDeployment: ephemeral-environment-build-and-deployment
+      buildStatusComplete: buildStatusComplete
+      buildUpdate: build-update
+      pipeline-execution: pipeline-execution
 
 management:
   endpoints:
@@ -59,5 +63,8 @@ deplorch:
   deployedPodDetails: /api/v1/pods
 
 cron:
-  codeFreezeScheduler: "0 * * * * *"
-  ephemeralCleanup: "0 */5 * * * *"
+  codeFreezeScheduler: "15 * * * * *"
+  ephemeralCleanup: "15 * * * * *"
+
+github:
+  baseURL: https://github.com

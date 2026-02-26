@@ -1,5 +1,6 @@
 package com.swadeshitech.prodhub.entity;
 
+import com.swadeshitech.prodhub.enums.PipelineTemplateType;
 import lombok.Builder;
 import lombok.Data;
 import org.springframework.data.annotation.Id;
@@ -22,6 +23,8 @@ public class PipelineTemplate extends BaseEntity {
     private boolean isActive;
 
     private List<StageDefinition> stages;
+
+    private PipelineTemplateType pipelineTemplateType;
 
     @Data
     @Builder

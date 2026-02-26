@@ -123,11 +123,11 @@ public class DeploymentServiceImpl implements DeploymentService {
         for (Template.Step deploymentStep : clonedTemplate.getSteps()) {
             if (!CollectionUtils.isEmpty(deploymentStep.getParams()) && !deploymentStep.isSkipStep()) {
                 Map<String, Object> configs = new HashMap<>();
-                for (String key : deploymentStep.getParams()) {
-                    if (ObjectUtils.isEmpty(deploymentProfileConfig.path(key))) {
-                        configs.put(key, "");
+                for (Map.Entry<String, Template.Step.TemplateStepParam> key : deploymentStep.getParams().entrySet()) {
+                    if (ObjectUtils.isEmpty(deploymentProfileConfig.path(key.getKey()))) {
+                        configs.put(key.getKey(), "");
                     } else {
-                        configs.put(key, deploymentProfileConfig.path(key).asText());
+                        configs.put(key.getKey(), deploymentProfileConfig.path(key.getKey()).asText());
                     }
                 }
                 deploymentStep.setValues(configs);
@@ -166,19 +166,18 @@ public class DeploymentServiceImpl implements DeploymentService {
         if (DeploymentStatus.valueOf(deploymentUpdateKafka.getStatus()).equals(DeploymentStatus.FAILED)) {
             isDeploymentStepFailed = true;
         }
-
-        for (int iCounter = 0; iCounter < deployment.getTemplate().getSteps().size(); iCounter++) {
-            Template.Step step = deployment.getTemplate().getSteps().get(iCounter);
+        for (Template.Step step : deployment.getTemplate().getSteps()) {
             if (step.getStepName().equalsIgnoreCase(deploymentUpdateKafka.getStepName())) {
                 step.setStatus(StepExecutionStatus.valueOf(deploymentUpdateKafka.getStatus()));
                 step.getMetadata().put("timestamp", deploymentUpdateKafka.getTimestamp());
                 step.getMetadata().put("details", deploymentUpdateKafka.getDetails());
                 updateDeploymentStatus(deployment);
-                iCounter++;
-                while (isDeploymentStepFailed && iCounter < deployment.getTemplate().getSteps().size()) {
-                    step = deployment.getTemplate().getSteps().get(iCounter);
-                    step.setStatus(StepExecutionStatus.SKIPPED);
-                    iCounter++;
+                if(isDeploymentStepFailed) {
+                    for (Template.Step innerStep : deployment.getTemplate().getSteps()) {
+                        if(innerStep.getOrder() > step.getOrder()) {
+                            innerStep.setStatus(StepExecutionStatus.SKIPPED);
+                        }
+                    }
                 }
             }
         }
@@ -325,14 +324,14 @@ public class DeploymentServiceImpl implements DeploymentService {
         for (Template.Step deploymentStep : clonedTemplate.getSteps()) {
             if (!CollectionUtils.isEmpty(deploymentStep.getParams()) && !deploymentStep.isSkipStep()) {
                 Map<String, Object> configs = new HashMap<>();
-                for (String key : deploymentStep.getParams()) {
-                    if (ObjectUtils.isEmpty(deploymentProfileConfig.path(key))) {
-                        configs.put(key, "");
+                for (Map.Entry<String, Template.Step.TemplateStepParam> key : deploymentStep.getParams().entrySet()) {
+                    if (ObjectUtils.isEmpty(deploymentProfileConfig.path(key.getKey()))) {
+                        configs.put(key.getKey(), "");
                     } else {
                         if (NAMESPACE_KEY.equals(key)) {
-                            configs.put(key, ephemeralEnvironment.getName());
+                            configs.put(key.getKey(), ephemeralEnvironment.getName());
                         } else {
-                            configs.put(key, deploymentProfileConfig.path(key).asText());
+                            configs.put(key.getKey(), deploymentProfileConfig.path(key.getKey()).asText());
                         }
                     }
                 }

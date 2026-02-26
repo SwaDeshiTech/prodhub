@@ -9,6 +9,7 @@ public class PipelineTemplateRequest {
     private String name;
     private String version;
     private List<PipelineTemplateStageRequest> stages;
+    private String pipelineTemplateType;
 
     @Data
     public static class PipelineTemplateStageRequest {

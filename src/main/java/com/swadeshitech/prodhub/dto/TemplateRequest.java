@@ -2,28 +2,28 @@ package com.swadeshitech.prodhub.dto;
 
 import lombok.Builder;
 import lombok.Data;
-import lombok.experimental.SuperBuilder;
 
 import java.util.List;
 import java.util.Map;
 
 @Data
-public class DeploymentTemplateRequest {
+public class TemplateRequest {
     private String id;
     private String templateName;
     private String version;
     private String description;
-    List<DeploymentTemplateStepRequest> stepRequests;
+    private List<TemplateStepRequest> stepRequests;
 
     @Data
     @Builder
-    public static class DeploymentTemplateStepRequest {
+    public static class TemplateStepRequest {
         private int order;
         private String stepName;
         private ChartDetailsRequest chartDetails;
         private boolean wait;
         private int timeoutSeconds;
-        private List<String> params;
+        private boolean skipStep;
+        private Map<String, TemplateStepRequestParam> params;
 
         @Data
         @Builder
@@ -32,6 +32,13 @@ public class DeploymentTemplateRequest {
             private String chartName;
             private String version;
             private String chartLink;
+        }
+
+        @Data
+        @Builder
+        public static class TemplateStepRequestParam {
+            private String affectedKey;
+            private String displayName;
         }
     }
 }

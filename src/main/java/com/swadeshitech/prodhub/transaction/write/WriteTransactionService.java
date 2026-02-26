@@ -294,14 +294,14 @@ public class WriteTransactionService {
         }
     }
 
-    public Template saveDeploymentTemplate(Template template) {
+    public Template saveTemplate(Template template) {
         try {
             return templateRepository.save(template);
         } catch (DataIntegrityViolationException ex) {
             log.error("DataIntegrity error ", ex);
             throw new CustomException(ErrorCode.DATA_INTEGRITY_FAILURE);
         } catch (Exception ex) {
-            log.error("Failed to update deployment run ", ex);
+            log.error("Failed to update template ", ex);
             throw new CustomException(ErrorCode.DEPLOYMENT_TEMPLATE_COULD_NOT_BE_CREATED);
         }
     }

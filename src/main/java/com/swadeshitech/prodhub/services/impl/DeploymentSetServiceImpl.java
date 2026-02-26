@@ -222,7 +222,7 @@ public class DeploymentSetServiceImpl implements DeploymentSetService {
             for(Deployment deployment : deploymentSet.getDeployments()) {
                 deploymentResponse.add(DeploymentResponse.builder()
                                 .deploymentID(deployment.getId())
-                                .status(deployment.getStatus().getMessage())
+                                .status(deployment.getStatus().name())
                                 .createdBy(deployment.getCreatedBy())
                                 .createdTime(deployment.getCreatedTime())
                         .build());

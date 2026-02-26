@@ -1,10 +1,10 @@
 package com.swadeshitech.prodhub.services.impl;
 
-import com.swadeshitech.prodhub.dto.PaginatedResponse;
 import com.swadeshitech.prodhub.dto.PipelineTemplateRequest;
 import com.swadeshitech.prodhub.dto.PipelineTemplateResponse;
 import com.swadeshitech.prodhub.entity.PipelineTemplate;
 import com.swadeshitech.prodhub.enums.ErrorCode;
+import com.swadeshitech.prodhub.enums.PipelineTemplateType;
 import com.swadeshitech.prodhub.exception.CustomException;
 import com.swadeshitech.prodhub.services.PipelineTemplateService;
 import com.swadeshitech.prodhub.transaction.read.ReadTransactionService;
@@ -15,7 +15,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
-import org.springframework.util.CollectionUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -39,6 +38,7 @@ public class PipelineTemplateServiceImpl implements PipelineTemplateService {
                 .version(request.getVersion())
                 .stages(generatePipelineTemplateSteps(request.getStages()))
                 .isActive(true)
+                .pipelineTemplateType(PipelineTemplateType.fromValue(request.getPipelineTemplateType()))
                 .build();
 
         writeTransactionService.savePipelineTemplateToRepository(pipelineTemplate);
@@ -60,8 +60,14 @@ public class PipelineTemplateServiceImpl implements PipelineTemplateService {
     @Override
     public PipelineTemplate getPipelineTemplateByVersion(String version) {
 
-        Page<PipelineTemplate> pipelineTemplates = readTransactionService.findByDynamicOrFiltersPaginated(Map.of("version",
-                        version, "isActive", true), PipelineTemplate.class, 0, 1, "version", Sort.Direction.DESC);
+        Page<PipelineTemplate> pipelineTemplates = readTransactionService.findByDynamicOrFiltersPaginated(
+                Map.of("version", version,
+                        "isActive", true),
+                PipelineTemplate.class,
+                0,
+                1,
+                "version",
+                Sort.Direction.DESC);
         if(pipelineTemplates.isEmpty()) {
             log.error("Pipeline templates could be fetched with version {}", version);
             throw new CustomException(ErrorCode.PIPELINE_TEMPLATE_COULD_NOT_BE_FOUND);

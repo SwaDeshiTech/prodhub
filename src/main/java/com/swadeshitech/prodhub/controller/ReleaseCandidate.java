@@ -7,8 +7,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import com.swadeshitech.prodhub.config.ContextHolder;
 import com.swadeshitech.prodhub.services.ReleaseCandidateService;
 
 @RestController
@@ -16,20 +14,7 @@ import com.swadeshitech.prodhub.services.ReleaseCandidateService;
 public class ReleaseCandidate {
 
     @Autowired
-    private ReleaseCandidateService releaseCandidateService;
-
-    @PostMapping
-    public ResponseEntity<Response> createReleaseCandidate(@RequestBody ReleaseCandidateRequest request) {
-
-        ReleaseCandidateResponse releaseCandidateResponse = releaseCandidateService.createReleaseCandidate(request);
-
-        Response response = Response.builder()
-                .httpStatus(HttpStatus.CREATED)
-                .message("Successfully created release candidate")
-                .response(releaseCandidateResponse)
-                .build();
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
-    }
+    ReleaseCandidateService releaseCandidateService;
 
     @PutMapping("/syncStatus/{id}")
     public ResponseEntity<Response> syncStatus(@PathVariable String id, @RequestParam String forceSync) {

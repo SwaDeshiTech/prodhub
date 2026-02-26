@@ -7,9 +7,9 @@ import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Data
-@EqualsAndHashCode(callSuper = true)
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -25,7 +25,7 @@ public class Template extends BaseEntity {
 
     private String description;
 
-    private List<Step> steps;
+    private Set<Step> steps;
 
     @Data
     @Builder
@@ -45,7 +45,7 @@ public class Template extends BaseEntity {
 
         private StepExecutionStatus status;
 
-        private List<String> params;
+        private Map<String, TemplateStepParam> params;
 
         private Map<String, Object> metadata;
 
@@ -62,6 +62,15 @@ public class Template extends BaseEntity {
             private String version;
 
             private String chartLink;
+        }
+
+        @Data
+        @Builder
+        public static class TemplateStepParam {
+
+            private String affectedKey;
+
+            private String displayName;
         }
     }
 }

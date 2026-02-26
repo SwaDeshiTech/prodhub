@@ -5,10 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.experimental.SuperBuilder;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
 @Data
 @SuperBuilder
@@ -17,7 +14,7 @@ public class TemplateResponse extends BaseResponse {
     private String templateName;
     private String version;
     private String description;
-    List<TemplateStepResponse> stepResponses;
+    private Set<TemplateStepResponse> stepResponses;
 
     @Data
     @Builder
@@ -56,9 +53,9 @@ public class TemplateResponse extends BaseResponse {
                 .build();
     }
 
-    private static List<TemplateResponse.TemplateStepResponse> generateDeploymentTemplateResponse(List<Template.Step> steps) {
+    private static Set<TemplateResponse.TemplateStepResponse> generateDeploymentTemplateResponse(Set<Template.Step> steps) {
 
-        List<TemplateResponse.TemplateStepResponse> deploymentTemplateStepResponseList = new ArrayList<>();
+        Set<TemplateResponse.TemplateStepResponse> deploymentTemplateStepResponseList = new HashSet<>();
 
         for(Template.Step step : steps) {
             deploymentTemplateStepResponseList.add(TemplateStepResponse.builder()
@@ -66,7 +63,7 @@ public class TemplateResponse extends BaseResponse {
                     .stepName(step.getStepName())
                     .wait(step.isWait())
                     .timeoutSeconds(step.getTimeoutSeconds())
-                    .params(step.getParams())
+                    //.params(step.getParams())
                     .order(step.getOrder())
                     .chartDetails(generateChartDetailsResponse(step.getChartDetails()))
                     .metaData(step.getMetadata())
