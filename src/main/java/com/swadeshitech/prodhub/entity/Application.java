@@ -1,13 +1,12 @@
 package com.swadeshitech.prodhub.entity;
 
 import java.util.Set;
+
+import lombok.*;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.DBRef;
 import org.springframework.data.mongodb.core.mapping.Document;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 
 @Data
 @NoArgsConstructor
@@ -32,5 +31,7 @@ public class Application extends BaseEntity {
     private Department department;
 
     @DBRef
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
     private Set<Metadata> profiles;
 }

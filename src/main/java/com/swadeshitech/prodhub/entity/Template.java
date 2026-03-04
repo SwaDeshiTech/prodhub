@@ -5,7 +5,6 @@ import lombok.*;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -71,6 +70,8 @@ public class Template extends BaseEntity {
             private String affectedKey;
 
             private String displayName;
+
+            private String value;
         }
     }
 }

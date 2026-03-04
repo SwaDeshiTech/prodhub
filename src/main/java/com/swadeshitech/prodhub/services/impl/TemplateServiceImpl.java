@@ -3,6 +3,7 @@ package com.swadeshitech.prodhub.services.impl;
 import com.swadeshitech.prodhub.dto.TemplateRequest;
 import com.swadeshitech.prodhub.dto.TemplateResponse;
 import com.swadeshitech.prodhub.entity.Template;
+import com.swadeshitech.prodhub.enums.StepExecutionStatus;
 import com.swadeshitech.prodhub.services.TemplateService;
 import com.swadeshitech.prodhub.transaction.write.WriteTransactionService;
 import lombok.extern.slf4j.Slf4j;
@@ -38,6 +39,7 @@ public class TemplateServiceImpl implements TemplateService {
         for (TemplateRequest.TemplateStepRequest itr : stepRequests) {
             steps.add(Template.Step.builder()
                     .order(itr.getOrder())
+                    .status(StepExecutionStatus.CREATED)
                     .wait(itr.isWait())
                     .stepName(itr.getStepName())
                     .timeoutSeconds(itr.getTimeoutSeconds())
@@ -69,6 +71,7 @@ public class TemplateServiceImpl implements TemplateService {
                 params.put(itr.getKey(), Template.Step.TemplateStepParam.builder()
                         .affectedKey(itr.getValue().getAffectedKey())
                         .displayName(itr.getValue().getDisplayName())
+                        .value("")
                         .build());
             }
         }

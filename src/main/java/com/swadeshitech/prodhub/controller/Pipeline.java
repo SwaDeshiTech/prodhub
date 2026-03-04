@@ -8,15 +8,18 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@RequestMapping("/pipeline")
 public class Pipeline {
 
     @Autowired
     PipelineService pipelineService;
 
     @PostMapping
+    @RequestMapping("/startExecution")
     public ResponseEntity<Response> startPipelineExecution(@RequestBody PipelineExecutionRequest request) {
 
         String pipelineExecutionId = pipelineService.schedulePipelineExecution(request);

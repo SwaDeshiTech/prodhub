@@ -25,6 +25,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.ObjectUtils;
+import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -113,6 +114,10 @@ public class PipelineServiceImpl implements PipelineService {
     }
 
     private Template generateTemplateForPipeline(String templateName, String metaDataId) {
+
+        if(!StringUtils.hasText(templateName)) {
+            return null;
+        }
 
         List<Template> templates = readTransactionService.findByDynamicOrFilters(
                 Map.of("templateName", templateName),
