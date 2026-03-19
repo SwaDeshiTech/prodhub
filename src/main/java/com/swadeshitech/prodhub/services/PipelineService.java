@@ -11,7 +11,7 @@ public interface PipelineService {
 
     String schedulePipelineExecution(PipelineExecutionRequest request);
 
-    PipelineExecution createPipelineExecution(String pipelineTemplateName, String metaDataId);
+    PipelineExecution createPipelineExecution(PipelineExecutionRequest request);
 
     void startPipelineExecution(PipelineExecution pipelineExecution);
 }

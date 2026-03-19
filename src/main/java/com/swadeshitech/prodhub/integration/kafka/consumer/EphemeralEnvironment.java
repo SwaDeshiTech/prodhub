@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.swadeshitech.prodhub.config.ContextHolder;
 import com.swadeshitech.prodhub.constant.EphemeralEnvironmentConstants;
 import com.swadeshitech.prodhub.dto.EphemeralEnvironmentBuildAndDeployRequest;
+import com.swadeshitech.prodhub.dto.PipelineExecutionRequest;
 import com.swadeshitech.prodhub.dto.ReleaseCandidateRequest;
 import com.swadeshitech.prodhub.entity.Metadata;
 import com.swadeshitech.prodhub.entity.PipelineExecution;
@@ -81,7 +82,11 @@ public class EphemeralEnvironment {
                     log.error("Metadata could not be found {}", profile.getBuildProfileId());
                     continue;
                 }
-                PipelineExecution pipelineExecution = pipelineService.createPipelineExecution(pipelineTemplate.getName(), metadataList.getFirst().getId());
+                PipelineExecutionRequest pipelineExecutionRequest = PipelineExecutionRequest.builder()
+                        .metaDataID(metadataList.getFirst().getId())
+                        .pipelineTemplateName(pipelineTemplate.getName())
+                        .build();
+                PipelineExecution pipelineExecution = pipelineService.createPipelineExecution(pipelineExecutionRequest);
                 pipelineExecutions.add(pipelineExecution);
             }
         } catch (JsonProcessingException e) {

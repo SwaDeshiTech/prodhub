@@ -38,7 +38,6 @@ public class PipelineTemplateServiceImpl implements PipelineTemplateService {
                 .version(request.getVersion())
                 .stages(generatePipelineTemplateSteps(request.getStages()))
                 .isActive(true)
-                .pipelineTemplateType(PipelineTemplateType.fromValue(request.getPipelineTemplateType()))
                 .build();
 
         writeTransactionService.savePipelineTemplateToRepository(pipelineTemplate);

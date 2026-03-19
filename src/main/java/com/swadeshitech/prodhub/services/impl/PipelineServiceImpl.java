@@ -12,6 +12,7 @@ import com.swadeshitech.prodhub.enums.*;
 import com.swadeshitech.prodhub.exception.CustomException;
 import com.swadeshitech.prodhub.integration.kafka.producer.KafkaProducer;
 import com.swadeshitech.prodhub.provider.BuildProvider;
+import com.swadeshitech.prodhub.services.CredentialProviderService;
 import com.swadeshitech.prodhub.services.PipelineService;
 import com.swadeshitech.prodhub.transaction.read.ReadTransactionService;
 import com.swadeshitech.prodhub.transaction.write.WriteTransactionService;
@@ -52,11 +53,13 @@ public class PipelineServiceImpl implements PipelineService {
     @Autowired
     BuildProvider buildProvider;
 
+    @Autowired
+    CredentialProviderService credentialProviderService;
+
     @Override
     public String schedulePipelineExecution(PipelineExecutionRequest request) {
 
-        PipelineExecution pipelineExecution = createPipelineExecution(request.getPipelineTemplateName(),
-                request.getMetaDataID());
+        PipelineExecution pipelineExecution = createPipelineExecution(request);
 
         kafkaProducer.sendMessage(pipelineExecutionTopicName, pipelineExecution.getId());
 
@@ -64,56 +67,63 @@ public class PipelineServiceImpl implements PipelineService {
     }
 
     @Override
-    public PipelineExecution createPipelineExecution(String pipelineTemplateName, String metaDataId) {
+    public PipelineExecution createPipelineExecution(PipelineExecutionRequest request) {
 
         PipelineTemplate pipelineTemplate = fetchPipelineTemplate(
-                Map.of("name", pipelineTemplateName)
+                Map.of("name", request.getPipelineTemplateName())
         );
 
         PipelineExecution pipelineExecution = new PipelineExecution();
-        pipelineExecution.setStageExecutions(createStages(pipelineTemplate, metaDataId));
+        pipelineExecution.setStageExecutions(createStages(request, pipelineTemplate, request.getMetaDataID()));
         pipelineExecution.setPipelineTemplate(pipelineTemplate);
         pipelineExecution.setStatus(PipelineStatus.PENDING);
-        pipelineExecution.setMetaData(Map.of());
+        pipelineExecution.setMetaData(Map.of("metaDataId", request.getMetaDataID()));
 
         return writeTransactionService.savePipelineExecutionToRepository(pipelineExecution);
     }
 
     @Override
     public void startPipelineExecution(PipelineExecution pipelineExecution) {
-        if(Objects.nonNull(pipelineExecution)) {
-            switch (pipelineExecution.getPipelineTemplate().getPipelineTemplateType()) {
-                case PipelineTemplateType.BUILD:
-                    handleBuildPipelineTemplate(pipelineExecution);
-                    break;
-                case PipelineTemplateType.DEPLOYMENT:
-                    handleDeploymentPipelineTemplate(pipelineExecution);
-                    break;
-                default:
-                    log.error("Unknow pipeline template type for pipeline execution {}", pipelineExecution.getId());
+        pipelineExecution.getStageExecutions().sort((o1, o2) -> o1.getOrder() - o2.getOrder());
+        for(PipelineExecution.StageExecution stageExecution : pipelineExecution.getStageExecutions()) {
+            if(Objects.nonNull(stageExecution)) {
+                switch (stageExecution.getStageName().toLowerCase()) {
+                    case "build":
+                        handleBuildPipelineTemplate(pipelineExecution);
+                        break;
+                    case "deployment":
+                        handleDeploymentPipelineTemplate(pipelineExecution);
+                        break;
+                    default:
+                        log.error("Unknow pipeline template type for pipeline execution {}", pipelineExecution.getId());
+                }
             }
         }
     }
 
-    private List<PipelineExecution.StageExecution> createStages(PipelineTemplate pipelineTemplate, String metaDataId) {
+    private List<PipelineExecution.StageExecution> createStages(PipelineExecutionRequest request, PipelineTemplate pipelineTemplate, String metaDataId) {
         List<PipelineExecution.StageExecution> stages = new ArrayList<>();
 
         for(PipelineTemplate.StageDefinition stageDefinition : pipelineTemplate.getStages()) {
-            stages.add(PipelineExecution.StageExecution.builder()
+            PipelineExecution.StageExecution stageExecution = PipelineExecution.StageExecution.builder()
                     .id(UuidUtil.generateRandomUuid())
                     .stageName(stageDefinition.getName())
                     .startTime(LocalDateTime.now())
                     .stopOnFailure(stageDefinition.isStopOnFailure())
                     .order(stageDefinition.getOrder())
                     .status(PipelineStepExecutionStatus.PENDING)
-                    .template(generateTemplateForPipeline(stageDefinition.getTemplateName(), metaDataId))
-                    .build());
+                    .template(generateTemplateForPipeline(request, stageDefinition.getTemplateName(), metaDataId))
+                    .build();
+            if(stageDefinition.getName().equalsIgnoreCase("init")) {
+                stageExecution.setStatus(PipelineStepExecutionStatus.SUCCESS);
+            }
+            stages.add(stageExecution);
         }
 
         return stages;
     }
 
-    private Template generateTemplateForPipeline(String templateName, String metaDataId) {
+    private Template generateTemplateForPipeline(PipelineExecutionRequest request, String templateName, String metaDataId) {
 
         if(!StringUtils.hasText(templateName)) {
             return null;
@@ -148,29 +158,76 @@ public class PipelineServiceImpl implements PipelineService {
             throw new CustomException(ErrorCode.METADATA_PROFILE_INVALID_DATA);
         }
 
-        for (Template.Step deploymentStep : clonedTemplate.getSteps()) {
-            if (!CollectionUtils.isEmpty(deploymentStep.getParams()) && !deploymentStep.isSkipStep()) {
-                Map<String, Object> configs = new HashMap<>();
-                for (Map.Entry<String, Template.Step.TemplateStepParam> itr : deploymentStep.getParams().entrySet()) {
-                    if (ObjectUtils.isEmpty(profileConfig.path(itr.getKey()))) {
-                        configs.put(itr.getKey(), "");
+        for (Template.Step step : clonedTemplate.getSteps()) {
+            if(step.getStepName().equalsIgnoreCase("init")) {
+                step.setStatus(StepExecutionStatus.COMPLETED);
+            } else {
+                if (!CollectionUtils.isEmpty(step.getParams()) && !step.isSkipStep()) {
+                    if(step.getStepName().equalsIgnoreCase("build")) {
+                        handleParamGenerationForBuildStep(request, step, profileConfig, metadata);
                     } else {
-                        configs.put(itr.getKey(), profileConfig.path(itr.getKey()).asText());
+                        Map<String, Object> configs = new HashMap<>();
+                        for (Map.Entry<String, Template.Step.TemplateStepParam> itr : step.getParams().entrySet()) {
+                            if (ObjectUtils.isEmpty(profileConfig.path(itr.getKey()))) {
+                                configs.put(itr.getKey(), "");
+                            } else {
+                                configs.put(itr.getKey(), profileConfig.path(itr.getKey()).asText());
+                            }
+                        }
+                        step.setValues(configs);
+                        step.setMetadata(new HashMap<>());
+                        step.setStatus(StepExecutionStatus.IN_PROGRESS);
                     }
                 }
-                deploymentStep.setValues(configs);
             }
-            deploymentStep.setMetadata(new HashMap<>());
-            deploymentStep.setStatus(StepExecutionStatus.IN_PROGRESS);
         }
-
         return clonedTemplate;
     }
 
     private void handleBuildPipelineTemplate(PipelineExecution pipelineExecution) {
-        for(PipelineExecution.StageExecution stageExecution : pipelineExecution.getStageExecutions()) {
-            if(stageExecution.getTemplate().getTemplateName().equalsIgnoreCase("build")) {
-                log.info("Triggering build for pipeline {}", stageExecution.getId());
+        log.info("Handling build pipeline execution for ID: {}", pipelineExecution.getId());
+
+        for (PipelineExecution.StageExecution stageExecution : pipelineExecution.getStageExecutions()) {
+            // Check if the stage is intended for building (case-insensitive check based on your JSON)
+            if (stageExecution.getStageName().equalsIgnoreCase("Build")) {
+
+                log.info("Triggering build provider for stage: {}", stageExecution.getStageName());
+
+                try {
+                    // 1. Fetch the Metadata (Build Profile) using the ID stored in your request/execution context
+                    // Note: You may need to ensure the metadata ID is passed correctly.
+                    // Assuming the metadata ID is part of the execution's metaData map or reachable via the template name
+                    String metaDataId = (String) pipelineExecution.getMetaData().get("metaDataId");
+
+                    List<Metadata> metadataList = readTransactionService.findMetaDataByFilters(
+                            Map.of("_id", new ObjectId(metaDataId)));
+
+                    if (CollectionUtils.isEmpty(metadataList)) {
+                        log.error("Metadata not found for ID: {}", metaDataId);
+                        throw new CustomException(ErrorCode.METADATA_PROFILE_INVALID_DATA);
+                    }
+                    Metadata buildProfile = metadataList.getFirst();
+
+                    // 2. Extract values from the template steps (the 'values' map populated in generateTemplateForPipeline)
+                    Map<String, String> values = new HashMap<>();
+                    stageExecution.getTemplate().getSteps().forEach(step -> {
+                        if (step.getValues() != null) {
+                            step.getValues().forEach((k, v) -> values.put(k, String.valueOf(v)));
+                        }
+                    });
+
+                    // 3. Call the Build Provider
+                    buildProvider.triggerBuild(pipelineExecution, buildProfile, values);
+
+                    // 4. Update Stage Status
+                    stageExecution.setStatus(PipelineStepExecutionStatus.IN_PROGRESS);
+                    writeTransactionService.savePipelineExecutionToRepository(pipelineExecution);
+
+                } catch (Exception e) {
+                    log.error("Failed to trigger build for pipeline execution {}", pipelineExecution.getId(), e);
+                    stageExecution.setStatus(PipelineStepExecutionStatus.FAILED);
+                    writeTransactionService.savePipelineExecutionToRepository(pipelineExecution);
+                }
             }
         }
     }
@@ -187,5 +244,39 @@ public class PipelineServiceImpl implements PipelineService {
             throw new CustomException(ErrorCode.PIPELINE_TEMPLATE_COULD_NOT_BE_FOUND);
         }
         return pipelineTemplates.getFirst();
+    }
+
+    private void handleParamGenerationForBuildStep(PipelineExecutionRequest request, Template.Step step, JsonNode profileConfig, Metadata buildProfile) {
+
+        String decodedData = Base64Util.convertToPlainText(buildProfile.getData());
+        String commitId = String.valueOf(request.getMetaData().get("commitId"));
+        String dockerImageHashValue = buildProfile.getApplication().getName().toLowerCase() + "-"
+                + Base64Util.generate7DigitHash(decodedData) + ":" + commitId.substring(0, 7);
+
+        String scmProviderId = profileConfig.path("scmId").asText();
+
+        Map<String, Object> configs = new HashMap<>();
+        for (Map.Entry<String, Template.Step.TemplateStepParam> itr : step.getParams().entrySet()) {
+            if (ObjectUtils.isEmpty(profileConfig.path(itr.getKey()))) {
+                configs.put(itr.getKey(), "");
+            } else {
+                switch (itr.getKey()) {
+                    case "commitId": itr.getValue().setValue(commitId);
+                    break;
+                    case "repoURL": itr.getValue().setValue(credentialProviderService.extractSCMURL(scmProviderId) + "/" + profileConfig.path("repo").asText());
+                    break;
+                    case "serviceName": itr.getValue().setValue(buildProfile.getApplication().getName());
+                    break;
+                    case "dockerImageHashValue": itr.getValue().setValue(dockerImageHashValue);
+                    break;
+                    default:
+                        itr.getValue().setValue(profileConfig.path(itr.getKey()).asText());
+                        configs.put(itr.getKey(), profileConfig.path(itr.getKey()).asText());
+                }
+            }
+        }
+        step.setValues(configs);
+        step.setMetadata(new HashMap<>());
+        step.setStatus(StepExecutionStatus.IN_PROGRESS);
     }
 }

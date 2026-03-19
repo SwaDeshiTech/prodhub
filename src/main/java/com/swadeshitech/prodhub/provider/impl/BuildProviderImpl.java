@@ -34,9 +34,6 @@ public class BuildProviderImpl implements BuildProvider {
     @Autowired
     ObjectMapper objectMapper;
 
-    @Autowired
-    CredentialProviderService credentialProviderService;
-
     @Override
     public BuildTriggerResponse triggerBuild(PipelineExecution pipelineExecution, Metadata buildProfile,
             Map<String, String> values) {
@@ -60,11 +57,8 @@ public class BuildProviderImpl implements BuildProvider {
             jobName += "-" + ephemeralEnvironment;
         }
 
-        Map<String, String> params = generateParamsForProvider(pipelineExecution, data, buildProfile, decodedData);
-
         BuildTriggerRequest request = BuildTriggerRequest.builder()
                 .triggeredBy(pipelineExecution.getCreatedBy())
-                .parameters(params)
                 .refId(UuidUtil.generateRandomUuid())
                 .build();
 
@@ -72,29 +66,5 @@ public class BuildProviderImpl implements BuildProvider {
         BuildTriggerResponse response = buildTriggerResponse.blockOptional().get();
         log.info("Printing ci-captain build response {}", response);
         return response;
-    }
-
-    private Map<String, String> generateParamsForProvider(PipelineExecution pipelineExecution, JsonNode data, Metadata buildProfile, String decodedData) {
-
-        String commitId = String.valueOf(pipelineExecution.getMetaData().get("commitId"));
-        String dockerImageHashValue = buildProfile.getApplication().getName().toLowerCase() + "-"
-                + Base64Util.generate7DigitHash(decodedData) + ":" + commitId.substring(0, 7);
-
-        String scmProviderId = data.path("scmId").asText();
-
-        Map<String, String> params = new HashMap<>();
-        params.put("BRANCH_NAME", data.path("branchName").asText());
-        params.put("COMMIT_ID", commitId);
-        params.put("BASE_IMAGE", data.path("baseImage").asText());
-        params.put("BUILD_COMMAND", data.path("buildCommand").asText());
-        params.put("REPO_URL", credentialProviderService.extractSCMURL(scmProviderId) + "/" + data.path("repo").asText());
-        params.put("ARTIFACT_PATH", data.path("artifactPath").asText());
-        params.put("JOB_TEMPLATE", data.path("buildTemplate").asText());
-        params.put("SERVICE_NAME", buildProfile.getApplication().getName());
-        params.put("PROFILE_PATH", data.path("profilePath").asText());
-        params.put("DOCKER_IMAGE_HASH_VALUE", dockerImageHashValue);
-        params.put("BUILD_PATH", data.path("buildPath").asText());
-
-        return params;
     }
 }

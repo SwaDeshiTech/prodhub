@@ -24,8 +24,6 @@ public class PipelineTemplate extends BaseEntity {
 
     private List<StageDefinition> stages;
 
-    private PipelineTemplateType pipelineTemplateType;
-
     @Data
     @Builder
     public static class StageDefinition {
