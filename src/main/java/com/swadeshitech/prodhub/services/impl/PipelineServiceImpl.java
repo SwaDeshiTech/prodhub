@@ -10,6 +10,7 @@ import com.swadeshitech.prodhub.entity.PipelineTemplate;
 import com.swadeshitech.prodhub.entity.Template;
 import com.swadeshitech.prodhub.enums.*;
 import com.swadeshitech.prodhub.exception.CustomException;
+import com.swadeshitech.prodhub.integration.cicaptain.dto.BuildTriggerResponse;
 import com.swadeshitech.prodhub.integration.kafka.producer.KafkaProducer;
 import com.swadeshitech.prodhub.provider.BuildProvider;
 import com.swadeshitech.prodhub.services.CredentialProviderService;
@@ -77,7 +78,7 @@ public class PipelineServiceImpl implements PipelineService {
         pipelineExecution.setStageExecutions(createStages(request, pipelineTemplate, request.getMetaDataID()));
         pipelineExecution.setPipelineTemplate(pipelineTemplate);
         pipelineExecution.setStatus(PipelineStatus.PENDING);
-        pipelineExecution.setMetaData(Map.of("metaDataId", request.getMetaDataID()));
+        pipelineExecution.setMetaData(new HashMap<>(Map.of("metaDataId", request.getMetaDataID())));
 
         return writeTransactionService.savePipelineExecutionToRepository(pipelineExecution);
     }
@@ -217,10 +218,17 @@ public class PipelineServiceImpl implements PipelineService {
                     });
 
                     // 3. Call the Build Provider
-                    buildProvider.triggerBuild(pipelineExecution, buildProfile, values);
+                    BuildTriggerResponse buildTriggerResponse = buildProvider.triggerBuild(pipelineExecution, buildProfile, values);
 
                     // 4. Update Stage Status
                     stageExecution.setStatus(PipelineStepExecutionStatus.IN_PROGRESS);
+                    if (pipelineExecution.getMetaData() == null) {
+                        pipelineExecution.setMetaData(new HashMap<>());
+                    }
+                    if (buildTriggerResponse != null && buildTriggerResponse.data() != null) {
+                        pipelineExecution.getMetaData().put("ciCaptainBuildId", buildTriggerResponse.data().buildId());
+                        pipelineExecution.getMetaData().put("ciCaptainStageExecutionId", stageExecution.getId());
+                    }
                     writeTransactionService.savePipelineExecutionToRepository(pipelineExecution);
 
                 } catch (Exception e) {

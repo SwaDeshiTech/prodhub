@@ -30,22 +30,9 @@ public class CiCaptainClient {
     @Value("${cicaptain.buildStatus}")
     String buildStatusPath;
 
-    /**
-     * Triggers a CI Captain job using a reactive, non-blocking POST.
-     *
-     * @param providerId  e.g., "68d8f3b62d7f621b3ab8da6d"
-     * @param jobName     e.g., "prodhub_build"
-     * @param request     BuildTriggerRequest payload
-     * @return            Mono<CiCaptainResponse>
-     */
-    public Mono<BuildTriggerResponse> triggerBuild(
-            String providerId,
-            String jobName,
-            BuildTriggerRequest request
-    ) {
+    public Mono<BuildTriggerResponse> triggerBuild(BuildTriggerRequest request) {
         return webClient.post()
-                .uri(cicaptainBaseURL + triggerBuildPath,
-                        providerId, jobName)
+                .uri(cicaptainBaseURL + triggerBuildPath)
                 .contentType(MediaType.APPLICATION_JSON)
                 .accept(MediaType.APPLICATION_JSON)
                 .bodyValue(request)
