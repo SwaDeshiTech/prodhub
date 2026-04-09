@@ -70,8 +70,19 @@ public class PipelineServiceImpl implements PipelineService {
     @Override
     public PipelineExecution createPipelineExecution(PipelineExecutionRequest request) {
 
+        // Fetch metadata to extract pipelineTemplateId
+        List<Metadata> metadataList = readTransactionService.findMetaDataByFilters(
+                Map.of("_id", new ObjectId(request.getMetaDataID())));
+        if (CollectionUtils.isEmpty(metadataList)) {
+            log.error("Metadata could not be found for ID {}", request.getMetaDataID());
+            throw new CustomException(ErrorCode.METADATA_PROFILE_INVALID_DATA);
+        }
+        Metadata metadata = metadataList.getFirst();
+
+        String pipelineTemplateId = extractPipelineTemplateIdFromMetadata(metadata);
+
         PipelineTemplate pipelineTemplate = fetchPipelineTemplate(
-                Map.of("name", request.getPipelineTemplateName())
+                Map.of("_id", new ObjectId(pipelineTemplateId))
         );
 
         PipelineExecution pipelineExecution = new PipelineExecution();
@@ -81,6 +92,22 @@ public class PipelineServiceImpl implements PipelineService {
         pipelineExecution.setMetaData(new HashMap<>(Map.of("metaDataId", request.getMetaDataID())));
 
         return writeTransactionService.savePipelineExecutionToRepository(pipelineExecution);
+    }
+
+    private String extractPipelineTemplateIdFromMetadata(Metadata metadata) {
+        try {
+            JsonNode metadataJson = objectMapper.readTree(
+                    Base64Util.convertToPlainText(metadata.getData()));
+            JsonNode pipelineTemplateIdNode = metadataJson.path("pipelineTemplateId");
+            if (pipelineTemplateIdNode.isMissingNode() || !StringUtils.hasText(pipelineTemplateIdNode.asText())) {
+                log.error("pipelineTemplateId not found in metadata {}", metadata.getId());
+                throw new CustomException(ErrorCode.PIPELINE_TEMPLATE_COULD_NOT_BE_FOUND);
+            }
+            return pipelineTemplateIdNode.asText();
+        } catch (JsonProcessingException e) {
+            log.error("Unable to parse metadata data for ID {}", metadata.getId(), e);
+            throw new CustomException(ErrorCode.METADATA_PROFILE_INVALID_DATA);
+        }
     }
 
     @Override

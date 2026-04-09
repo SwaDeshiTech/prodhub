@@ -84,7 +84,7 @@ public class EphemeralEnvironment {
                 }
                 PipelineExecutionRequest pipelineExecutionRequest = PipelineExecutionRequest.builder()
                         .metaDataID(metadataList.getFirst().getId())
-                        .pipelineTemplateName(pipelineTemplate.getName())
+                        //.pipelineTemplateName(pipelineTemplate.getName())
                         .build();
                 PipelineExecution pipelineExecution = pipelineService.createPipelineExecution(pipelineExecutionRequest);
                 pipelineExecutions.add(pipelineExecution);
