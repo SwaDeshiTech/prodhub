@@ -1,5 +1,6 @@
 package com.swadeshitech.prodhub.controller;
 
+import com.swadeshitech.prodhub.dto.DropdownDTO;
 import com.swadeshitech.prodhub.dto.PipelineTemplateRequest;
 import com.swadeshitech.prodhub.dto.PipelineTemplateResponse;
 import com.swadeshitech.prodhub.dto.Response;
@@ -8,6 +9,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/pipelineTemplate")
@@ -43,4 +46,19 @@ public class PipelineTemplate {
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 
+    @GetMapping("/dropdown")
+    public ResponseEntity<Response> getPipelineTemplatesForDropdown() {
+
+        List<DropdownDTO> dropdownList = pipelineTemplateService.getAllPipelineTemplatesForDropdown();
+
+        Response response = Response.builder()
+                .httpStatus(HttpStatus.OK)
+                .message("Successfully fetched pipeline templates for dropdown")
+                .response(dropdownList)
+                .build();
+
+        return ResponseEntity.status(HttpStatus.OK).body(response);
+    }
+
 }
+

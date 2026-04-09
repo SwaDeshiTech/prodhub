@@ -9,6 +9,5 @@ import java.util.Map;
 @Builder
 public class PipelineExecutionRequest {
     Map<String, String> metaData;
-    private String pipelineTemplateName;
     private String metaDataID;
 }

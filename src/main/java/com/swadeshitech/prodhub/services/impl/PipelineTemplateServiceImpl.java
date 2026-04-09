@@ -1,5 +1,6 @@
 package com.swadeshitech.prodhub.services.impl;
 
+import com.swadeshitech.prodhub.dto.DropdownDTO;
 import com.swadeshitech.prodhub.dto.PipelineTemplateRequest;
 import com.swadeshitech.prodhub.dto.PipelineTemplateResponse;
 import com.swadeshitech.prodhub.entity.PipelineTemplate;
@@ -19,6 +20,7 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -87,5 +89,14 @@ public class PipelineTemplateServiceImpl implements PipelineTemplateService {
                     .build());
         }
         return stageDefinitions;
+    }
+
+    @Override
+    public List<DropdownDTO> getAllPipelineTemplatesForDropdown() {
+        List<PipelineTemplate> pipelineTemplates = readTransactionService.findByDynamicOrFilters(
+                Map.of("isActive", true), PipelineTemplate.class);
+        return pipelineTemplates.stream()
+                .map(template -> new DropdownDTO(template.getId(), template.getName()))
+                .collect(Collectors.toList());
     }
 }
