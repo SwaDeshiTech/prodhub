@@ -26,6 +26,8 @@ public class Template extends BaseEntity {
 
     private Set<Step> steps;
 
+    private String provider;
+
     @Data
     @Builder
     public static class Step {

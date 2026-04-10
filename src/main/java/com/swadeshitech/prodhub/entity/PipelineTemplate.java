@@ -22,6 +22,8 @@ public class PipelineTemplate extends BaseEntity {
 
     private boolean isActive;
 
+    private String provider;
+
     private List<StageDefinition> stages;
 
     @Data
