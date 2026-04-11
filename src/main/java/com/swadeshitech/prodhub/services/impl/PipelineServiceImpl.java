@@ -85,7 +85,8 @@ public class PipelineServiceImpl implements PipelineService {
         String pipelineTemplateId = extractPipelineTemplateIdFromMetadata(metadata);
 
         PipelineTemplate pipelineTemplate = fetchPipelineTemplate(
-                Map.of("_id", new ObjectId(pipelineTemplateId)));
+                Map.of("_id", new ObjectId(pipelineTemplateId))
+        );
 
         PipelineExecution pipelineExecution = new PipelineExecution();
         pipelineExecution.setStageExecutions(createStages(request, pipelineTemplate, request.getMetaDataID()));
