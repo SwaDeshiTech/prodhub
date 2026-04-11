@@ -29,7 +29,10 @@ public enum PipelineStepExecutionStatus {
     ROLLING_BACK("Rolling Back"),
 
     /** The Pipeline Step has been successfully rolled back after a failure */
-    ROLLED_BACK("Rolled Back");
+    ROLLED_BACK("Rolled Back"),
+
+    /** The Pipeline Step was skipped due to a previous stage failure */
+    SKIPPED("Skipped");
 
     private final String message;
 

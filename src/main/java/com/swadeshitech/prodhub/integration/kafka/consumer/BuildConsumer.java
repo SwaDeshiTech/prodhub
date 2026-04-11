@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.swadeshitech.prodhub.entity.PipelineExecution;
+import com.swadeshitech.prodhub.entity.Template;
 import com.swadeshitech.prodhub.enums.PipelineStatus;
 import com.swadeshitech.prodhub.enums.PipelineStepExecutionStatus;
 import com.swadeshitech.prodhub.enums.StepExecutionStatus;
@@ -19,6 +20,7 @@ import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
@@ -96,31 +98,110 @@ public class BuildConsumer {
             return;
         }
 
-        PipelineStepExecutionStatus pipelineStepExecutionStatus = toPipelineStageStatus(buildUpdateMessage.status());
-        stageExecution.setStatus(pipelineStepExecutionStatus);
-        if (isTerminal(pipelineStepExecutionStatus)) {
-            stageExecution.setEndTime(LocalDateTime.now());
-        }
+        StepExecutionStatus stepStatus = toStepStatus(buildUpdateMessage.status());
+        updateStepStatus(stageExecution, "build", stepStatus);
 
+        handleStepCompletion(pipelineExecution, stageExecution, stepStatus);
+    }
+
+    private void updateStepStatus(PipelineExecution.StageExecution stageExecution, String stepName, StepExecutionStatus status) {
         if (stageExecution.getTemplate() != null && !CollectionUtils.isEmpty(stageExecution.getTemplate().getSteps())) {
             stageExecution.getTemplate().getSteps().forEach(step -> {
-                if ("build".equalsIgnoreCase(step.getStepName())) {
-                    step.setStatus(toStepStatus(buildUpdateMessage.status()));
+                if (stepName.equalsIgnoreCase(step.getStepName())) {
+                    step.setStatus(status);
                 }
             });
         }
+    }
 
-        if (pipelineStepExecutionStatus == PipelineStepExecutionStatus.FAILED
-                || pipelineStepExecutionStatus == PipelineStepExecutionStatus.ERROR) {
-            pipelineExecution.setStatus(PipelineStatus.FAILED);
+    private void handleStepCompletion(PipelineExecution pipelineExecution, PipelineExecution.StageExecution currentStage, StepExecutionStatus stepStatus) {
+        if (stepStatus == StepExecutionStatus.FAILED) {
+            handleStepFailure(pipelineExecution, currentStage);
+        } else if (stepStatus == StepExecutionStatus.COMPLETED) {
+            handleStepSuccess(pipelineExecution, currentStage);
+        }
+    }
+
+    private void handleStepFailure(PipelineExecution pipelineExecution, PipelineExecution.StageExecution failedStage) {
+        log.info("Handling step failure for stage {} in pipeline {}", failedStage.getStageName(), pipelineExecution.getId());
+
+        failedStage.setStatus(PipelineStepExecutionStatus.FAILED);
+        failedStage.setEndTime(LocalDateTime.now());
+
+        if (failedStage.isStopOnFailure()) {
+            skipRemainingStages(pipelineExecution, failedStage.getOrder());
+        }
+
+        pipelineExecution.setStatus(PipelineStatus.FAILED);
+    }
+
+    private void handleStepSuccess(PipelineExecution pipelineExecution, PipelineExecution.StageExecution currentStage) {
+        log.info("Handling step success for stage {} in pipeline {}", currentStage.getStageName(), pipelineExecution.getId());
+
+        boolean allStepsCompleted = checkAllStepsCompleted(currentStage);
+        if (allStepsCompleted) {
+            currentStage.setStatus(PipelineStepExecutionStatus.SUCCESS);
+            currentStage.setEndTime(LocalDateTime.now());
+
+            boolean allStagesCompleted = checkAllStagesCompleted(pipelineExecution);
+            pipelineExecution.setStatus(allStagesCompleted ? PipelineStatus.SUCCESS : PipelineStatus.IN_PROGRESS);
+        } else {
+            currentStage.setStatus(PipelineStepExecutionStatus.IN_PROGRESS);
+            executeNextStep(currentStage);
+        }
+    }
+
+    private boolean checkAllStepsCompleted(PipelineExecution.StageExecution stageExecution) {
+        if (stageExecution.getTemplate() == null || CollectionUtils.isEmpty(stageExecution.getTemplate().getSteps())) {
+            return true;
+        }
+        return stageExecution.getTemplate().getSteps().stream()
+                .filter(step -> !step.isSkipStep())
+                .allMatch(step -> step.getStatus() == StepExecutionStatus.COMPLETED);
+    }
+
+    private boolean checkAllStagesCompleted(PipelineExecution pipelineExecution) {
+        return pipelineExecution.getStageExecutions().stream()
+                .filter(stage -> !"init".equalsIgnoreCase(stage.getStageName()))
+                .allMatch(stage -> stage.getStatus() == PipelineStepExecutionStatus.SUCCESS);
+    }
+
+    private void executeNextStep(PipelineExecution.StageExecution stageExecution) {
+        if (stageExecution.getTemplate() == null || CollectionUtils.isEmpty(stageExecution.getTemplate().getSteps())) {
             return;
         }
 
-        boolean allDone = pipelineExecution.getStageExecutions().stream()
-                .filter(stage -> !"init".equalsIgnoreCase(stage.getStageName()))
-                .allMatch(stage -> stage.getStatus() == PipelineStepExecutionStatus.SUCCESS);
+        List<Template.Step> steps = stageExecution.getTemplate().getSteps().stream()
+                .sorted(Comparator.comparingInt(Template.Step::getOrder))
+                .toList();
 
-        pipelineExecution.setStatus(allDone ? PipelineStatus.SUCCESS : PipelineStatus.IN_PROGRESS);
+        for (Template.Step step : steps) {
+            if (step.getStatus() == StepExecutionStatus.CREATED || step.getStatus() == StepExecutionStatus.IN_PROGRESS) {
+                if (!step.isSkipStep()) {
+                    step.setStatus(StepExecutionStatus.IN_PROGRESS);
+                    log.info("Executing next step {} in stage {}", step.getStepName(), stageExecution.getStageName());
+                }
+                break;
+            }
+        }
+    }
+
+    private void skipRemainingStages(PipelineExecution pipelineExecution, int failedStageOrder) {
+        log.info("Skipping remaining stages after failed stage order {} in pipeline {}", failedStageOrder, pipelineExecution.getId());
+
+        pipelineExecution.getStageExecutions().stream()
+                .filter(stage -> stage.getOrder() > failedStageOrder)
+                .forEach(stage -> {
+                    stage.setStatus(PipelineStepExecutionStatus.SKIPPED);
+                    stage.setEndTime(LocalDateTime.now());
+                    if (stage.getTemplate() != null && !CollectionUtils.isEmpty(stage.getTemplate().getSteps())) {
+                        stage.getTemplate().getSteps().forEach(step -> {
+                            if (step.getStatus() != StepExecutionStatus.COMPLETED && step.getStatus() != StepExecutionStatus.FAILED) {
+                                step.setStatus(StepExecutionStatus.SKIPPED);
+                            }
+                        });
+                    }
+                });
     }
 
     private PipelineExecution.StageExecution findBuildStageExecution(PipelineExecution pipelineExecution, String stageExecutionId) {

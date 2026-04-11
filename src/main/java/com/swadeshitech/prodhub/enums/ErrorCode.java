@@ -80,29 +80,39 @@ public enum ErrorCode {
         APPROVALS_NOT_FOUND("PH-16002", "Approvals not found", HttpStatus.NOT_FOUND),
         APPROVALS_LIST_NOT_FOUND("PH-16003", "Approvals list not found", HttpStatus.BAD_REQUEST),
 
-        APPROVALS_STAGE_UPDATE_FAILED("PH-17001", "Approvals stage could not be updated", HttpStatus.INTERNAL_SERVER_ERROR),
+        APPROVALS_STAGE_UPDATE_FAILED("PH-17001", "Approvals stage could not be updated",
+                        HttpStatus.INTERNAL_SERVER_ERROR),
         APPROVALS_STAGE_NOT_FOUND("PH-17002", "Approvals stage not found", HttpStatus.NOT_FOUND),
 
         CODE_FREEZE_UPDATE_FAILED("PH-18001", "Code freeze could not be updated", HttpStatus.INTERNAL_SERVER_ERROR),
         CODE_FREEZE_NOT_FOUND("PH-18002", "Code freeze not found", HttpStatus.NOT_FOUND),
         CODE_FREEZE_LIST_NOT_FOUND("PH-18003", "Code freeze list not found", HttpStatus.NOT_FOUND),
 
-        DEPLOYMENT_SET_COULD_NOT_BE_CREATED("PH-19001", "Deployment set could not be created", HttpStatus.INTERNAL_SERVER_ERROR),
+        DEPLOYMENT_SET_COULD_NOT_BE_CREATED("PH-19001", "Deployment set could not be created",
+                        HttpStatus.INTERNAL_SERVER_ERROR),
         DEPLOYMENT_SET_NOT_FOUND("PH-19002", "Deployment set could not be found", HttpStatus.NOT_FOUND),
 
-        DEPLOYMENT_COULD_NOT_BE_CREATED("PH-19001", "Deployment could not be created", HttpStatus.INTERNAL_SERVER_ERROR),
+        DEPLOYMENT_COULD_NOT_BE_CREATED("PH-19001", "Deployment could not be created",
+                        HttpStatus.INTERNAL_SERVER_ERROR),
         DEPLOYMENT_NOT_FOUND("PH-19002", "Deployment could not be found", HttpStatus.NOT_FOUND),
 
-        DEPLOYMENT_RUN_COULD_NOT_BE_CREATED("PH-19001", "Deployment run could not be created", HttpStatus.INTERNAL_SERVER_ERROR),
+        DEPLOYMENT_RUN_COULD_NOT_BE_CREATED("PH-19001", "Deployment run could not be created",
+                        HttpStatus.INTERNAL_SERVER_ERROR),
         DEPLOYMENT_RUN_NOT_FOUND("PH-19002", "Deployment run could not be found", HttpStatus.NOT_FOUND),
 
-        DEPLOYMENT_TEMPLATE_COULD_NOT_BE_CREATED("PH-20001", "Deployment template could not be created", HttpStatus.INTERNAL_SERVER_ERROR),
-        DEPLOYMENT_TEMPLATE_COULD_NOT_BE_FOUND("PH-20002", "Deployment template could not be found", HttpStatus.NOT_FOUND),
+        DEPLOYMENT_TEMPLATE_COULD_NOT_BE_CREATED("PH-20001", "Deployment template could not be created",
+                        HttpStatus.INTERNAL_SERVER_ERROR),
+        DEPLOYMENT_TEMPLATE_COULD_NOT_BE_FOUND("PH-20002", "Deployment template could not be found",
+                        HttpStatus.NOT_FOUND),
 
-        PIPELINE_TEMPLATE_COULD_NOT_BE_CREATED("PH-210001", "Pipeline template could not be created", HttpStatus.INTERNAL_SERVER_ERROR),
+        PIPELINE_TEMPLATE_COULD_NOT_BE_CREATED("PH-210001", "Pipeline template could not be created",
+                        HttpStatus.INTERNAL_SERVER_ERROR),
         PIPELINE_TEMPLATE_COULD_NOT_BE_FOUND("PH-210002", "Pipeline template could not be found", HttpStatus.NOT_FOUND),
 
-        PIPELINE_EXECUTION_COULD_NOT_BE_CREATED("PH-220001", "Pipeline execution could not be created", HttpStatus.INTERNAL_SERVER_ERROR);
+        PIPELINE_EXECUTION_COULD_NOT_BE_CREATED("PH-220001", "Pipeline execution could not be created",
+                        HttpStatus.INTERNAL_SERVER_ERROR),
+        PIPELINE_EXECUTION_COULD_NOT_BE_FOUND("PH-220002", "Pipeline execution could not be found",
+                        HttpStatus.NOT_FOUND);
 
         private final String code;
         private final String description;
