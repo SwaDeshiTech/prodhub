@@ -4,6 +4,7 @@ import com.swadeshitech.prodhub.dto.TemplateRequest;
 import com.swadeshitech.prodhub.dto.TemplateResponse;
 import com.swadeshitech.prodhub.entity.Template;
 import com.swadeshitech.prodhub.enums.StepExecutionStatus;
+import com.swadeshitech.prodhub.repository.TemplateRepository;
 import com.swadeshitech.prodhub.services.TemplateService;
 import com.swadeshitech.prodhub.transaction.write.WriteTransactionService;
 import lombok.extern.slf4j.Slf4j;
@@ -19,6 +20,9 @@ public class TemplateServiceImpl implements TemplateService {
     @Autowired
     WriteTransactionService writeTransactionService;
 
+    @Autowired
+    TemplateRepository templateRepository;
+
     @Override
     public TemplateResponse createTemplate(TemplateRequest request) {
 
@@ -32,6 +36,16 @@ public class TemplateServiceImpl implements TemplateService {
         template = writeTransactionService.saveTemplate(template);
 
         return TemplateResponse.mapDTOToEntity(template);
+    }
+
+    @Override
+    public List<TemplateResponse> getAllTemplates() {
+        List<Template> templates = templateRepository.findAll();
+        List<TemplateResponse> templateResponses = new ArrayList<>();
+        for (Template template : templates) {
+            templateResponses.add(TemplateResponse.mapDTOToEntity(template));
+        }
+        return templateResponses;
     }
 
     private Set<Template.Step> generateStep(List<TemplateRequest.TemplateStepRequest> stepRequests) {
