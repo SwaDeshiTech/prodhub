@@ -280,6 +280,53 @@ public class ReadTransactionService {
         return mongoTemplate.find(query, PipelineExecution.class);
     }
 
+    public Page<PipelineExecution> findPipelineExecutionsByFiltersPaginated(
+            Map<String, Object> filters,
+            Integer page,
+            Integer size,
+            String sortBy,
+            Sort.Direction direction) {
+
+        int finalPage = (page != null) ? page : 0;
+        int finalSize = (size != null) ? size : 10;
+        String finalSort = StringUtils.hasText(sortBy) ? sortBy : "createdTime";
+        Sort.Direction finalDir = (direction != null) ? direction : Sort.Direction.DESC;
+
+        Query query = new Query();
+
+        filters.forEach((key, value) -> {
+            if (value != null) {
+                if (value instanceof Iterable) {
+                    Iterable<?> iterable = (Iterable<?>) value;
+                    List<Object> list = new ArrayList<>();
+                    iterable.forEach(list::add);
+                    if (!list.isEmpty()) {
+                        query.addCriteria(Criteria.where(key).in(list));
+                    }
+                } else if (value.getClass().isArray()) {
+                    Object[] arr = (Object[]) value;
+                    if (arr.length > 0) {
+                        query.addCriteria(Criteria.where(key).in(Arrays.asList(arr)));
+                    }
+                } else {
+                    query.addCriteria(Criteria.where(key).is(value));
+                }
+            }
+        });
+
+        Pageable pageable = PageRequest.of(finalPage, finalSize, Sort.by(finalDir, finalSort));
+        query.with(pageable);
+
+        log.info("Executing Pipeline Executions Mongo Query: {}", query);
+
+        List<PipelineExecution> list = mongoTemplate.find(query, PipelineExecution.class);
+        return PageableExecutionUtils.getPage(
+                list,
+                pageable,
+                () -> mongoTemplate.count(Query.of(query).limit(-1).skip(-1), PipelineExecution.class)
+        );
+    }
+
     public List<Application> findApplicationByFilters(Map<String, Object> filters) {
         Query query = new Query();
 

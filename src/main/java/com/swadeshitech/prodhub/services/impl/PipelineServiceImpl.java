@@ -3,6 +3,7 @@ package com.swadeshitech.prodhub.services.impl;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.swadeshitech.prodhub.dto.PaginatedResponse;
 import com.swadeshitech.prodhub.dto.PipelineExecutionDetailsDTO;
 import com.swadeshitech.prodhub.dto.PipelineExecutionRequest;
 import com.swadeshitech.prodhub.dto.StageExecutionDTO;
@@ -27,6 +28,8 @@ import org.bson.types.ObjectId;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.ObjectUtils;
@@ -363,6 +366,41 @@ public class PipelineServiceImpl implements PipelineService {
         return pipelineExecutions.stream()
                 .map(this::mapToDetailsDTO)
                 .toList();
+    }
+
+    @Override
+    public PaginatedResponse<PipelineExecutionDetailsDTO> getPipelineExecutionsPaginated(
+            Map<String, Object> filters,
+            Integer page,
+            Integer size,
+            String sortBy,
+            String order) {
+        Map<String, Object> queryFilters = new HashMap<>();
+
+        filters.forEach((key, value) -> {
+            if (key.equalsIgnoreCase("serviceId")) {
+                queryFilters.put("metaData.serviceId", value);
+            } else {
+                queryFilters.put(key, value);
+            }
+        });
+
+        Sort.Direction direction = "ASC".equalsIgnoreCase(order) ? Sort.Direction.ASC : Sort.Direction.DESC;
+        Page<PipelineExecution> pipelineExecutionsPage = readTransactionService.findPipelineExecutionsByFiltersPaginated(
+                queryFilters, page, size, sortBy, direction);
+
+        List<PipelineExecutionDetailsDTO> content = pipelineExecutionsPage.getContent().stream()
+                .map(this::mapToDetailsDTO)
+                .toList();
+
+        return PaginatedResponse.<PipelineExecutionDetailsDTO>builder()
+                .content(content)
+                .pageNumber(pipelineExecutionsPage.getNumber())
+                .pageSize(pipelineExecutionsPage.getSize())
+                .totalElements(pipelineExecutionsPage.getTotalElements())
+                .totalPages(pipelineExecutionsPage.getTotalPages())
+                .isLast(pipelineExecutionsPage.isLast())
+                .build();
     }
 
     private PipelineExecutionDetailsDTO mapToDetailsDTO(PipelineExecution pipelineExecution) {

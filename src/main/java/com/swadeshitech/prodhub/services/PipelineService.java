@@ -1,5 +1,6 @@
 package com.swadeshitech.prodhub.services;
 
+import com.swadeshitech.prodhub.dto.PaginatedResponse;
 import com.swadeshitech.prodhub.dto.PipelineExecutionDetailsDTO;
 import com.swadeshitech.prodhub.dto.PipelineExecutionRequest;
 import com.swadeshitech.prodhub.entity.PipelineExecution;
@@ -20,4 +21,11 @@ public interface PipelineService {
     PipelineExecutionDetailsDTO getPipelineExecutionDetails(String pipelineExecutionId);
 
     List<PipelineExecutionDetailsDTO> getPipelineExecutions(Map<String, Object> filters);
+
+    PaginatedResponse<PipelineExecutionDetailsDTO> getPipelineExecutionsPaginated(
+            Map<String, Object> filters,
+            Integer page,
+            Integer size,
+            String sortBy,
+            String order);
 }

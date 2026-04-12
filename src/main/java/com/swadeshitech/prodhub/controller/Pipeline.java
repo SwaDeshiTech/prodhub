@@ -1,5 +1,6 @@
 package com.swadeshitech.prodhub.controller;
 
+import com.swadeshitech.prodhub.dto.PaginatedResponse;
 import com.swadeshitech.prodhub.dto.PipelineExecutionDetailsDTO;
 import com.swadeshitech.prodhub.dto.PipelineExecutionRequest;
 import com.swadeshitech.prodhub.dto.Response;
@@ -7,6 +8,7 @@ import com.swadeshitech.prodhub.enums.ErrorCode;
 import com.swadeshitech.prodhub.exception.CustomException;
 import com.swadeshitech.prodhub.services.PipelineService;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -61,14 +63,20 @@ public class Pipeline {
 
     @GetMapping
     @RequestMapping("/executions")
-    public ResponseEntity<Response> getPipelineExecutions(@RequestParam Map<String, Object> filters) {
+    public ResponseEntity<Response> getPipelineExecutions(
+            @RequestParam(required = false) String serviceId,
+            @RequestParam(defaultValue = "0") Integer page,
+            @RequestParam(defaultValue = "10") Integer size,
+            @RequestParam(defaultValue = "createdTime") String sortBy,
+            @RequestParam(defaultValue = "DESC") String order) {
 
-        if (!filters.containsKey("serviceId")) {
-            throw new CustomException(ErrorCode.PIPELINE_SERVICE_ID_IS_MANDATORY);
+        Map<String, Object> filters = new HashMap<>();
+        if (serviceId != null && !serviceId.isEmpty()) {
+            filters.put("serviceId", serviceId);
         }
 
-        List<PipelineExecutionDetailsDTO> pipelineExecutions = pipelineService
-                .getPipelineExecutions(filters);
+        PaginatedResponse<PipelineExecutionDetailsDTO> pipelineExecutions = pipelineService
+                .getPipelineExecutionsPaginated(filters, page, size, sortBy, order);
 
         Response response = Response.builder()
                 .httpStatus(HttpStatus.OK)
