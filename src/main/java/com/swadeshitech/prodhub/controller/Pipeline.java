@@ -3,7 +3,13 @@ package com.swadeshitech.prodhub.controller;
 import com.swadeshitech.prodhub.dto.PipelineExecutionDetailsDTO;
 import com.swadeshitech.prodhub.dto.PipelineExecutionRequest;
 import com.swadeshitech.prodhub.dto.Response;
+import com.swadeshitech.prodhub.enums.ErrorCode;
+import com.swadeshitech.prodhub.exception.CustomException;
 import com.swadeshitech.prodhub.services.PipelineService;
+
+import java.util.List;
+import java.util.Map;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -12,6 +18,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -47,6 +54,26 @@ public class Pipeline {
                 .httpStatus(HttpStatus.OK)
                 .message("Successfully retrieved pipeline execution details")
                 .response(pipelineExecutionDetails)
+                .build();
+
+        return ResponseEntity.status(HttpStatus.OK).body(response);
+    }
+
+    @GetMapping
+    @RequestMapping("/executions")
+    public ResponseEntity<Response> getPipelineExecutions(@RequestParam Map<String, Object> filters) {
+
+        if (!filters.containsKey("serviceId")) {
+            throw new CustomException(ErrorCode.PIPELINE_SERVICE_ID_IS_MANDATORY);
+        }
+
+        List<PipelineExecutionDetailsDTO> pipelineExecutions = pipelineService
+                .getPipelineExecutions(filters);
+
+        Response response = Response.builder()
+                .httpStatus(HttpStatus.OK)
+                .message("Successfully retrieved pipeline executions")
+                .response(pipelineExecutions)
                 .build();
 
         return ResponseEntity.status(HttpStatus.OK).body(response);

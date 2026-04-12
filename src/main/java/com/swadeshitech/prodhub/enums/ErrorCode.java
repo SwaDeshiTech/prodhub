@@ -112,7 +112,8 @@ public enum ErrorCode {
         PIPELINE_EXECUTION_COULD_NOT_BE_CREATED("PH-220001", "Pipeline execution could not be created",
                         HttpStatus.INTERNAL_SERVER_ERROR),
         PIPELINE_EXECUTION_COULD_NOT_BE_FOUND("PH-220002", "Pipeline execution could not be found",
-                        HttpStatus.NOT_FOUND);
+                        HttpStatus.NOT_FOUND),
+        PIPELINE_SERVICE_ID_IS_MANDATORY("PH-220003", "Pipeline service ID is mandatory", HttpStatus.BAD_REQUEST);
 
         private final String code;
         private final String description;

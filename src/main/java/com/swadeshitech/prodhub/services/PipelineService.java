@@ -5,6 +5,9 @@ import com.swadeshitech.prodhub.dto.PipelineExecutionRequest;
 import com.swadeshitech.prodhub.entity.PipelineExecution;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
+import java.util.Map;
+
 @Component
 public interface PipelineService {
 
@@ -15,4 +18,6 @@ public interface PipelineService {
     void startPipelineExecution(PipelineExecution pipelineExecution);
 
     PipelineExecutionDetailsDTO getPipelineExecutionDetails(String pipelineExecutionId);
+
+    List<PipelineExecutionDetailsDTO> getPipelineExecutions(Map<String, Object> filters);
 }

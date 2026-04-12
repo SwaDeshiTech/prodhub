@@ -92,7 +92,10 @@ public class PipelineServiceImpl implements PipelineService {
         pipelineExecution.setStageExecutions(createStages(request, pipelineTemplate, request.getMetaDataID()));
         pipelineExecution.setPipelineTemplate(pipelineTemplate);
         pipelineExecution.setStatus(PipelineStatus.PENDING);
-        pipelineExecution.setMetaData(new HashMap<>(Map.of("metaDataId", request.getMetaDataID())));
+        pipelineExecution.setMetaData(new HashMap<>(Map.of(
+                "metaDataId", request.getMetaDataID(),
+                "serviceId", metadata.getApplication().getId()
+        )));
 
         return writeTransactionService.savePipelineExecutionToRepository(pipelineExecution);
     }
@@ -339,13 +342,38 @@ public class PipelineServiceImpl implements PipelineService {
             throw new CustomException(ErrorCode.PIPELINE_EXECUTION_COULD_NOT_BE_FOUND);
         }
         PipelineExecution pipelineExecution = pipelineExecutions.getFirst();
-        
-        List<StageExecutionDTO> stageExecutions = pipelineExecution.getStageExecutions() != null 
+
+        return mapToDetailsDTO(pipelineExecution);
+    }
+
+    @Override
+    public List<PipelineExecutionDetailsDTO> getPipelineExecutions(Map<String, Object> filters) {
+        Map<String, Object> queryFilters = new HashMap<>();
+
+        filters.forEach((key, value) -> {
+            if (key.equalsIgnoreCase("serviceId")) {
+                queryFilters.put("metaData.serviceId", value);
+            } else {
+                queryFilters.put(key, value);
+            }
+        });
+
+        List<PipelineExecution> pipelineExecutions = readTransactionService.findPipelineExecutionsByFilters(queryFilters);
+
+        return pipelineExecutions.stream()
+                .map(this::mapToDetailsDTO)
+                .toList();
+    }
+
+    private PipelineExecutionDetailsDTO mapToDetailsDTO(PipelineExecution pipelineExecution) {
+        List<StageExecutionDTO> stageExecutions = pipelineExecution.getStageExecutions() != null
                 ? pipelineExecution.getStageExecutions().stream()
                         .map(stageExecution -> StageExecutionDTO.builder()
                                 .id(stageExecution.getId())
                                 .stageName(stageExecution.getStageName())
-                                .template(stageExecution.getTemplate() != null ? TemplateResponse.mapDTOToEntity(stageExecution.getTemplate()) : null)
+                                .template(stageExecution.getTemplate() != null
+                                        ? TemplateResponse.mapDTOToEntity(stageExecution.getTemplate())
+                                        : null)
                                 .status(stageExecution.getStatus())
                                 .order(stageExecution.getOrder())
                                 .stopOnFailure(stageExecution.isStopOnFailure())
@@ -360,6 +388,8 @@ public class PipelineServiceImpl implements PipelineService {
                 .status(pipelineExecution.getStatus())
                 .metaData(pipelineExecution.getMetaData())
                 .stageExecutions(stageExecutions)
+                .createdBy(pipelineExecution.getCreatedBy())
+                .createdTime(pipelineExecution.getCreatedTime())
                 .build();
     }
 }

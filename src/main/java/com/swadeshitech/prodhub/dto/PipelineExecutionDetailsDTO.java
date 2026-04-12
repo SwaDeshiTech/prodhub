@@ -15,4 +15,6 @@ public class PipelineExecutionDetailsDTO {
     private PipelineStatus status;
     private List<StageExecutionDTO> stageExecutions;
     private Map<String, Object> metaData;
+    private String createdBy;
+    private java.time.LocalDateTime createdTime;
 }

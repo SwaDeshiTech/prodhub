@@ -255,6 +255,31 @@ public class ReadTransactionService {
         return mongoTemplate.find(query, Metadata.class);
     }
 
+    public List<PipelineExecution> findPipelineExecutionsByFilters(Map<String, Object> filters) {
+        Query query = new Query();
+
+        filters.forEach((key, value) -> {
+            if (value != null) {
+                if (value instanceof Iterable) {
+                    Iterable<?> iterable = (Iterable<?>) value;
+                    List<Object> list = new ArrayList<>();
+                    iterable.forEach(list::add);
+                    if (!list.isEmpty()) {
+                        query.addCriteria(Criteria.where(key).in(list));
+                    }
+                } else if (value.getClass().isArray()) {
+                    Object[] arr = (Object[]) value;
+                    if (arr.length > 0) {
+                        query.addCriteria(Criteria.where(key).in(Arrays.asList(arr)));
+                    }
+                } else {
+                    query.addCriteria(Criteria.where(key).is(value));
+                }
+            }
+        });
+        return mongoTemplate.find(query, PipelineExecution.class);
+    }
+
     public List<Application> findApplicationByFilters(Map<String, Object> filters) {
         Query query = new Query();
 
