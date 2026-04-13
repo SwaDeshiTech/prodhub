@@ -1,16 +1,23 @@
 package com.swadeshitech.prodhub.controller;
 
 import com.swadeshitech.prodhub.dto.*;
+import com.swadeshitech.prodhub.integration.storage.FileUploadResponse;
 import com.swadeshitech.prodhub.services.DeploymentSetService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
 @RestController
 @RequestMapping("/deployment-set")
+@Tag(name = "Deployment Set", description = "API for managing deployment sets")
 public class DeploymentSet {
 
     @Autowired
@@ -72,5 +79,22 @@ public class DeploymentSet {
                 .build();
 
         return ResponseEntity.ok().body(response);
+    }
+
+    @PostMapping(value = "/{id}/upload-evidence", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "Upload evidence file for deployment set", description = "Uploads evidence file to storage provider for a deployment set")
+    public ResponseEntity<FileUploadResponse> uploadEvidence(
+            @Parameter(description = "Deployment set ID", required = true)
+            @PathVariable("id") String deploymentSetId,
+            @Parameter(description = "Evidence file to upload", required = true)
+            @RequestParam("file") MultipartFile file
+    ) {
+        FileUploadResponse response = deploymentSetService.uploadEvidenceFile(deploymentSetId, file);
+
+        if (response.isSuccess()) {
+            return ResponseEntity.ok(response);
+        } else {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+        }
     }
 }

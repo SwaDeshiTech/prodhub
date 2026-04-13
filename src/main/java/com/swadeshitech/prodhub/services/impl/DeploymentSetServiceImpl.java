@@ -4,6 +4,8 @@ import com.swadeshitech.prodhub.dto.*;
 import com.swadeshitech.prodhub.entity.*;
 import com.swadeshitech.prodhub.enums.*;
 import com.swadeshitech.prodhub.exception.CustomException;
+import com.swadeshitech.prodhub.integration.storage.FileUploadResponse;
+import com.swadeshitech.prodhub.services.FileUploadService;
 import com.swadeshitech.prodhub.services.MetadataService;
 import com.swadeshitech.prodhub.services.approval.ApprovalService;
 import com.swadeshitech.prodhub.services.DeploymentSetService;
@@ -18,6 +20,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
+import org.springframework.util.StringUtils;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.*;
 
@@ -42,6 +46,9 @@ public class DeploymentSetServiceImpl implements DeploymentSetService {
 
     @Autowired
     MetadataService metadataService;
+
+    @Autowired
+    FileUploadService fileUploadService;
 
     @Override
     public String createDeploymentSet(DeploymentSetRequest request) {
@@ -242,5 +249,67 @@ public class DeploymentSetServiceImpl implements DeploymentSetService {
                 .lastModifiedBy(deploymentSet.getLastModifiedBy())
                 .lastModifiedTime(deploymentSet.getLastModifiedTime())
                 .build();
+    }
+
+    @Override
+    public FileUploadResponse uploadEvidenceFile(String deploymentSetId, MultipartFile file) {
+        try {
+            // Get deployment set details
+            DeploymentSet deploymentSet = fetchDeploymentSet(Map.of("_id", new ObjectId(deploymentSetId)));
+            
+            // Extract service name and commit ID
+            String serviceName = deploymentSet.getApplication().getName();
+            String commitId = deploymentSet.getReleaseCandidate().getMetaData().get("commitId");
+            
+            // Get metadataId from deployment set's metadata
+            Object metadataIdObj = deploymentSet.getMetaData() != null 
+                    ? deploymentSet.getMetaData().get("evidenceRepositoryCredentialProviderId") 
+                    : null;
+            
+            if (metadataIdObj == null) {
+                return FileUploadResponse.builder()
+                        .success(false)
+                        .message("Evidence repository credential provider ID not found in deployment set metadata")
+                        .build();
+            }
+            
+            String metadataId = metadataIdObj.toString();
+            
+            // Always construct file name as deploymentSetId_commitId.extension
+            String originalFileName = file.getOriginalFilename();
+            String extension = getFileExtension(originalFileName);
+            String finalFileName = deploymentSetId + "_" + commitId + "." + extension;
+            
+            // Build folder path: evidence/{serviceName}/...
+            String folderPath = deploymentSetId;
+            
+            // Call file upload service
+            return fileUploadService.uploadFile(
+                    metadataId, 
+                    file, 
+                    serviceName, 
+                    finalFileName, 
+                    folderPath, 
+                    null
+            );
+            
+        } catch (Exception e) {
+            log.error("Error uploading evidence file for deployment set: {}", deploymentSetId, e);
+            return FileUploadResponse.builder()
+                    .success(false)
+                    .message("Error uploading evidence file: " + e.getMessage())
+                    .build();
+        }
+    }
+
+    private String getFileExtension(String fileName) {
+        if (!StringUtils.hasText(fileName)) {
+            return "";
+        }
+        int lastDotIndex = fileName.lastIndexOf('.');
+        if (lastDotIndex > 0 && lastDotIndex < fileName.length() - 1) {
+            return fileName.substring(lastDotIndex + 1);
+        }
+        return "";
     }
 }
