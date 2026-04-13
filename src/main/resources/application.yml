@@ -38,6 +38,7 @@ spring:
       buildStatusComplete: buildStatusComplete
       buildUpdate: build_update
       pipeline-execution: pipeline-execution
+      releaseCandidate: release_candidate
 
 management:
   endpoints:

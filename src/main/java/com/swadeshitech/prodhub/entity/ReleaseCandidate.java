@@ -43,5 +43,5 @@ public class ReleaseCandidate extends BaseEntity implements Serializable {
     private Application service;
 
     @DBRef
-    private Metadata buildProfile;
+    private PipelineExecution pipelineExecution;
 }
