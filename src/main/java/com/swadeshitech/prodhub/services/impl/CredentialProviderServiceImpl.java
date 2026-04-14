@@ -127,11 +127,11 @@ public class CredentialProviderServiceImpl implements CredentialProviderService 
         }
 
         CredentialProvider credentialProvider = credentialProviders.getFirst();
-        CredentialProviderResponse response = mapEntityToDTO(credentialProvider);
-        Map<String, Object> vaultResponse = vaultService.getSecret(credentialProvider.getCredentialPath());
+        /* Map<String, Object> vaultResponse = vaultService.getSecret(credentialProvider.getCredentialPath());
         response.setCredentialMetadata(vaultResponse != null ? vaultResponse.get("secret").toString() : null);
+        */
 
-        return response;
+        return mapEntityToDTO(credentialProvider);
     }
 
     @Override
