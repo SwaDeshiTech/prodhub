@@ -122,20 +122,27 @@ public class PipelineServiceImpl implements PipelineService {
     @Override
     public void startPipelineExecution(PipelineExecution pipelineExecution) {
         pipelineExecution.getStageExecutions().sort((o1, o2) -> o1.getOrder() - o2.getOrder());
+        
+        // Only trigger the first pending stage
         for (PipelineExecution.StageExecution stageExecution : pipelineExecution.getStageExecutions()) {
-            if (Objects.nonNull(stageExecution)) {
+            if (Objects.nonNull(stageExecution) && stageExecution.getStatus() == PipelineStepExecutionStatus.PENDING) {
+                log.info("Triggering stage: {} for pipeline execution: {}", stageExecution.getStageName(), pipelineExecution.getId());
+                
                 switch (stageExecution.getStageName().toLowerCase()) {
                     case "build":
-                        handleBuildPipelineTemplate(pipelineExecution);
+                        handleBuildPipelineTemplate(pipelineExecution, stageExecution);
                         break;
                     case "deployment":
-                        handleDeploymentPipelineTemplate(pipelineExecution);
+                        handleDeploymentPipelineTemplate(pipelineExecution, stageExecution);
                         break;
                     default:
-                        log.error("Unknow pipeline template type for pipeline execution {}", pipelineExecution.getId());
+                        log.error("Unknown pipeline template type for pipeline execution {}", pipelineExecution.getId());
                 }
+                return; // Exit after triggering the first pending stage
             }
         }
+        
+        log.info("No pending stages found for pipeline execution: {}", pipelineExecution.getId());
     }
 
     private List<PipelineExecution.StageExecution> createStages(PipelineExecutionRequest request,
@@ -222,68 +229,146 @@ public class PipelineServiceImpl implements PipelineService {
         return clonedTemplate;
     }
 
-    private void handleBuildPipelineTemplate(PipelineExecution pipelineExecution) {
+    private void handleBuildPipelineTemplate(PipelineExecution pipelineExecution, PipelineExecution.StageExecution stageExecution) {
         log.info("Handling build pipeline execution for ID: {}", pipelineExecution.getId());
 
-        for (PipelineExecution.StageExecution stageExecution : pipelineExecution.getStageExecutions()) {
-            // Check if the stage is intended for building (case-insensitive check based on
-            // your JSON)
-            if (stageExecution.getStageName().equalsIgnoreCase("Build")) {
+        log.info("Triggering build provider for stage: {}", stageExecution.getStageName());
 
-                log.info("Triggering build provider for stage: {}", stageExecution.getStageName());
+        try {
+            // 1. Fetch the Metadata (Build Profile) using the ID stored in your
+            // request/execution context
+            String metaDataId = (String) pipelineExecution.getMetaData().get("metaDataId");
 
-                try {
-                    // 1. Fetch the Metadata (Build Profile) using the ID stored in your
-                    // request/execution context
-                    // Note: You may need to ensure the metadata ID is passed correctly.
-                    // Assuming the metadata ID is part of the execution's metaData map or reachable
-                    // via the template name
-                    String metaDataId = (String) pipelineExecution.getMetaData().get("metaDataId");
+            List<Metadata> metadataList = readTransactionService.findMetaDataByFilters(
+                    Map.of("_id", new ObjectId(metaDataId)));
 
-                    List<Metadata> metadataList = readTransactionService.findMetaDataByFilters(
-                            Map.of("_id", new ObjectId(metaDataId)));
-
-                    if (CollectionUtils.isEmpty(metadataList)) {
-                        log.error("Metadata not found for ID: {}", metaDataId);
-                        throw new CustomException(ErrorCode.METADATA_PROFILE_INVALID_DATA);
-                    }
-                    Metadata buildProfile = metadataList.getFirst();
-
-                    // 2. Extract values from the template steps (the 'values' map populated in
-                    // generateTemplateForPipeline)
-                    Map<String, String> values = new HashMap<>();
-                    stageExecution.getTemplate().getSteps().forEach(step -> {
-                        if (step.getValues() != null) {
-                            step.getValues().forEach((k, v) -> values.put(k, String.valueOf(v)));
-                        }
-                    });
-
-                    // 3. Call the Build Provider
-                    BuildTriggerResponse buildTriggerResponse = buildProvider.triggerBuild(pipelineExecution,
-                            buildProfile, values);
-
-                    // 4. Update Stage Status
-                    stageExecution.setStatus(PipelineStepExecutionStatus.IN_PROGRESS);
-                    if (pipelineExecution.getMetaData() == null) {
-                        pipelineExecution.setMetaData(new HashMap<>());
-                    }
-                    if (buildTriggerResponse != null && buildTriggerResponse.data() != null) {
-                        pipelineExecution.getMetaData().put("ciCaptainBuildId", buildTriggerResponse.data().buildId());
-                        pipelineExecution.getMetaData().put("ciCaptainStageExecutionId", stageExecution.getId());
-                    }
-                    writeTransactionService.savePipelineExecutionToRepository(pipelineExecution);
-
-                } catch (Exception e) {
-                    log.error("Failed to trigger build for pipeline execution {}", pipelineExecution.getId(), e);
-                    stageExecution.setStatus(PipelineStepExecutionStatus.FAILED);
-                    writeTransactionService.savePipelineExecutionToRepository(pipelineExecution);
-                }
+            if (CollectionUtils.isEmpty(metadataList)) {
+                log.error("Metadata not found for ID: {}", metaDataId);
+                throw new CustomException(ErrorCode.METADATA_PROFILE_INVALID_DATA);
             }
+            Metadata buildProfile = metadataList.getFirst();
+
+            // 2. Extract values from the template steps (the 'values' map populated in
+            // generateTemplateForPipeline)
+            Map<String, String> values = new HashMap<>();
+            stageExecution.getTemplate().getSteps().forEach(step -> {
+                if (step.getValues() != null) {
+                    step.getValues().forEach((k, v) -> values.put(k, String.valueOf(v)));
+                }
+            });
+
+            // 3. Call the Build Provider
+            BuildTriggerResponse buildTriggerResponse = buildProvider.triggerBuild(pipelineExecution,
+                    buildProfile, values);
+
+            // 4. Update Stage Status
+            stageExecution.setStatus(PipelineStepExecutionStatus.IN_PROGRESS);
+            if (pipelineExecution.getMetaData() == null) {
+                pipelineExecution.setMetaData(new HashMap<>());
+            }
+            if (buildTriggerResponse != null && buildTriggerResponse.data() != null) {
+                pipelineExecution.getMetaData().put("ciCaptainBuildId", buildTriggerResponse.data().buildId());
+                pipelineExecution.getMetaData().put("ciCaptainStageExecutionId", stageExecution.getId());
+            }
+            writeTransactionService.savePipelineExecutionToRepository(pipelineExecution);
+
+        } catch (Exception e) {
+            log.error("Failed to trigger build for pipeline execution {}", pipelineExecution.getId(), e);
+            stageExecution.setStatus(PipelineStepExecutionStatus.FAILED);
+            writeTransactionService.savePipelineExecutionToRepository(pipelineExecution);
         }
     }
 
-    private void handleDeploymentPipelineTemplate(PipelineExecution pipelineExecution) {
+    private void handleDeploymentPipelineTemplate(PipelineExecution pipelineExecution, PipelineExecution.StageExecution stageExecution) {
+        log.info("Handling deployment pipeline execution for ID: {}", pipelineExecution.getId());
+        // TODO: Implement deployment logic
+        log.info("Deployment stage handling not yet implemented for stage: {}", stageExecution.getStageName());
+    }
 
+    public void processBuildCompletion(String buildRefId, String buildStatus) {
+        log.info("Processing build completion for buildRefId: {} with status: {}", buildRefId, buildStatus);
+
+        // Find pipeline execution by ciCaptainBuildId
+        List<PipelineExecution> pipelineExecutions = readTransactionService.findByDynamicOrFilters(
+                Map.of("metaData.ciCaptainBuildId", buildRefId), PipelineExecution.class);
+        
+        if (CollectionUtils.isEmpty(pipelineExecutions)) {
+            log.info("No pipeline execution found for buildRefId: {}", buildRefId);
+            return;
+        }
+
+        PipelineExecution pipelineExecution = pipelineExecutions.getFirst();
+        log.info("Found pipeline execution: {} for buildRefId: {}", pipelineExecution.getId(), buildRefId);
+
+        // Find the build stage and update its status
+        pipelineExecution.getStageExecutions().sort((o1, o2) -> o1.getOrder() - o2.getOrder());
+        
+        PipelineExecution.StageExecution currentStage = null;
+        for (PipelineExecution.StageExecution stageExecution : pipelineExecution.getStageExecutions()) {
+            if (stageExecution.getStatus() == PipelineStepExecutionStatus.IN_PROGRESS) {
+                currentStage = stageExecution;
+                break;
+            }
+        }
+
+        if (currentStage == null) {
+            log.info("No in-progress stage found for pipeline execution: {}", pipelineExecution.getId());
+            return;
+        }
+
+        // Update current stage status based on build status
+        if ("SUCCESS".equalsIgnoreCase(buildStatus)) {
+            currentStage.setStatus(PipelineStepExecutionStatus.SUCCESS);
+            currentStage.setEndTime(LocalDateTime.now());
+            log.info("Stage {} completed successfully for pipeline execution: {}", currentStage.getStageName(), pipelineExecution.getId());
+        } else {
+            currentStage.setStatus(PipelineStepExecutionStatus.FAILED);
+            currentStage.setEndTime(LocalDateTime.now());
+            log.info("Stage {} failed for pipeline execution: {}", currentStage.getStageName(), pipelineExecution.getId());
+            
+            // Check if we should stop on failure
+            if (currentStage.isStopOnFailure()) {
+                pipelineExecution.setStatus(PipelineStatus.FAILED);
+                writeTransactionService.savePipelineExecutionToRepository(pipelineExecution);
+                log.info("Pipeline execution {} stopped due to stage failure with stopOnFailure=true", pipelineExecution.getId());
+                return;
+            }
+        }
+
+        writeTransactionService.savePipelineExecutionToRepository(pipelineExecution);
+
+        // Trigger next stage if current stage succeeded
+        if ("SUCCESS".equalsIgnoreCase(buildStatus)) {
+            triggerNextStage(pipelineExecution);
+        }
+    }
+
+    private void triggerNextStage(PipelineExecution pipelineExecution) {
+        pipelineExecution.getStageExecutions().sort((o1, o2) -> o1.getOrder() - o2.getOrder());
+        
+        // Find the next pending stage
+        for (PipelineExecution.StageExecution stageExecution : pipelineExecution.getStageExecutions()) {
+            if (stageExecution.getStatus() == PipelineStepExecutionStatus.PENDING) {
+                log.info("Triggering next stage: {} for pipeline execution: {}", stageExecution.getStageName(), pipelineExecution.getId());
+                
+                switch (stageExecution.getStageName().toLowerCase()) {
+                    case "build":
+                        handleBuildPipelineTemplate(pipelineExecution, stageExecution);
+                        break;
+                    case "deployment":
+                        handleDeploymentPipelineTemplate(pipelineExecution, stageExecution);
+                        break;
+                    default:
+                        log.error("Unknown pipeline template type for pipeline execution {}", pipelineExecution.getId());
+                }
+                return;
+            }
+        }
+        
+        // All stages completed
+        pipelineExecution.setStatus(PipelineStatus.SUCCESS);
+        writeTransactionService.savePipelineExecutionToRepository(pipelineExecution);
+        log.info("Pipeline execution {} completed successfully", pipelineExecution.getId());
     }
 
     private PipelineTemplate fetchPipelineTemplate(Map<String, Object> filters) {
