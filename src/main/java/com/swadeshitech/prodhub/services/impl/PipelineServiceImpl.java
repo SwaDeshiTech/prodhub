@@ -15,6 +15,8 @@ import com.swadeshitech.prodhub.entity.Template;
 import com.swadeshitech.prodhub.enums.*;
 import com.swadeshitech.prodhub.exception.CustomException;
 import com.swadeshitech.prodhub.integration.cicaptain.dto.BuildTriggerResponse;
+import com.swadeshitech.prodhub.integration.deplorch.DeplOrchClient;
+import com.swadeshitech.prodhub.integration.deplorch.DeploymentResponse;
 import com.swadeshitech.prodhub.integration.kafka.producer.KafkaProducer;
 import com.swadeshitech.prodhub.provider.BuildProvider;
 import com.swadeshitech.prodhub.services.CredentialProviderService;
@@ -28,6 +30,7 @@ import org.bson.types.ObjectId;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationContext;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -62,6 +65,9 @@ public class PipelineServiceImpl implements PipelineService {
 
     @Autowired
     CredentialProviderService credentialProviderService;
+
+    @Autowired
+    ApplicationContext applicationContext;
 
     @Override
     public String schedulePipelineExecution(PipelineExecutionRequest request) {
@@ -281,8 +287,52 @@ public class PipelineServiceImpl implements PipelineService {
 
     private void handleDeploymentPipelineTemplate(PipelineExecution pipelineExecution, PipelineExecution.StageExecution stageExecution) {
         log.info("Handling deployment pipeline execution for ID: {}", pipelineExecution.getId());
-        // TODO: Implement deployment logic
-        log.info("Deployment stage handling not yet implemented for stage: {}", stageExecution.getStageName());
+
+        try {
+            // Update stage status to IN_PROGRESS
+            stageExecution.setStatus(PipelineStepExecutionStatus.IN_PROGRESS);
+            writeTransactionService.savePipelineExecutionToRepository(pipelineExecution);
+
+            // Find the first pending step in the template
+            Template.Step firstPendingStep = null;
+            if (stageExecution.getTemplate() != null && stageExecution.getTemplate().getSteps() != null) {
+                for (Template.Step step : stageExecution.getTemplate().getSteps()) {
+                    if (step.getStatus() == StepExecutionStatus.IN_PROGRESS || step.getStatus() == StepExecutionStatus.PENDING) {
+                        firstPendingStep = step;
+                        break;
+                    }
+                }
+            }
+
+            if (firstPendingStep == null) {
+                log.error("No pending step found for deployment stage in pipeline execution: {}", pipelineExecution.getId());
+                stageExecution.setStatus(PipelineStepExecutionStatus.FAILED);
+                writeTransactionService.savePipelineExecutionToRepository(pipelineExecution);
+                return;
+            }
+
+            // Trigger the first step via cloudedge-deployer API
+            DeplOrchClient deplOrchClient = applicationContext.getBean(DeplOrchClient.class);
+            DeploymentResponse response = deplOrchClient.triggerPipelineDeployment(
+                    pipelineExecution.getId(), 
+                    stageExecution.getId(), 
+                    firstPendingStep.getStepName()
+            ).block();
+
+            if (response != null) {
+                log.info("Deployment trigger response for step {}: {}", firstPendingStep.getStepName(), response);
+                // Step status will be updated via Kafka events from cloudedge-deployer
+            } else {
+                log.error("Failed to trigger deployment step {} for pipeline execution: {}", firstPendingStep.getStepName(), pipelineExecution.getId());
+                firstPendingStep.setStatus(StepExecutionStatus.FAILED);
+                writeTransactionService.savePipelineExecutionToRepository(pipelineExecution);
+            }
+
+        } catch (Exception e) {
+            log.error("Failed to trigger deployment for pipeline execution {}", pipelineExecution.getId(), e);
+            stageExecution.setStatus(PipelineStepExecutionStatus.FAILED);
+            writeTransactionService.savePipelineExecutionToRepository(pipelineExecution);
+        }
     }
 
     public void processBuildCompletion(String buildRefId, String buildStatus) {
@@ -343,7 +393,8 @@ public class PipelineServiceImpl implements PipelineService {
         }
     }
 
-    private void triggerNextStage(PipelineExecution pipelineExecution) {
+    @Override
+    public void triggerNextStage(PipelineExecution pipelineExecution) {
         pipelineExecution.getStageExecutions().sort((o1, o2) -> o1.getOrder() - o2.getOrder());
         
         // Find the next pending stage

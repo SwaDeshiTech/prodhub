@@ -18,6 +18,8 @@ public interface PipelineService {
 
     void startPipelineExecution(PipelineExecution pipelineExecution);
 
+    void triggerNextStage(PipelineExecution pipelineExecution);
+
     void processBuildCompletion(String buildRefId, String buildStatus);
 
     PipelineExecutionDetailsDTO getPipelineExecutionDetails(String pipelineExecutionId);

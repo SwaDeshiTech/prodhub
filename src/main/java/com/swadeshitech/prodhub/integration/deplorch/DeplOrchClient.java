@@ -26,6 +26,9 @@ public class DeplOrchClient {
     @Value("${deplorch.deployedPodDetails}")
     String deployedPodDetails;
 
+    @Value("${deplorch.initiatePipelineDeployment}")
+    String initiatePipelineDeployment;
+
     public Mono<DeploymentResponse> triggerDeployment(String deploymentID) {
         return webClient.post()
                 .uri(deplorchBaseURL + initiateDeployment + "/" + deploymentID)
@@ -49,5 +52,19 @@ public class DeplOrchClient {
                                 .defaultIfEmpty("Deployment Orchestrator error")
                                 .map(msg -> new RuntimeException("Deployment Orchestrator HTTP " + resp.statusCode() + " - " + msg)))
                 .bodyToMono(DeploymentPodResponse.class);
+    }
+
+    public Mono<DeploymentResponse> triggerPipelineDeployment(String pipelineExecutionId, String stageExecutionId, String stepName) {
+        log.info("Triggering pipeline deployment for pipelineExecutionId: {}, stageExecutionId: {}, stepName: {}", pipelineExecutionId, stageExecutionId, stepName);
+        return webClient.post()
+                .uri(deplorchBaseURL + initiatePipelineDeployment + "/" + pipelineExecutionId + "/" + stageExecutionId + "/" + stepName)
+                .contentType(MediaType.APPLICATION_JSON)
+                .accept(MediaType.APPLICATION_JSON)
+                .retrieve()
+                .onStatus(status -> status.is4xxClientError() || status.is5xxServerError(),
+                        resp -> resp.bodyToMono(String.class)
+                                .defaultIfEmpty("Deployment Orchestrator error")
+                                .map(msg -> new RuntimeException("Deployment Orchestrator HTTP " + resp.statusCode() + " - " + msg)))
+                .bodyToMono(DeploymentResponse.class);
     }
 }
