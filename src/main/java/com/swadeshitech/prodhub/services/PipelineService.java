@@ -32,4 +32,6 @@ public interface PipelineService {
             Integer size,
             String sortBy,
             String order);
+
+    void syncPipelineStatus(String pipelineExecutionId, String forceSync);
 }

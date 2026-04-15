@@ -9,6 +9,7 @@ import com.swadeshitech.prodhub.entity.Template;
 import com.swadeshitech.prodhub.enums.PipelineStatus;
 import com.swadeshitech.prodhub.enums.PipelineStepExecutionStatus;
 import com.swadeshitech.prodhub.enums.StepExecutionStatus;
+import com.swadeshitech.prodhub.services.PipelineService;
 import com.swadeshitech.prodhub.transaction.read.ReadTransactionService;
 import com.swadeshitech.prodhub.transaction.write.WriteTransactionService;
 import lombok.extern.slf4j.Slf4j;
@@ -36,6 +37,9 @@ public class BuildConsumer {
 
     @Autowired
     private WriteTransactionService writeTransactionService;
+
+    @Autowired
+    private PipelineService pipelineService;
 
     @KafkaListener(topics = "${spring.kafka.topic.buildUpdate}", groupId = "default_group")
     public void listen(String message) {
@@ -145,9 +149,15 @@ public class BuildConsumer {
 
             boolean allStagesCompleted = checkAllStagesCompleted(pipelineExecution);
             pipelineExecution.setStatus(allStagesCompleted ? PipelineStatus.SUCCESS : PipelineStatus.IN_PROGRESS);
+            
+            // Trigger next stage if not all stages are completed
+            if (!allStagesCompleted) {
+                log.info("Triggering next stage after stage {} completion", currentStage.getStageName());
+                pipelineService.triggerNextStage(pipelineExecution);
+            }
         } else {
             currentStage.setStatus(PipelineStepExecutionStatus.IN_PROGRESS);
-            executeNextStep(currentStage);
+            executeNextStep(pipelineExecution, currentStage);
         }
     }
 
@@ -162,11 +172,12 @@ public class BuildConsumer {
 
     private boolean checkAllStagesCompleted(PipelineExecution pipelineExecution) {
         return pipelineExecution.getStageExecutions().stream()
+                .sorted((o1, o2) -> o1.getOrder() - o2.getOrder())
                 .filter(stage -> !"init".equalsIgnoreCase(stage.getStageName()))
                 .allMatch(stage -> stage.getStatus() == PipelineStepExecutionStatus.SUCCESS);
     }
 
-    private void executeNextStep(PipelineExecution.StageExecution stageExecution) {
+    private void executeNextStep(PipelineExecution pipelineExecution, PipelineExecution.StageExecution stageExecution) {
         if (stageExecution.getTemplate() == null || CollectionUtils.isEmpty(stageExecution.getTemplate().getSteps())) {
             return;
         }
@@ -178,8 +189,25 @@ public class BuildConsumer {
         for (Template.Step step : steps) {
             if (step.getStatus() == StepExecutionStatus.CREATED || step.getStatus() == StepExecutionStatus.IN_PROGRESS) {
                 if (!step.isSkipStep()) {
-                    step.setStatus(StepExecutionStatus.IN_PROGRESS);
-                    log.info("Executing next step {} in stage {}", step.getStepName(), stageExecution.getStageName());
+                    // Automatically complete "Completed" step
+                    if ("completed".equalsIgnoreCase(step.getStepName())) {
+                        step.setStatus(StepExecutionStatus.COMPLETED);
+                        log.info("Automatically completing step {} in stage {}", step.getStepName(), stageExecution.getStageName());
+                        
+                        // After completing "Completed" step, check if all steps are done and update stage/pipeline status
+                        boolean allStepsCompleted = checkAllStepsCompleted(stageExecution);
+                        if (allStepsCompleted) {
+                            stageExecution.setStatus(PipelineStepExecutionStatus.SUCCESS);
+                            stageExecution.setEndTime(LocalDateTime.now());
+                            
+                            // Check if all stages are completed to update overall pipeline status
+                            boolean allStagesCompleted = checkAllStagesCompleted(pipelineExecution);
+                            pipelineExecution.setStatus(allStagesCompleted ? PipelineStatus.SUCCESS : PipelineStatus.IN_PROGRESS);
+                        }
+                    } else {
+                        step.setStatus(StepExecutionStatus.IN_PROGRESS);
+                        log.info("Executing next step {} in stage {}", step.getStepName(), stageExecution.getStageName());
+                    }
                 }
                 break;
             }

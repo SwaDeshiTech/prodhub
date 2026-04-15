@@ -243,11 +243,20 @@ public class ReleaseCandidateServiceImpl implements ReleaseCandidateService {
     @Override
     public ReleaseCandidateResponse certifyReleaseCandidateForProduction(String id) {
 
+        // Try to find release candidate with CERTIFIABLE status
         List<ReleaseCandidate> releaseCandidates = readTransactionService.findReleaseCandidateDetailsByFilters(Map.of(
                 "_id", new ObjectId(id),
                 "status", ReleaseCandidateStatus.CERTIFIABLE));
+        
+        // If not found, try with CREATED status
         if (CollectionUtils.isEmpty(releaseCandidates)) {
-            log.error("Release candidates could not be found for application id {}", id);
+            releaseCandidates = readTransactionService.findReleaseCandidateDetailsByFilters(Map.of(
+                    "_id", new ObjectId(id),
+                    "status", ReleaseCandidateStatus.CREATED));
+        }
+        
+        if (CollectionUtils.isEmpty(releaseCandidates)) {
+            log.error("Release candidates could not be found for id {}", id);
             throw new CustomException(ErrorCode.RELEASE_CANDIDATE_NOT_FOUND);
         }
 
@@ -284,7 +293,9 @@ public class ReleaseCandidateServiceImpl implements ReleaseCandidateService {
         Metadata metadata = releaseCandidate.getBuildProfile();
 
         ReleaseCandidateResponse response = getReleaseCandidateResponse(releaseCandidate, certifiedBy, initiatedBy);
-        response.setBuildProfile(metadata.getName().split(Constants.CLONE_METADATA_DELIMITER)[0]);
+        if (metadata != null) {
+            response.setBuildProfile(metadata.getName().split(Constants.CLONE_METADATA_DELIMITER)[0]);
+        }
 
         return response;
     }

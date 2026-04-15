@@ -53,6 +53,10 @@ public class CICaptainKafkaConsumer {
         log.info("{}: Syncing build status {}", this.getClass().getCanonicalName(), message);
 
         ReleaseCandidate releaseCandidate = fetchReleaseCandidate(message);
+        if (releaseCandidate == null) {
+            log.warn("Release candidate not found for build status sync, skipping");
+            return;
+        }
 
         releaseCandidateService.syncStatus(releaseCandidate.getId(), "true");
     }
@@ -106,6 +110,10 @@ public class CICaptainKafkaConsumer {
     private void triggerDeployment(String buildRefId) {
         log.info("Starting triggering the deployment for buildProfile with refId {}", buildRefId);
         ReleaseCandidate releaseCandidate = fetchReleaseCandidate(buildRefId);
+        if (releaseCandidate == null) {
+            log.warn("Release candidate not found for deployment trigger, skipping");
+            return;
+        }
         if(Objects.nonNull(releaseCandidate.getEphemeralEnvironment())) {
             for(EphemeralEnvironment.Profile profile : releaseCandidate.getEphemeralEnvironment().getAttachedProfiles()) {
                 if(profile.getBuildProfile().equals(releaseCandidate.getBuildProfile())) {
@@ -122,11 +130,11 @@ public class CICaptainKafkaConsumer {
 
     private ReleaseCandidate fetchReleaseCandidate(String buildRefId){
         Map<String, Object> filters = new HashMap<>();
-        filters.put("buildRefId", buildRefId);
+        filters.put("metaData.buildRefId", buildRefId);
         List<ReleaseCandidate> releaseCandidates = readTransactionService.findReleaseCandidateDetailsByFilters(filters);
         if (CollectionUtils.isEmpty(releaseCandidates)) {
-            log.error("Failed to fetch the release candidate for buildRefId {}", buildRefId);
-            throw new CustomException(ErrorCode.RELEASE_CANDIDATE_NOT_FOUND);
+            log.warn("Release candidate not found for buildRefId {}", buildRefId);
+            return null;
         }
 
         return releaseCandidates.getFirst();

@@ -16,5 +16,6 @@ public class PipelineExecutionDetailsDTO {
     private List<StageExecutionDTO> stageExecutions;
     private Map<String, Object> metaData;
     private String createdBy;
+    private String releaseCandidateId;
     private java.time.LocalDateTime createdTime;
 }

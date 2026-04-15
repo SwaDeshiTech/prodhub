@@ -86,4 +86,18 @@ public class Pipeline {
 
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }
+
+    @PostMapping
+    @RequestMapping("/execution/{pipelineExecutionId}/syncStatus")
+    public ResponseEntity<Response> syncPipelineStatus(@PathVariable String pipelineExecutionId, @RequestParam(defaultValue = "true") String forceSync) {
+        pipelineService.syncPipelineStatus(pipelineExecutionId, forceSync);
+
+        Response response = Response.builder()
+                .httpStatus(HttpStatus.OK)
+                .message("Successfully synced pipeline status from CI-Captain")
+                .response(pipelineExecutionId)
+                .build();
+
+        return ResponseEntity.status(HttpStatus.OK).body(response);
+    }
 }

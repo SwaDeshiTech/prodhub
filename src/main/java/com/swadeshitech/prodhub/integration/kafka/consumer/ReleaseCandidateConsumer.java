@@ -5,8 +5,11 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.swadeshitech.prodhub.entity.Application;
+import com.swadeshitech.prodhub.entity.EphemeralEnvironment;
 import com.swadeshitech.prodhub.entity.Metadata;
+import com.swadeshitech.prodhub.entity.PipelineExecution;
 import com.swadeshitech.prodhub.entity.ReleaseCandidate;
+import com.swadeshitech.prodhub.entity.User;
 import com.swadeshitech.prodhub.enums.ReleaseCandidateStatus;
 import com.swadeshitech.prodhub.transaction.read.ReadTransactionService;
 import com.swadeshitech.prodhub.transaction.write.WriteTransactionService;
@@ -62,16 +65,23 @@ public class ReleaseCandidateConsumer {
 
         // Extract parameters from the event
         ReleaseCandidateEventData eventData = releaseCandidateEvent.data();
-        if (eventData == null || eventData.parameters() == null) {
-            log.warn("Release candidate event missing data or parameters for build: {}", 
+        if (eventData == null) {
+            log.warn("Release candidate event missing data for build: {}", 
                     releaseCandidateEvent.buildId());
             return;
         }
 
-        // Extract service name from parameters
-        String serviceName = extractParameterValue(eventData.parameters(), "SERVICE_NAME");
+        // Extract service name from parameters or use job_name as fallback
+        String serviceName = null;
+        if (eventData.parameters() != null) {
+            serviceName = extractParameterValue(eventData.parameters(), "SERVICE_NAME");
+        }
         if (!StringUtils.hasText(serviceName)) {
-            log.warn("SERVICE_NAME not found in parameters for build: {}", releaseCandidateEvent.buildId());
+            // Fallback to job_name if SERVICE_NAME not in parameters
+            serviceName = eventData.jobName();
+        }
+        if (!StringUtils.hasText(serviceName)) {
+            log.warn("Service name not found in parameters or job_name for build: {}", releaseCandidateEvent.buildId());
             return;
         }
 
@@ -99,13 +109,55 @@ public class ReleaseCandidateConsumer {
             // In a real scenario, you might want to match based on specific criteria
             buildProfile = buildProfiles.getFirst();
         }
+        
+        if (buildProfile == null) {
+            log.error("Build profile not found for service: {}", serviceName);
+            return;
+        }
+
+        // Find pipeline execution by ciCaptainBuildId
+        PipelineExecution pipelineExecution = null;
+        List<PipelineExecution> pipelineExecutions = readTransactionService.findByDynamicOrFilters(
+                Map.of("metaData.ciCaptainBuildId", releaseCandidateEvent.buildId()),
+                PipelineExecution.class
+        );
+        if (!CollectionUtils.isEmpty(pipelineExecutions)) {
+            pipelineExecution = pipelineExecutions.getFirst();
+        }
+
+        // Find ephemeral environment (optional - may not always be present)
+        EphemeralEnvironment ephemeralEnvironment = null;
+        if (pipelineExecution != null && pipelineExecution.getMetaData() != null) {
+            String ephemeralEnvId = (String) pipelineExecution.getMetaData().get("ephemeralEnvironmentId");
+            if (StringUtils.hasText(ephemeralEnvId)) {
+                List<EphemeralEnvironment> ephemeralEnvironments = readTransactionService.findByDynamicOrFilters(
+                        Map.of("_id", new ObjectId(ephemeralEnvId)),
+                        EphemeralEnvironment.class
+                );
+                if (!CollectionUtils.isEmpty(ephemeralEnvironments)) {
+                    ephemeralEnvironment = ephemeralEnvironments.getFirst();
+                }
+            }
+        }
+
+        // Find user who initiated the build (from triggered_by field)
+        User initiatedBy = null;
+        if (StringUtils.hasText(eventData.triggeredBy())) {
+            List<User> users = readTransactionService.findByDynamicOrFilters(
+                    Map.of("email", eventData.triggeredBy()),
+                    User.class
+            );
+            if (!CollectionUtils.isEmpty(users)) {
+                initiatedBy = users.getFirst();
+            }
+        }
 
         // Create metadata map for the release candidate
         Map<String, String> metadata = new HashMap<>();
         metadata.put("buildRefId", releaseCandidateEvent.buildId());
         metadata.put("providerID", eventData.providerId());
         metadata.put("jobName", eventData.jobName());
-        metadata.put("system", eventData.system());
+        metadata.put("system", releaseCandidateEvent.system());
         
         // Extract additional parameters
         metadata.put("repoURL", extractParameterValue(eventData.parameters(), "REPO_URL"));
@@ -122,12 +174,12 @@ public class ReleaseCandidateConsumer {
         ReleaseCandidate releaseCandidate = ReleaseCandidate.builder()
                 .service(application)
                 .buildProfile(buildProfile)
-                .status(ReleaseCandidateStatus.CREATED)
+                .status(ReleaseCandidateStatus.CERTIFIABLE)
                 .metaData(metadata)
-                .createdBy("ci-captain")
-                .createdTime(LocalDateTime.now())
-                .lastModifiedBy("ci-captain")
-                .lastModifiedTime(LocalDateTime.now())
+                .buildRefId(releaseCandidateEvent.buildId())
+                .ephemeralEnvironment(ephemeralEnvironment)
+                .initiatedBy(initiatedBy)
+                .pipelineExecution(pipelineExecution)
                 .build();
 
         // Save the release candidate

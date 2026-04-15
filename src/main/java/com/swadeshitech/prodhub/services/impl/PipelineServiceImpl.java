@@ -67,6 +67,9 @@ public class PipelineServiceImpl implements PipelineService {
     CredentialProviderService credentialProviderService;
 
     @Autowired
+    com.swadeshitech.prodhub.integration.cicaptain.config.CiCaptainClient ciCaptainClient;
+
+    @Autowired
     ApplicationContext applicationContext;
 
     @Override
@@ -128,6 +131,11 @@ public class PipelineServiceImpl implements PipelineService {
     @Override
     public void startPipelineExecution(PipelineExecution pipelineExecution) {
         pipelineExecution.getStageExecutions().sort((o1, o2) -> o1.getOrder() - o2.getOrder());
+        
+        // Set pipeline status to IN_PROGRESS when starting
+        pipelineExecution.setStatus(PipelineStatus.IN_PROGRESS);
+        writeTransactionService.savePipelineExecutionToRepository(pipelineExecution);
+        log.info("Pipeline execution {} started and set to IN_PROGRESS", pipelineExecution.getId());
         
         // Only trigger the first pending stage
         for (PipelineExecution.StageExecution stageExecution : pipelineExecution.getStageExecutions()) {
@@ -254,6 +262,18 @@ public class PipelineServiceImpl implements PipelineService {
             }
             Metadata buildProfile = metadataList.getFirst();
 
+            // Extract providerID from build profile metadata
+            String providerID = null;
+            try {
+                JsonNode data = objectMapper.readTree(Base64Util.convertToPlainText(buildProfile.getData()));
+                providerID = data.path("buildProviderId").asText();
+                if (StringUtils.hasText(providerID)) {
+                    pipelineExecution.getMetaData().put("providerID", providerID);
+                }
+            } catch (JsonProcessingException e) {
+                log.warn("Failed to extract providerID from build profile metadata for pipeline execution {}", pipelineExecution.getId(), e);
+            }
+
             // 2. Extract values from the template steps (the 'values' map populated in
             // generateTemplateForPipeline)
             Map<String, String> values = new HashMap<>();
@@ -267,7 +287,7 @@ public class PipelineServiceImpl implements PipelineService {
             BuildTriggerResponse buildTriggerResponse = buildProvider.triggerBuild(pipelineExecution,
                     buildProfile, values);
 
-            // 4. Update Stage Status
+            // 4. Update Stage Status and store build URL in step metadata
             stageExecution.setStatus(PipelineStepExecutionStatus.IN_PROGRESS);
             if (pipelineExecution.getMetaData() == null) {
                 pipelineExecution.setMetaData(new HashMap<>());
@@ -275,6 +295,20 @@ public class PipelineServiceImpl implements PipelineService {
             if (buildTriggerResponse != null && buildTriggerResponse.data() != null) {
                 pipelineExecution.getMetaData().put("ciCaptainBuildId", buildTriggerResponse.data().buildId());
                 pipelineExecution.getMetaData().put("ciCaptainStageExecutionId", stageExecution.getId());
+                
+                // Store build URL in the build step's metadata
+                if (stageExecution.getTemplate() != null && !CollectionUtils.isEmpty(stageExecution.getTemplate().getSteps())) {
+                    stageExecution.getTemplate().getSteps().forEach(step -> {
+                        if ("build".equalsIgnoreCase(step.getStepName())) {
+                            if (step.getMetadata() == null) {
+                                step.setMetadata(new HashMap<>());
+                            }
+                            if (StringUtils.hasText(buildTriggerResponse.data().url())) {
+                                step.getMetadata().put("buildUrl", buildTriggerResponse.data().url());
+                            }
+                        }
+                    });
+                }
             }
             writeTransactionService.savePipelineExecutionToRepository(pipelineExecution);
 
@@ -297,7 +331,7 @@ public class PipelineServiceImpl implements PipelineService {
             Template.Step firstPendingStep = null;
             if (stageExecution.getTemplate() != null && stageExecution.getTemplate().getSteps() != null) {
                 for (Template.Step step : stageExecution.getTemplate().getSteps()) {
-                    if (step.getStatus() == StepExecutionStatus.IN_PROGRESS || step.getStatus() == StepExecutionStatus.PENDING) {
+                    if (step.getStatus() == StepExecutionStatus.IN_PROGRESS || step.getStatus() == StepExecutionStatus.CREATED) {
                         firstPendingStep = step;
                         break;
                     }
@@ -409,6 +443,15 @@ public class PipelineServiceImpl implements PipelineService {
                     case "deployment":
                         handleDeploymentPipelineTemplate(pipelineExecution, stageExecution);
                         break;
+                    case "completed":
+                        // Automatically complete the completed stage
+                        stageExecution.setStatus(PipelineStepExecutionStatus.SUCCESS);
+                        stageExecution.setEndTime(LocalDateTime.now());
+                        writeTransactionService.savePipelineExecutionToRepository(pipelineExecution);
+                        log.info("Automatically completed stage {} for pipeline execution: {}", stageExecution.getStageName(), pipelineExecution.getId());
+                        // Trigger next stage (which should complete the pipeline)
+                        triggerNextStage(pipelineExecution);
+                        return;
                     default:
                         log.error("Unknown pipeline template type for pipeline execution {}", pipelineExecution.getId());
                 }
@@ -539,9 +582,124 @@ public class PipelineServiceImpl implements PipelineService {
                 .build();
     }
 
+    @Override
+    public void syncPipelineStatus(String pipelineExecutionId, String forceSync) {
+        log.info("Syncing pipeline status for execution {} with forceSync={}", pipelineExecutionId, forceSync);
+        
+        List<PipelineExecution> pipelineExecutions = readTransactionService.findByDynamicOrFilters(
+                Map.of("_id", new ObjectId(pipelineExecutionId)),
+                PipelineExecution.class
+        );
+        
+        if (CollectionUtils.isEmpty(pipelineExecutions)) {
+            log.error("Pipeline execution not found with ID {}", pipelineExecutionId);
+            throw new CustomException(ErrorCode.PIPELINE_EXECUTION_COULD_NOT_BE_FOUND);
+        }
+        
+        PipelineExecution pipelineExecution = pipelineExecutions.getFirst();
+        
+        // Get the build stage execution
+        PipelineExecution.StageExecution buildStage = pipelineExecution.getStageExecutions().stream()
+                .filter(stage -> "build".equalsIgnoreCase(stage.getStageName()))
+                .findFirst()
+                .orElse(null);
+                
+        if (buildStage == null) {
+            log.warn("Build stage not found for pipeline execution {}", pipelineExecutionId);
+            return;
+        }
+        
+        // Get buildRefId from metadata
+        String buildRefId = (String) pipelineExecution.getMetaData().get("ciCaptainBuildId");
+        if (!StringUtils.hasText(buildRefId)) {
+            log.warn("BuildRefId not found in metadata for pipeline execution {}", pipelineExecutionId);
+            return;
+        }
+        
+        // Get providerID from metadata or build profile
+        String providerID = (String) pipelineExecution.getMetaData().get("providerID");
+        if (!StringUtils.hasText(providerID)) {
+            // Try to get providerID from build profile
+            String metaDataId = (String) pipelineExecution.getMetaData().get("metaDataId");
+            if (StringUtils.hasText(metaDataId)) {
+                List<Metadata> metadataList = readTransactionService.findMetaDataByFilters(
+                        Map.of("_id", new ObjectId(metaDataId)));
+                if (!CollectionUtils.isEmpty(metadataList)) {
+                    Metadata buildProfile = metadataList.getFirst();
+                    try {
+                        JsonNode data = objectMapper.readTree(Base64Util.convertToPlainText(buildProfile.getData()));
+                        providerID = data.path("buildProviderId").asText();
+                        if (StringUtils.hasText(providerID)) {
+                            // Store it in metadata for future use
+                            pipelineExecution.getMetaData().put("providerID", providerID);
+                            writeTransactionService.savePipelineExecutionToRepository(pipelineExecution);
+                        }
+                    } catch (JsonProcessingException e) {
+                        log.warn("Failed to extract providerID from build profile metadata for pipeline execution {}", pipelineExecutionId, e);
+                    }
+                }
+            }
+        }
+        
+        if (!StringUtils.hasText(providerID)) {
+            log.warn("ProviderID not found in metadata or build profile for pipeline execution {}", pipelineExecutionId);
+            return;
+        }
+        
+        try {
+            // Fetch build status from CI-Captain
+            reactor.core.publisher.Mono<com.swadeshitech.prodhub.integration.cicaptain.dto.BuildStatusResponse> buildStatusResponseMono = 
+                ciCaptainClient.getBuildStatus(providerID, buildRefId, forceSync);
+            com.swadeshitech.prodhub.integration.cicaptain.dto.BuildStatusResponse response = buildStatusResponseMono.blockOptional().get();
+            
+            log.info("Build status from CI-Captain: {}", response.status());
+            
+            // Update the build stage status based on CI-Captain response
+            if ("SUCCESS".equalsIgnoreCase(response.status())) {
+                buildStage.setStatus(PipelineStepExecutionStatus.SUCCESS);
+                buildStage.setEndTime(LocalDateTime.now());
+                
+                // Update build step status
+                if (buildStage.getTemplate() != null && !CollectionUtils.isEmpty(buildStage.getTemplate().getSteps())) {
+                    buildStage.getTemplate().getSteps().forEach(step -> {
+                        if ("build".equalsIgnoreCase(step.getStepName())) {
+                            step.setStatus(StepExecutionStatus.COMPLETED);
+                        }
+                    });
+                }
+                
+                // Check if all stages are completed
+                boolean allStagesCompleted = pipelineExecution.getStageExecutions().stream()
+                        .sorted((o1, o2) -> o1.getOrder() - o2.getOrder())
+                        .filter(stage -> !"init".equalsIgnoreCase(stage.getStageName()))
+                        .allMatch(stage -> stage.getStatus() == PipelineStepExecutionStatus.SUCCESS);
+                        
+                pipelineExecution.setStatus(allStagesCompleted ? PipelineStatus.SUCCESS : PipelineStatus.IN_PROGRESS);
+                
+                // Trigger next stage if not all stages are completed
+                if (!allStagesCompleted) {
+                    log.info("Triggering next stage after status sync for pipeline execution {}", pipelineExecutionId);
+                    triggerNextStage(pipelineExecution);
+                }
+            } else if ("FAILURE".equalsIgnoreCase(response.status()) || "FAILED".equalsIgnoreCase(response.status())) {
+                buildStage.setStatus(PipelineStepExecutionStatus.FAILED);
+                buildStage.setEndTime(LocalDateTime.now());
+                pipelineExecution.setStatus(PipelineStatus.FAILED);
+            }
+            
+            writeTransactionService.savePipelineExecutionToRepository(pipelineExecution);
+            log.info("Successfully synced pipeline status for execution {}", pipelineExecutionId);
+            
+        } catch (Exception e) {
+            log.error("Failed to sync pipeline status for execution {}", pipelineExecutionId, e);
+            throw new CustomException(ErrorCode.PIPELINE_EXECUTION_COULD_NOT_BE_FOUND);
+        }
+    }
+
     private PipelineExecutionDetailsDTO mapToDetailsDTO(PipelineExecution pipelineExecution) {
         List<StageExecutionDTO> stageExecutions = pipelineExecution.getStageExecutions() != null
                 ? pipelineExecution.getStageExecutions().stream()
+                        .sorted((o1, o2) -> o1.getOrder() - o2.getOrder())
                         .map(stageExecution -> StageExecutionDTO.builder()
                                 .id(stageExecution.getId())
                                 .stageName(stageExecution.getStageName())
@@ -557,6 +715,21 @@ public class PipelineServiceImpl implements PipelineService {
                         .toList()
                 : null;
 
+        // Fetch release candidate ID associated with this pipeline execution
+        String releaseCandidateId = null;
+        try {
+            List<com.swadeshitech.prodhub.entity.ReleaseCandidate> releaseCandidates = 
+                readTransactionService.findByDynamicOrFilters(
+                    Map.of("pipelineExecution.$id", new ObjectId(pipelineExecution.getId())),
+                    com.swadeshitech.prodhub.entity.ReleaseCandidate.class
+                );
+            if (!CollectionUtils.isEmpty(releaseCandidates)) {
+                releaseCandidateId = releaseCandidates.getFirst().getId();
+            }
+        } catch (Exception e) {
+            log.warn("Failed to fetch release candidate for pipeline execution {}", pipelineExecution.getId(), e);
+        }
+
         return PipelineExecutionDetailsDTO.builder()
                 .id(pipelineExecution.getId())
                 .status(pipelineExecution.getStatus())
@@ -564,6 +737,7 @@ public class PipelineServiceImpl implements PipelineService {
                 .stageExecutions(stageExecutions)
                 .createdBy(pipelineExecution.getCreatedBy())
                 .createdTime(pipelineExecution.getCreatedTime())
+                .releaseCandidateId(releaseCandidateId)
                 .build();
     }
 }

@@ -38,6 +38,7 @@ spring:
       buildStatusComplete: buildStatusComplete
       buildUpdate: build_update
       pipeline-execution: pipeline-execution
+      pipeline-execution-update: pipeline-execution-update
       releaseCandidate: release_candidate
 
 management:
@@ -57,11 +58,15 @@ cicaptain:
   uri: http://localhost:4457/ci-captain
   triggerBuildPath: /api/v1/pipeline-executions/trigger
   buildStatus: /api/v1/providers/%s/job/%s/status
+  default:
+    provider:
+      id: default-provider
 
 deplorch:
   uri: http://localhost:4458/cloudedge-deployer
   initiateDeployment: /api/v1/deployment/start
   deployedPodDetails: /api/v1/pods
+  initiatePipelineDeployment: /api/v1/pipeline/deployment
 
 cron:
   codeFreezeScheduler: "15 * * * * *"
