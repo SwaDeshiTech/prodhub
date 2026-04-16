@@ -111,6 +111,10 @@ public class PipelineServiceImpl implements PipelineService {
                 "metaDataId", request.getMetaDataID(),
                 "serviceId", metadata.getApplication().getId()
         )));
+        // Merge additional metadata from the request (e.g., deploymentSetId, releaseCandidateId)
+        if (request.getMetaData() != null) {
+            pipelineExecution.getMetaData().putAll(request.getMetaData());
+        }
 
         return writeTransactionService.savePipelineExecutionToRepository(pipelineExecution);
     }

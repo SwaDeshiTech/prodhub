@@ -324,7 +324,8 @@ public class DeploymentSetServiceImpl implements DeploymentSetService {
             if (deploymentSet.getDeploymentProfile() != null && deploymentSet.getDeploymentProfile().getData() != null) {
                 String profileData = deploymentSet.getDeploymentProfile().getData();
                 if (StringUtils.hasText(profileData)) {
-                    Map<String, Object> data = objectMapper.readValue(profileData, Map.class);
+                    Map<String, Object> data = objectMapper.readValue(
+                            com.swadeshitech.prodhub.utils.Base64Util.convertToPlainText(profileData), Map.class);
                     pipelineTemplateId = (String) data.get("pipelineTemplateId");
                 }
             }
