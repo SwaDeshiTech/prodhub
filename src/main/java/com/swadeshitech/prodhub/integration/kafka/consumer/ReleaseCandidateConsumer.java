@@ -96,25 +96,6 @@ public class ReleaseCandidateConsumer {
 
         Application application = applications.getFirst();
 
-        // Find build profile - this might need to be derived from parameters or metadata
-        // For now, we'll try to find a build profile that matches the service
-        List<Metadata> buildProfiles = readTransactionService.findByDynamicOrFilters(
-                Map.of("serviceId", application.getId()),
-                Metadata.class
-        );
-        
-        Metadata buildProfile = null;
-        if (!CollectionUtils.isEmpty(buildProfiles)) {
-            // Use the first build profile found for this service
-            // In a real scenario, you might want to match based on specific criteria
-            buildProfile = buildProfiles.getFirst();
-        }
-        
-        if (buildProfile == null) {
-            log.error("Build profile not found for service: {}", serviceName);
-            return;
-        }
-
         // Find pipeline execution by ciCaptainBuildId
         PipelineExecution pipelineExecution = null;
         List<PipelineExecution> pipelineExecutions = readTransactionService.findByDynamicOrFilters(
@@ -123,6 +104,35 @@ public class ReleaseCandidateConsumer {
         );
         if (!CollectionUtils.isEmpty(pipelineExecutions)) {
             pipelineExecution = pipelineExecutions.getFirst();
+        }
+
+        // Find build profile - use the metaDataId from pipeline execution metadata
+        Metadata buildProfile = null;
+        if (pipelineExecution != null && pipelineExecution.getMetaData() != null) {
+            String metaDataId = (String) pipelineExecution.getMetaData().get("metaDataId");
+            if (StringUtils.hasText(metaDataId)) {
+                List<Metadata> buildProfiles = readTransactionService.findMetaDataByFilters(
+                        Map.of("_id", new ObjectId(metaDataId)));
+                if (!CollectionUtils.isEmpty(buildProfiles)) {
+                    buildProfile = buildProfiles.getFirst();
+                }
+            }
+        }
+        
+        // Fallback: try to find build profile by serviceId if not found via metaDataId
+        if (buildProfile == null) {
+            List<Metadata> buildProfiles = readTransactionService.findByDynamicOrFilters(
+                    Map.of("serviceId", application.getId()),
+                    Metadata.class
+            );
+            if (!CollectionUtils.isEmpty(buildProfiles)) {
+                buildProfile = buildProfiles.getFirst();
+            }
+        }
+        
+        if (buildProfile == null) {
+            log.error("Build profile not found for service: {}", serviceName);
+            return;
         }
 
         // Find ephemeral environment (optional - may not always be present)
@@ -163,6 +173,7 @@ public class ReleaseCandidateConsumer {
         metadata.put("repoURL", extractParameterValue(eventData.parameters(), "REPO_URL"));
         metadata.put("branchName", extractParameterValue(eventData.parameters(), "BRANCH_NAME"));
         metadata.put("commitId", extractParameterValue(eventData.parameters(), "COMMIT_ID"));
+        metadata.put("dockerImageHashValue", extractParameterValue(eventData.parameters(), "DOCKER_IMAGE_HASH_VALUE"));
         metadata.put("buildCommand", extractParameterValue(eventData.parameters(), "BUILD_COMMAND"));
         metadata.put("artifactPath", extractParameterValue(eventData.parameters(), "ARTIFACT_PATH"));
         

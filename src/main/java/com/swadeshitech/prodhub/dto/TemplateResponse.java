@@ -58,6 +58,18 @@ public class TemplateResponse extends BaseResponse {
         Set<TemplateResponse.TemplateStepResponse> deploymentTemplateStepResponseList = new HashSet<>();
 
         for(Template.Step step : steps) {
+            // Clean up step metadata by removing ID fields and keeping only name fields
+            Map<String, Object> cleanedMetaData = null;
+            if (step.getMetadata() != null && !step.getMetadata().isEmpty()) {
+                cleanedMetaData = new HashMap<>(step.getMetadata());
+                // Remove ID fields
+                cleanedMetaData.remove("metaDataId");
+                cleanedMetaData.remove("buildProfileId");
+                // If buildProfile name is not present but ID was, we can't replace it here
+                // since we don't have access to the metadata service in this static method
+                // The buildProfile name should already be in the metadata for new executions
+            }
+            
             deploymentTemplateStepResponseList.add(TemplateStepResponse.builder()
                     .status(step.getStatus().getMessage())
                     .stepName(step.getStepName())
@@ -66,7 +78,7 @@ public class TemplateResponse extends BaseResponse {
                     //.params(step.getParams())
                     .order(step.getOrder())
                     .chartDetails(generateChartDetailsResponse(step.getChartDetails()))
-                    .metaData(step.getMetadata())
+                    .metaData(cleanedMetaData)
                     .build());
         }
         return deploymentTemplateStepResponseList;

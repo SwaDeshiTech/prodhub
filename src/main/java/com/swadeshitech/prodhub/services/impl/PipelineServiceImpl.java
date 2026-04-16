@@ -3,11 +3,14 @@ package com.swadeshitech.prodhub.services.impl;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.swadeshitech.prodhub.constant.Constants;
 import com.swadeshitech.prodhub.dto.PaginatedResponse;
 import com.swadeshitech.prodhub.dto.PipelineExecutionDetailsDTO;
 import com.swadeshitech.prodhub.dto.PipelineExecutionRequest;
 import com.swadeshitech.prodhub.dto.StageExecutionDTO;
 import com.swadeshitech.prodhub.dto.TemplateResponse;
+import com.swadeshitech.prodhub.entity.Application;
+import com.swadeshitech.prodhub.entity.CredentialProvider;
 import com.swadeshitech.prodhub.entity.Metadata;
 import com.swadeshitech.prodhub.entity.PipelineExecution;
 import com.swadeshitech.prodhub.entity.PipelineTemplate;
@@ -296,7 +299,7 @@ public class PipelineServiceImpl implements PipelineService {
                 pipelineExecution.getMetaData().put("ciCaptainBuildId", buildTriggerResponse.data().buildId());
                 pipelineExecution.getMetaData().put("ciCaptainStageExecutionId", stageExecution.getId());
                 
-                // Store build URL in the build step's metadata
+                // Store build URL and buildProfile name in the build step's metadata
                 if (stageExecution.getTemplate() != null && !CollectionUtils.isEmpty(stageExecution.getTemplate().getSteps())) {
                     stageExecution.getTemplate().getSteps().forEach(step -> {
                         if ("build".equalsIgnoreCase(step.getStepName())) {
@@ -305,6 +308,11 @@ public class PipelineServiceImpl implements PipelineService {
                             }
                             if (StringUtils.hasText(buildTriggerResponse.data().url())) {
                                 step.getMetadata().put("buildUrl", buildTriggerResponse.data().url());
+                            }
+                            // Store buildProfile name in step metadata
+                            if (buildProfile != null && StringUtils.hasText(buildProfile.getName())) {
+                                String profileName = buildProfile.getName().split(Constants.CLONE_METADATA_DELIMITER)[0];
+                                step.getMetadata().put("buildProfile", profileName);
                             }
                         }
                     });
@@ -730,10 +738,93 @@ public class PipelineServiceImpl implements PipelineService {
             log.warn("Failed to fetch release candidate for pipeline execution {}", pipelineExecution.getId(), e);
         }
 
+        // Fetch metadata details and replace metadataId with profile name
+        Map<String, Object> responseMetaData = new HashMap<>(pipelineExecution.getMetaData());
+        String metaDataId = (String) pipelineExecution.getMetaData().get("metaDataId");
+        
+        if (StringUtils.hasText(metaDataId)) {
+            try {
+                List<Metadata> metadataList = readTransactionService.findMetaDataByFilters(
+                        Map.of("_id", new ObjectId(metaDataId)));
+                
+                if (!CollectionUtils.isEmpty(metadataList)) {
+                    Metadata metadata = metadataList.getFirst();
+                    
+                    if (StringUtils.hasText(metadata.getName())) {
+                        String profileName = metadata.getName().split(Constants.CLONE_METADATA_DELIMITER)[0];
+                        
+                        // Determine if it's a build or deployment pipeline
+                        boolean isBuildPipeline = false;
+                        boolean isDeploymentPipeline = false;
+                        if (pipelineExecution.getStageExecutions() != null) {
+                            for (PipelineExecution.StageExecution stage : pipelineExecution.getStageExecutions()) {
+                                if ("build".equalsIgnoreCase(stage.getStageName())) {
+                                    isBuildPipeline = true;
+                                    break;
+                                } else if ("deployment".equalsIgnoreCase(stage.getStageName())) {
+                                    isDeploymentPipeline = true;
+                                    break;
+                                }
+                            }
+                        }
+                        
+                        // Remove the old metaDataId key and add the appropriate profile key
+                        responseMetaData.remove("metaDataId");
+                        if (isBuildPipeline) {
+                            responseMetaData.put("buildProfile", profileName);
+                        } else if (isDeploymentPipeline) {
+                            responseMetaData.put("deploymentProfile", profileName);
+                        } else {
+                            responseMetaData.put("metaDataId", profileName);
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("Failed to fetch metadata details for pipeline execution {}", pipelineExecution.getId(), e);
+            }
+        }
+
+        // Replace serviceId with service name
+        String serviceId = (String) pipelineExecution.getMetaData().get("serviceId");
+        if (StringUtils.hasText(serviceId)) {
+            try {
+                List<Application> applications = readTransactionService.findApplicationByFilters(
+                        Map.of("_id", new ObjectId(serviceId)));
+                if (!CollectionUtils.isEmpty(applications)) {
+                    Application application = applications.getFirst();
+                    if (StringUtils.hasText(application.getName())) {
+                        responseMetaData.remove("serviceId");
+                        responseMetaData.put("serviceName", application.getName());
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("Failed to fetch service details for pipeline execution {}", pipelineExecution.getId(), e);
+            }
+        }
+
+        // Replace providerID with provider name
+        String providerID = (String) pipelineExecution.getMetaData().get("providerID");
+        if (StringUtils.hasText(providerID)) {
+            try {
+                List<CredentialProvider> credentialProviders = readTransactionService.findByDynamicOrFilters(
+                        Map.of("_id", new ObjectId(providerID)),
+                        CredentialProvider.class);
+                if (!CollectionUtils.isEmpty(credentialProviders)) {
+                    CredentialProvider credentialProvider = credentialProviders.getFirst();
+                    if (StringUtils.hasText(credentialProvider.getName())) {
+                        responseMetaData.remove("providerID");
+                        responseMetaData.put("providerName", credentialProvider.getName());
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("Failed to fetch provider details for pipeline execution {}", pipelineExecution.getId(), e);
+            }
+        }
+
         return PipelineExecutionDetailsDTO.builder()
                 .id(pipelineExecution.getId())
                 .status(pipelineExecution.getStatus())
-                .metaData(pipelineExecution.getMetaData())
+                .metaData(responseMetaData)
                 .stageExecutions(stageExecutions)
                 .createdBy(pipelineExecution.getCreatedBy())
                 .createdTime(pipelineExecution.getCreatedTime())
