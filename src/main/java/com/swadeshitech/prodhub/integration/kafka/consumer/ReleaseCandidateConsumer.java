@@ -9,6 +9,7 @@ import com.swadeshitech.prodhub.entity.EphemeralEnvironment;
 import com.swadeshitech.prodhub.entity.Metadata;
 import com.swadeshitech.prodhub.entity.PipelineExecution;
 import com.swadeshitech.prodhub.entity.ReleaseCandidate;
+import com.swadeshitech.prodhub.entity.Template;
 import com.swadeshitech.prodhub.entity.User;
 import com.swadeshitech.prodhub.enums.ReleaseCandidateStatus;
 import com.swadeshitech.prodhub.transaction.read.ReadTransactionService;
@@ -169,13 +170,35 @@ public class ReleaseCandidateConsumer {
         metadata.put("jobName", eventData.jobName());
         metadata.put("system", releaseCandidateEvent.system());
         
-        // Extract additional parameters
-        metadata.put("repoURL", extractParameterValue(eventData.parameters(), "REPO_URL"));
-        metadata.put("branchName", extractParameterValue(eventData.parameters(), "BRANCH_NAME"));
-        metadata.put("commitId", extractParameterValue(eventData.parameters(), "COMMIT_ID"));
-        metadata.put("dockerImageHashValue", extractParameterValue(eventData.parameters(), "DOCKER_IMAGE_HASH_VALUE"));
-        metadata.put("buildCommand", extractParameterValue(eventData.parameters(), "BUILD_COMMAND"));
-        metadata.put("artifactPath", extractParameterValue(eventData.parameters(), "ARTIFACT_PATH"));
+        // Extract additional parameters from step metadata if event parameters are null
+        if (eventData.parameters() != null) {
+            metadata.put("repoURL", extractParameterValue(eventData.parameters(), "REPO_URL"));
+            metadata.put("branchName", extractParameterValue(eventData.parameters(), "BRANCH_NAME"));
+            metadata.put("commitId", extractParameterValue(eventData.parameters(), "COMMIT_ID"));
+            metadata.put("dockerImageHashValue", extractParameterValue(eventData.parameters(), "DOCKER_IMAGE_HASH_VALUE"));
+            metadata.put("buildCommand", extractParameterValue(eventData.parameters(), "BUILD_COMMAND"));
+            metadata.put("artifactPath", extractParameterValue(eventData.parameters(), "ARTIFACT_PATH"));
+        } else if (pipelineExecution != null && pipelineExecution.getStageExecutions() != null) {
+            // Try to extract from pipeline execution step metadata
+            for (PipelineExecution.StageExecution stage : pipelineExecution.getStageExecutions()) {
+                if ("build".equalsIgnoreCase(stage.getStageName()) && stage.getTemplate() != null 
+                        && !CollectionUtils.isEmpty(stage.getTemplate().getSteps())) {
+                    for (Template.Step step : stage.getTemplate().getSteps()) {
+                        if ("build".equalsIgnoreCase(step.getStepName()) && step.getParams() != null) {
+                            // Extract values from step params
+                            metadata.put("repoURL", extractParamValue(step.getParams(), "repoURL"));
+                            metadata.put("branchName", extractParamValue(step.getParams(), "branchName"));
+                            metadata.put("commitId", extractParamValue(step.getParams(), "commitId"));
+                            metadata.put("dockerImageHashValue", extractParamValue(step.getParams(), "dockerImageHashValue"));
+                            metadata.put("buildCommand", extractParamValue(step.getParams(), "buildCommand"));
+                            metadata.put("artifactPath", extractParamValue(step.getParams(), "artifactPath"));
+                            break;
+                        }
+                    }
+                    break;
+                }
+            }
+        }
         
         if (StringUtils.hasText(eventData.url())) {
             metadata.put("buildUrl", eventData.url());
@@ -209,6 +232,24 @@ public class ReleaseCandidateConsumer {
         }
         Object value = parameters.get(key);
         return value != null ? value.toString() : null;
+    }
+
+    private String extractParamValue(Map<String, Template.Step.TemplateStepParam> params, String key) {
+        if (params == null || !StringUtils.hasText(key)) {
+            return null;
+        }
+        // First try direct map key lookup (e.g., "repoURL", "commitId")
+        Template.Step.TemplateStepParam directMatch = params.get(key);
+        if (directMatch != null && StringUtils.hasText(directMatch.getValue())) {
+            return directMatch.getValue();
+        }
+        // Fallback: search by displayName or affectedKey
+        for (Template.Step.TemplateStepParam param : params.values()) {
+            if (key.equalsIgnoreCase(param.getDisplayName()) || key.equalsIgnoreCase(param.getAffectedKey())) {
+                return param.getValue();
+            }
+        }
+        return null;
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
