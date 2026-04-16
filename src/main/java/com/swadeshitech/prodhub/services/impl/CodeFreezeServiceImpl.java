@@ -120,13 +120,23 @@ public class CodeFreezeServiceImpl implements CodeFreezeService {
         }
 
         List<CodeFreeze> codeFreezeList = readTransactionService.findCodeFreezeByFilters(Map
-                .of("applications", applications.getFirst()));
+                .of("applications", applications.getFirst(), "isActive", true));
         if(CollectionUtils.isEmpty(codeFreezeList)) {
-            log.error("Code freeze could not be found for the applicationId {}", applicationId);
+            log.debug("No active code freeze found for the applicationId {}", applicationId);
             return null;
         }
 
-        return codeFreezeList.getFirst();
+        LocalDateTime now = LocalDateTime.now();
+        for (CodeFreeze codeFreeze : codeFreezeList) {
+            if (codeFreeze.getStartTime() != null && codeFreeze.getEndTime() != null) {
+                if (!now.isBefore(codeFreeze.getStartTime()) && !now.isAfter(codeFreeze.getEndTime())) {
+                    return codeFreeze;
+                }
+            }
+        }
+
+        log.debug("No active code freeze within current time range for the applicationId {}", applicationId);
+        return null;
     }
 
     private CodeFreezeResponse mapEntityToDTO(CodeFreeze codeFreeze) {

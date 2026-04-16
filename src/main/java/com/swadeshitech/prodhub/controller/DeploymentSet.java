@@ -97,4 +97,21 @@ public class DeploymentSet {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
         }
     }
+
+    @PostMapping("/{id}/trigger-pipeline")
+    @Operation(summary = "Trigger pipeline execution for deployment set", description = "Triggers pipeline execution using deployment set metadata")
+    public ResponseEntity<Response> triggerPipelineExecution(
+            @Parameter(description = "Deployment set ID", required = true)
+            @PathVariable("id") String deploymentSetId
+    ) {
+        String pipelineExecutionId = deploymentSetService.triggerPipelineExecution(deploymentSetId);
+
+        Response response = Response.builder()
+                .httpStatus(HttpStatus.OK)
+                .message("Pipeline execution started successfully")
+                .response(pipelineExecutionId)
+                .build();
+
+        return ResponseEntity.ok(response);
+    }
 }

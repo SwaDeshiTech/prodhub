@@ -32,4 +32,12 @@ public interface DeploymentSetService {
      * @return FileUploadResponse with upload result
      */
     FileUploadResponse uploadEvidenceFile(String deploymentSetId, MultipartFile file);
+
+    /**
+     * Triggers pipeline execution for a deployment set
+     * 
+     * @param deploymentSetId The deployment set ID
+     * @return The pipeline execution ID
+     */
+    String triggerPipelineExecution(String deploymentSetId);
 }

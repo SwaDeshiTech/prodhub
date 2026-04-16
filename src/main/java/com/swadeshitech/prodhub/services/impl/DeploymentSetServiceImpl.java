@@ -312,4 +312,58 @@ public class DeploymentSetServiceImpl implements DeploymentSetService {
         }
         return "";
     }
+
+    @Override
+    public String triggerPipelineExecution(String deploymentSetId) {
+        // Fetch deployment set
+        DeploymentSet deploymentSet = fetchDeploymentSet(Map.of("_id", new ObjectId(deploymentSetId)));
+        
+        // Extract pipelineTemplateId from deployment profile metadata
+        String pipelineTemplateId = null;
+        try {
+            if (deploymentSet.getDeploymentProfile() != null && deploymentSet.getDeploymentProfile().getData() != null) {
+                String profileData = deploymentSet.getDeploymentProfile().getData();
+                if (StringUtils.hasText(profileData)) {
+                    Map<String, Object> data = objectMapper.readValue(profileData, Map.class);
+                    pipelineTemplateId = (String) data.get("pipelineTemplateId");
+                }
+            }
+        } catch (Exception e) {
+            log.error("Failed to extract pipelineTemplateId from deployment profile metadata for deployment set: {}", deploymentSetId, e);
+        }
+        
+        if (!StringUtils.hasText(pipelineTemplateId)) {
+            log.error("pipelineTemplateId not found in deployment profile metadata for deployment set: {}", deploymentSetId);
+            throw new CustomException(ErrorCode.PIPELINE_TEMPLATE_COULD_NOT_BE_FOUND);
+        }
+        
+        // Build pipeline execution request with deployment set metadata
+        Map<String, String> metaData = new HashMap<>();
+        metaData.put("deploymentSetId", deploymentSetId);
+        metaData.put("releaseCandidateId", deploymentSet.getReleaseCandidate().getId());
+        
+        // Add deployment IDs from deployment set
+        if (!CollectionUtils.isEmpty(deploymentSet.getDeployments())) {
+            List<String> deploymentIds = deploymentSet.getDeployments().stream()
+                    .map(com.swadeshitech.prodhub.entity.Deployment::getId)
+                    .toList();
+            metaData.put("deploymentIds", String.join(",", deploymentIds));
+        }
+        
+        PipelineExecutionRequest pipelineExecutionRequest = PipelineExecutionRequest.builder()
+                .metaDataID(deploymentSet.getDeploymentProfile().getId())
+                .metaData(metaData)
+                .build();
+        
+        String pipelineExecutionId = pipelineService.schedulePipelineExecution(pipelineExecutionRequest);
+        log.info("Pipeline execution started with ID: {} for deployment set: {}", pipelineExecutionId, deploymentSetId);
+        
+        return pipelineExecutionId;
+    }
+
+    @Autowired
+    private com.swadeshitech.prodhub.services.PipelineService pipelineService;
+
+    @Autowired
+    private com.fasterxml.jackson.databind.ObjectMapper objectMapper;
 }
