@@ -343,6 +343,7 @@ public class DeploymentSetServiceImpl implements DeploymentSetService {
         Map<String, String> metaData = new HashMap<>();
         metaData.put("deploymentSetId", deploymentSetId);
         metaData.put("releaseCandidateId", deploymentSet.getReleaseCandidate().getId());
+        metaData.put("imageTag", deploymentSet.getReleaseCandidate().getMetaData().get("dockerImageHashValue"));
 
         PipelineExecutionRequest pipelineExecutionRequest = PipelineExecutionRequest.builder()
                 .metaDataID(deploymentSet.getDeploymentProfile().getId())

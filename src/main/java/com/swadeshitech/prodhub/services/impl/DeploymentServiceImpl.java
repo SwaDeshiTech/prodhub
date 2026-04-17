@@ -84,10 +84,8 @@ public class DeploymentServiceImpl implements DeploymentService {
 
         deployment = writeTransactionService.saveDeploymentToRepository(deployment);
 
-        if (CollectionUtils.isEmpty(deploymentSet.getDeployments())) {
-            deploymentSet.setDeployments(new ArrayList<>());
-        }
-        deploymentSet.getDeployments().add(deployment);
+        // Note: DeploymentSet now uses pipelineExecutions instead of deployments
+        // This method is deprecated - deployments should be triggered via pipeline execution
         writeTransactionService.saveDeploymentSetToRepository(deploymentSet);
 
         kafkaProducer.sendMessage(KafkaConstants.DEPLOYMENT_CONFIG_AND_SUBMIT_TOPIC_NAME, deployment.getId());
