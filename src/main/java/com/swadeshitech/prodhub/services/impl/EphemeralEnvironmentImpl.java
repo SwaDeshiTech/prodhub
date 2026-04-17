@@ -92,7 +92,7 @@ public class EphemeralEnvironmentImpl implements EphemeralEnvironmentService {
 
         kafkaProducer.sendMessage(ephemeralEnvironmentUpdateTopic, environment.getId());
 
-        return modelMapper.map(environment, EphemeralEnvironmentResponse.class);
+        return mapEntityToResponse(environment);
     }
 
     @Override
@@ -283,10 +283,10 @@ public class EphemeralEnvironmentImpl implements EphemeralEnvironmentService {
                 }
                 profileResponses.add(EphemeralEnvironmentResponse.EphemeralEnvironmentProfileResponse.builder()
                                 .applicationName(profile.getApplication().getName())
-                                .buildProfileName(profile.getBuildProfile().getName().split(CLONE_METADATA_DELIMITER)[0])
-                                .deploymentProfileName(profile.getDeploymentProfile().getName().split(CLONE_METADATA_DELIMITER)[0])
-                                .buildProfileId(profile.getBuildProfile().getId())
-                                .deploymentProfileId(profile.getDeploymentProfile().getId())
+                                .buildProfileName(profile.getBuildProfile() != null ? profile.getBuildProfile().getName().split(CLONE_METADATA_DELIMITER)[0] : null)
+                                .deploymentProfileName(profile.getDeploymentProfile() != null ? profile.getDeploymentProfile().getName().split(CLONE_METADATA_DELIMITER)[0] : null)
+                                .buildProfileId(profile.getBuildProfile() != null ? profile.getBuildProfile().getId() : null)
+                                .deploymentProfileId(profile.getDeploymentProfile() != null ? profile.getDeploymentProfile().getId() : null)
                         .build());
             }
             environmentResponse.setProfiles(profileResponses);
@@ -383,6 +383,10 @@ public class EphemeralEnvironmentImpl implements EphemeralEnvironmentService {
                     log.info("Deployment profile {} and build profile {} of application {} has been removed", application.getDeploymentProfileId(), application.getBuildProfileId(), application.getApplicationId());
                     break;
                 case "add":
+                    if (application.getDeploymentProfileId() == null || application.getBuildProfileId() == null) {
+                        log.error("Deployment profile ID or build profile ID is null for application {}", application.getApplicationId());
+                        throw new CustomException(ErrorCode.METADATA_PROFILE_NOT_FOUND);
+                    }
                     List<Application> applications = readTransactionService.findApplicationByFilters(Map.of("_id", application.getApplicationId()));
                     if(applications == null || applications.isEmpty()) {
                         log.error("Failed to add application to ephemeral environment {}", application.getApplicationId());

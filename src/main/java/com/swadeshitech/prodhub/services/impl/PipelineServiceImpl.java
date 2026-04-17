@@ -104,7 +104,7 @@ public class PipelineServiceImpl implements PipelineService {
         );
 
         PipelineExecution pipelineExecution = new PipelineExecution();
-        pipelineExecution.setStageExecutions(createStages(request, pipelineTemplate, request.getMetaDataID()));
+        pipelineExecution.setStageExecutions(createStages(request, pipelineTemplate, request.getMetaDataID(), null));
         pipelineExecution.setPipelineTemplate(pipelineTemplate);
         pipelineExecution.setStatus(PipelineStatus.PENDING);
         pipelineExecution.setMetaData(new HashMap<>(Map.of(
@@ -115,6 +115,56 @@ public class PipelineServiceImpl implements PipelineService {
         if (request.getMetaData() != null) {
             pipelineExecution.getMetaData().putAll(request.getMetaData());
         }
+
+        return writeTransactionService.savePipelineExecutionToRepository(pipelineExecution);
+    }
+
+    @Override
+    public PipelineExecution createEphemeralEnvironmentPipelineExecution(
+            PipelineExecutionRequest request,
+            String buildProfileId,
+            String deploymentProfileId) {
+
+        // Fetch build metadata to extract pipelineTemplateId
+        List<Metadata> metadataList = readTransactionService.findMetaDataByFilters(
+                Map.of("_id", new ObjectId(buildProfileId)));
+        if (CollectionUtils.isEmpty(metadataList)) {
+            log.error("Build metadata could not be found for ID {}", buildProfileId);
+            throw new CustomException(ErrorCode.METADATA_PROFILE_INVALID_DATA);
+        }
+        Metadata metadata = metadataList.getFirst();
+
+        String pipelineTemplateId = extractPipelineTemplateIdFromMetadata(metadata);
+
+        PipelineTemplate pipelineTemplate = fetchPipelineTemplate(
+                Map.of("_id", new ObjectId(pipelineTemplateId))
+        );
+
+        // Create stage-to-profile mapping for ephemeral environment
+        Map<String, String> stageProfileMap = new HashMap<>();
+        stageProfileMap.put("build", buildProfileId);
+        if (deploymentProfileId != null) {
+            stageProfileMap.put("deployment", deploymentProfileId);
+        }
+
+        PipelineExecution pipelineExecution = new PipelineExecution();
+        pipelineExecution.setStageExecutions(createStagesWithProfileMap(request, pipelineTemplate, stageProfileMap));
+        pipelineExecution.setPipelineTemplate(pipelineTemplate);
+        pipelineExecution.setStatus(PipelineStatus.PENDING);
+        
+        // Set metadata with both profile IDs
+        Map<String, Object> metaData = new HashMap<>();
+        metaData.put("metaDataId", buildProfileId);
+        metaData.put("buildProfileId", buildProfileId);
+        metaData.put("serviceId", metadata.getApplication().getId());
+        if (deploymentProfileId != null) {
+            metaData.put("deploymentProfileId", deploymentProfileId);
+        }
+        // Merge additional metadata from the request
+        if (request.getMetaData() != null) {
+            metaData.putAll(request.getMetaData());
+        }
+        pipelineExecution.setMetaData(metaData);
 
         return writeTransactionService.savePipelineExecutionToRepository(pipelineExecution);
     }
@@ -167,10 +217,16 @@ public class PipelineServiceImpl implements PipelineService {
     }
 
     private List<PipelineExecution.StageExecution> createStages(PipelineExecutionRequest request,
-            PipelineTemplate pipelineTemplate, String metaDataId) {
+            PipelineTemplate pipelineTemplate, String metaDataId, String deploymentProfileId) {
         List<PipelineExecution.StageExecution> stages = new ArrayList<>();
 
         for (PipelineTemplate.StageDefinition stageDefinition : pipelineTemplate.getStages()) {
+            // Determine which profile ID to use based on stage name
+            String profileIdForStage = metaDataId;
+            if (stageDefinition.getName().equalsIgnoreCase("deployment") && deploymentProfileId != null) {
+                profileIdForStage = deploymentProfileId;
+            }
+
             PipelineExecution.StageExecution stageExecution = PipelineExecution.StageExecution.builder()
                     .id(UuidUtil.generateRandomUuid())
                     .stageName(stageDefinition.getName())
@@ -178,7 +234,40 @@ public class PipelineServiceImpl implements PipelineService {
                     .stopOnFailure(stageDefinition.isStopOnFailure())
                     .order(stageDefinition.getOrder())
                     .status(PipelineStepExecutionStatus.PENDING)
-                    .template(generateTemplateForPipeline(request, stageDefinition.getTemplateName(), metaDataId))
+                    .template(generateTemplateForPipeline(request, stageDefinition.getTemplateName(), profileIdForStage))
+                    .build();
+            if (stageDefinition.getName().equalsIgnoreCase("init")) {
+                stageExecution.setStatus(PipelineStepExecutionStatus.SUCCESS);
+            }
+            stages.add(stageExecution);
+        }
+
+        return stages;
+    }
+
+    private List<PipelineExecution.StageExecution> createStagesWithProfileMap(
+            PipelineExecutionRequest request,
+            PipelineTemplate pipelineTemplate,
+            Map<String, String> stageProfileMap) {
+        List<PipelineExecution.StageExecution> stages = new ArrayList<>();
+
+        for (PipelineTemplate.StageDefinition stageDefinition : pipelineTemplate.getStages()) {
+            // Determine which profile ID to use based on stage name from the map
+            String profileIdForStage = stageProfileMap.get(stageDefinition.getName().toLowerCase());
+            
+            // Fallback to build profile if no specific mapping found
+            if (profileIdForStage == null) {
+                profileIdForStage = stageProfileMap.get("build");
+            }
+
+            PipelineExecution.StageExecution stageExecution = PipelineExecution.StageExecution.builder()
+                    .id(UuidUtil.generateRandomUuid())
+                    .stageName(stageDefinition.getName())
+                    .startTime(LocalDateTime.now())
+                    .stopOnFailure(stageDefinition.isStopOnFailure())
+                    .order(stageDefinition.getOrder())
+                    .status(PipelineStepExecutionStatus.PENDING)
+                    .template(generateTemplateForPipeline(request, stageDefinition.getTemplateName(), profileIdForStage))
                     .build();
             if (stageDefinition.getName().equalsIgnoreCase("init")) {
                 stageExecution.setStatus(PipelineStepExecutionStatus.SUCCESS);
@@ -492,8 +581,17 @@ public class PipelineServiceImpl implements PipelineService {
 
         String decodedData = Base64Util.convertToPlainText(buildProfile.getData());
         String commitId = String.valueOf(request.getMetaData().get("commitId"));
+        
+        // Safely extract commitId substring (handle cases where commitId is null or too short)
+        String commitIdShort = "unknown";
+        if (commitId != null && !commitId.equals("null") && commitId.length() >= 7) {
+            commitIdShort = commitId.substring(0, 7);
+        } else if (commitId != null && !commitId.equals("null")) {
+            commitIdShort = commitId;
+        }
+        
         String dockerImageHashValue = buildProfile.getApplication().getName().toLowerCase() + "-"
-                + Base64Util.generate7DigitHash(decodedData) + ":" + commitId.substring(0, 7);
+                + Base64Util.generate7DigitHash(decodedData) + ":" + commitIdShort;
 
         String scmProviderId = profileConfig.path("scmId").asText();
 

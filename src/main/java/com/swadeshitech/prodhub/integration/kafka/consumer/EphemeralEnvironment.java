@@ -57,44 +57,71 @@ public class EphemeralEnvironment {
             return;
         }
 
-        // generate the pipeline configs
-        PipelineTemplate pipelineTemplate = pipelineTemplates.getFirst();
+        // fetch ephemeral environment by ID
+        String environmentId = message;
+        List<com.swadeshitech.prodhub.entity.EphemeralEnvironment> ephemeralEnvironments = readTransactionService.findByDynamicOrFilters(
+                Map.of("_id", new ObjectId(environmentId)), com.swadeshitech.prodhub.entity.EphemeralEnvironment.class);
+        if(CollectionUtils.isEmpty(ephemeralEnvironments)) {
+            log.error("Ephemeral environment could not be found {}", environmentId);
+            return;
+        }
+
+        com.swadeshitech.prodhub.entity.EphemeralEnvironment ephemeralEnvironment = ephemeralEnvironments.getFirst();
+        log.info("Processing ephemeral environment {} with {} attached profiles", environmentId, 
+                ephemeralEnvironment.getAttachedProfiles() != null ? ephemeralEnvironment.getAttachedProfiles().size() : 0);
+
+        // set user context from environment owner
+        if (ephemeralEnvironment.getOwner() != null && ephemeralEnvironment.getOwner().getUuid() != null) {
+            ContextHolder.setContext("uuid", ephemeralEnvironment.getOwner().getUuid());
+        }
+
+        // generate the pipeline configs for each attached profile
         List<PipelineExecution> pipelineExecutions = new ArrayList<>();
-        try {
-            EphemeralEnvironmentBuildAndDeployRequest request = objectMapper.readValue(message, EphemeralEnvironmentBuildAndDeployRequest.class);
-            log.info("Processing request for buildAndDeploy for environment {}", request.getEphemeralEnvironmentId());
-
-            if (request.getUserId() != null) {
-                ContextHolder.setContext("uuid", request.getUserId());
-            } else {
-                log.warn("UUID missing in Kafka message, extractUserFromContext might fail");
-            }
-
-            List<com.swadeshitech.prodhub.entity.EphemeralEnvironment> ephemeralEnvironments = readTransactionService.findByDynamicOrFilters(
-                    Map.of("_id", new ObjectId(request.getEphemeralEnvironmentId())), com.swadeshitech.prodhub.entity.EphemeralEnvironment.class);
-            if(CollectionUtils.isEmpty(ephemeralEnvironments)) {
-                log.error("Ephemeral environment could not be found {}", request.getEphemeralEnvironmentId());
-                return;
-            }
-            for (EphemeralEnvironmentBuildAndDeployRequest.EphemeralEnvironmentServiceProfiles profile : request.getProfiles()) {
-                List<Metadata> metadataList = readTransactionService.findMetaDataByFilters(Map.of("_id", new ObjectId(profile.getBuildProfileId())));
-                if (CollectionUtils.isEmpty(metadataList)) {
-                    log.error("Metadata could not be found {}", profile.getBuildProfileId());
-                    continue;
+        
+        if (ephemeralEnvironment.getAttachedProfiles() != null) {
+            for (com.swadeshitech.prodhub.entity.EphemeralEnvironment.Profile profile : ephemeralEnvironment.getAttachedProfiles()) {
+                try {
+                    // Create pipeline execution request with metadata
+                    Map<String, String> metaData = new HashMap<>();
+                    metaData.put("ephemeralEnvironmentId", environmentId);
+                    metaData.put("applicationId", profile.getApplication().getId());
+                    metaData.put("applicationName", profile.getApplication().getName());
+                    metaData.put("buildProfileId", profile.getBuildProfile().getId());
+                    metaData.put("buildProfileName", profile.getBuildProfile().getName());
+                    metaData.put("deploymentProfileId", profile.getDeploymentProfile().getId());
+                    metaData.put("deploymentProfileName", profile.getDeploymentProfile().getName());
+                    
+                    PipelineExecutionRequest pipelineExecutionRequest = PipelineExecutionRequest.builder()
+                            .metaDataID(profile.getBuildProfile().getId())
+                            .metaData(metaData)
+                            .build();
+                    
+                    // Use the new ephemeral environment pipeline creation method
+                    PipelineExecution pipelineExecution = pipelineService.createEphemeralEnvironmentPipelineExecution(
+                            pipelineExecutionRequest,
+                            profile.getBuildProfile().getId(),
+                            profile.getDeploymentProfile().getId()
+                    );
+                    pipelineExecutions.add(pipelineExecution);
+                    log.info("Created pipeline execution {} for application {} in ephemeral environment {}", 
+                            pipelineExecution.getId(), profile.getApplication().getName(), environmentId);
+                } catch (Exception e) {
+                    log.error("Failed to create pipeline execution for profile {} in environment {}", 
+                            profile.getApplication().getName(), environmentId, e);
                 }
-                PipelineExecutionRequest pipelineExecutionRequest = PipelineExecutionRequest.builder()
-                        .metaDataID(metadataList.getFirst().getId())
-                        //.pipelineTemplateName(pipelineTemplate.getName())
-                        .build();
-                PipelineExecution pipelineExecution = pipelineService.createPipelineExecution(pipelineExecutionRequest);
-                pipelineExecutions.add(pipelineExecution);
             }
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
         }
 
         // start the pipeline executions
-        //pipelineService.startPipelineExecution(pipelineExecutions);
+        for (PipelineExecution pipelineExecution : pipelineExecutions) {
+            try {
+                pipelineService.startPipelineExecution(pipelineExecution);
+                log.info("Started pipeline execution {} for ephemeral environment {}", pipelineExecution.getId(), environmentId);
+            } catch (Exception e) {
+                log.error("Failed to start pipeline execution {} for ephemeral environment {}", 
+                        pipelineExecution.getId(), environmentId, e);
+            }
+        }
     }
 
     @KafkaListener(topics = "${spring.kafka.topic.ephemeralEnvironmentBuildAndDeployment}", groupId = "default_group")

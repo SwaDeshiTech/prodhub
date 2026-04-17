@@ -16,6 +16,11 @@ public interface PipelineService {
 
     PipelineExecution createPipelineExecution(PipelineExecutionRequest request);
 
+    PipelineExecution createEphemeralEnvironmentPipelineExecution(
+            PipelineExecutionRequest request,
+            String buildProfileId,
+            String deploymentProfileId);
+
     void startPipelineExecution(PipelineExecution pipelineExecution);
 
     void triggerNextStage(PipelineExecution pipelineExecution);
