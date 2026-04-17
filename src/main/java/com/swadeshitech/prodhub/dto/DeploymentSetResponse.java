@@ -16,5 +16,5 @@ public class DeploymentSetResponse extends BaseResponse {
     private String buildProfileName;
     private Map<String, String> metaData;
     private String approvalId;
-    private List<DeploymentResponse> deployments;
+    private List<PipelineExecutionDetailsDTO> pipelineExecutions;
 }

@@ -224,14 +224,15 @@ public class DeploymentSetServiceImpl implements DeploymentSetService {
     }
 
     private DeploymentSetResponse mapDTOToEntity(DeploymentSet deploymentSet) {
-        List<DeploymentResponse> deploymentResponse = new ArrayList<>();
-        if(Objects.nonNull(deploymentSet.getDeployments()) && !deploymentSet.getDeployments().isEmpty()) {
-            for(Deployment deployment : deploymentSet.getDeployments()) {
-                deploymentResponse.add(DeploymentResponse.builder()
-                                .deploymentID(deployment.getId())
-                                .status(deployment.getStatus().name())
-                                .createdBy(deployment.getCreatedBy())
-                                .createdTime(deployment.getCreatedTime())
+        List<PipelineExecutionDetailsDTO> pipelineExecutionResponses = new ArrayList<>();
+        if(Objects.nonNull(deploymentSet.getPipelineExecutions()) && !deploymentSet.getPipelineExecutions().isEmpty()) {
+            for(PipelineExecution pipelineExecution : deploymentSet.getPipelineExecutions()) {
+                pipelineExecutionResponses.add(PipelineExecutionDetailsDTO.builder()
+                                .id(pipelineExecution.getId())
+                                .status(pipelineExecution.getStatus())
+                                .createdBy(pipelineExecution.getCreatedBy())
+                                .createdTime(pipelineExecution.getCreatedTime())
+                                .metaData(pipelineExecution.getMetaData())
                         .build());
             }
         }
@@ -243,7 +244,7 @@ public class DeploymentSetServiceImpl implements DeploymentSetService {
                 .buildProfileName(deploymentSet.getReleaseCandidate().getBuildProfile().getName())
                 .approvalId(deploymentSet.getApprovals().getId())
                 .metaData(Map.of("COMMIT_ID", deploymentSet.getReleaseCandidate().getMetaData().get("commitId")))
-                .deployments(deploymentResponse)
+                .pipelineExecutions(pipelineExecutionResponses)
                 .createdBy(deploymentSet.getCreatedBy())
                 .createdTime(deploymentSet.getCreatedTime())
                 .lastModifiedBy(deploymentSet.getLastModifiedBy())
@@ -342,23 +343,26 @@ public class DeploymentSetServiceImpl implements DeploymentSetService {
         Map<String, String> metaData = new HashMap<>();
         metaData.put("deploymentSetId", deploymentSetId);
         metaData.put("releaseCandidateId", deploymentSet.getReleaseCandidate().getId());
-        
-        // Add deployment IDs from deployment set
-        if (!CollectionUtils.isEmpty(deploymentSet.getDeployments())) {
-            List<String> deploymentIds = deploymentSet.getDeployments().stream()
-                    .map(com.swadeshitech.prodhub.entity.Deployment::getId)
-                    .toList();
-            metaData.put("deploymentIds", String.join(",", deploymentIds));
-        }
-        
+
         PipelineExecutionRequest pipelineExecutionRequest = PipelineExecutionRequest.builder()
                 .metaDataID(deploymentSet.getDeploymentProfile().getId())
                 .metaData(metaData)
                 .build();
-        
+
         String pipelineExecutionId = pipelineService.schedulePipelineExecution(pipelineExecutionRequest);
         log.info("Pipeline execution started with ID: {} for deployment set: {}", pipelineExecutionId, deploymentSetId);
-        
+
+        // Associate the pipeline execution with the deployment set
+        List<PipelineExecution> pipelineExecutions = deploymentSet.getPipelineExecutions();
+        if (CollectionUtils.isEmpty(pipelineExecutions)) {
+            pipelineExecutions = new ArrayList<>();
+        }
+        PipelineExecution pipelineExecution = readTransactionService.findByDynamicOrFilters(
+                Map.of("_id", new ObjectId(pipelineExecutionId)), PipelineExecution.class).getFirst();
+        pipelineExecutions.add(pipelineExecution);
+        deploymentSet.setPipelineExecutions(pipelineExecutions);
+        writeTransactionService.saveDeploymentSetToRepository(deploymentSet);
+
         return pipelineExecutionId;
     }
 

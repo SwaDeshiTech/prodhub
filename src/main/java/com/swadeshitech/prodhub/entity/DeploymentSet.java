@@ -39,5 +39,5 @@ public class DeploymentSet extends BaseEntity {
     private ReleaseCandidate releaseCandidate;
 
     @DBRef
-    private List<Deployment> deployments;
+    private List<PipelineExecution> pipelineExecutions;
 }
