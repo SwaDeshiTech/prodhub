@@ -11,11 +11,11 @@ import com.swadeshitech.prodhub.entity.UserOrganization;
 @Repository
 public interface UserOrganizationRepository extends MongoRepository<UserOrganization, String> {
 
-    List<UserOrganization> findByUserIdAndActiveTrue(String userId);
+    List<UserOrganization> findByUserIdAndIsActiveTrue(String userId);
 
-    List<UserOrganization> findByOrganizationIdAndActiveTrue(String organizationId);
+    List<UserOrganization> findByOrganizationIdAndIsActiveTrue(String organizationId);
 
-    Optional<UserOrganization> findByUserIdAndOrganizationIdAndActiveTrue(String userId, String organizationId);
+    Optional<UserOrganization> findByUserIdAndOrganizationIdAndIsActiveTrue(String userId, String organizationId);
 
-    boolean existsByUserIdAndOrganizationIdAndActiveTrue(String userId, String organizationId);
+    boolean existsByUserIdAndOrganizationIdAndIsActiveTrue(String userId, String organizationId);
 }

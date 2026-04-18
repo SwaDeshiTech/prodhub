@@ -1,7 +1,9 @@
 package com.swadeshitech.prodhub.entity;
 
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.CompoundIndex;
@@ -10,8 +12,10 @@ import org.springframework.data.mongodb.core.mapping.DBRef;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 @Data
-@NoArgsConstructor
+@Builder
 @AllArgsConstructor
+@NoArgsConstructor
+@EqualsAndHashCode(callSuper = false)
 @Document(collection = "user_organizations")
 @CompoundIndex(name = "user_organization_idx", def = "{'userId': 1, 'organizationId': 1}", unique = true)
 public class UserOrganization extends BaseEntity {

@@ -39,7 +39,7 @@ public class Organization {
         OrganizationRegisterResponse organizationRegisterResponse = organizationService.registerOrganization(request);
 
         // Link the creator to the organization as OWNER
-        String userId = UserContextUtil.getUserId();
+        String userId = UserContextUtil.getUserIdFromRequestContext();
         userOrganizationService.linkCreatorToOrganization(userId, organizationRegisterResponse.getId());
 
         Response response = Response.builder()

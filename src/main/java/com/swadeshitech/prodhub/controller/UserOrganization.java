@@ -61,7 +61,7 @@ public class UserOrganization {
     @GetMapping("/user/organizations")
     public ResponseEntity<Response> getCurrentUserOrganizations(@RequestHeader(name = "uuid") String uuid) {
 
-        String userId = UserContextUtil.getUserId();
+        String userId = UserContextUtil.getUserIdFromRequestContext();
         List<UserOrganizationResponse> organizations = userOrganizationService.getOrganizationsForUser(userId);
 
         Response res = Response.builder()
@@ -94,7 +94,7 @@ public class UserOrganization {
     @GetMapping("/can-create-organization")
     public ResponseEntity<Response> canUserCreateOrganization(@RequestHeader(name = "uuid") String uuid) {
 
-        String userId = UserContextUtil.getUserId();
+        String userId = UserContextUtil.getUserIdFromRequestContext();
         boolean canCreate = userOrganizationService.canUserCreateOrganization(userId);
 
         Response res = Response.builder()

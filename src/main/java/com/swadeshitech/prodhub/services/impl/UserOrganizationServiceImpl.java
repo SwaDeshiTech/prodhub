@@ -20,6 +20,7 @@ import com.swadeshitech.prodhub.enums.ErrorCode;
 import com.swadeshitech.prodhub.exception.CustomException;
 import com.swadeshitech.prodhub.repository.UserOrganizationRepository;
 import com.swadeshitech.prodhub.services.UserOrganizationService;
+import com.swadeshitech.prodhub.services.UserService;
 import com.swadeshitech.prodhub.transaction.read.ReadTransactionService;
 import com.swadeshitech.prodhub.transaction.write.WriteTransactionService;
 
@@ -38,18 +39,21 @@ public class UserOrganizationServiceImpl implements UserOrganizationService {
     @Autowired
     private WriteTransactionService writeTransactionService;
 
+    @Autowired
+    private UserService userService;
+
     @Override
     public UserOrganizationResponse addUserToOrganization(UserOrganizationRequest request) {
         log.info("Adding user {} to organization {}", request.getUserId(), request.getOrganizationId());
 
         // Check if user already belongs to this organization
-        if (userOrganizationRepository.existsByUserIdAndOrganizationIdAndActiveTrue(
+        if (userOrganizationRepository.existsByUserIdAndOrganizationIdAndIsActiveTrue(
                 request.getUserId(), request.getOrganizationId())) {
             throw new CustomException(ErrorCode.USER_ORGANIZATION_ALREADY_EXISTS);
         }
 
         // Fetch user by email (userId field contains email in this case)
-        List<User> users = readTransactionService.findUserByFilters(
+        List<User> users = readTransactionService.findUserDetailsByFilters(
                 java.util.Map.of("emailId", request.getUserId()));
         if (CollectionUtils.isEmpty(users)) {
             throw new CustomException(ErrorCode.USER_NOT_FOUND);
@@ -83,7 +87,7 @@ public class UserOrganizationServiceImpl implements UserOrganizationService {
                 .user(users.get(0))
                 .organization(organizations.get(0))
                 .role(defaultRoleName)
-                .active(true)
+                .isActive(true)
                 .build();
 
         writeTransactionService.saveUserOrganizationToRepository(userOrganization);
@@ -98,7 +102,7 @@ public class UserOrganizationServiceImpl implements UserOrganizationService {
         log.info("Fetching organizations for user {}", userId);
 
         List<UserOrganization> userOrganizations = userOrganizationRepository
-                .findByUserIdAndActiveTrue(userId);
+                .findByUserIdAndIsActiveTrue(userId);
 
         return userOrganizations.stream()
                 .map(this::mapToResponse)
@@ -130,10 +134,9 @@ public class UserOrganizationServiceImpl implements UserOrganizationService {
                 String email = data[0].trim();
                 String role = data.length > 1 ? data[1].trim() : "MEMBER";
 
-                // Find or create user by email
-                List<User> users = readTransactionService.findUserByFilters(
+                // Check if user already exists by email
+                List<User> users = readTransactionService.findUserDetailsByFilters(
                         java.util.Map.of("emailId", email));
-
                 User user;
                 if (CollectionUtils.isEmpty(users)) {
                     // Create new user
@@ -149,14 +152,14 @@ public class UserOrganizationServiceImpl implements UserOrganizationService {
                 }
 
                 // Add user to organization
-                if (!userOrganizationRepository.existsByUserIdAndOrganizationIdAndActiveTrue(
+                if (!userOrganizationRepository.existsByUserIdAndOrganizationIdAndIsActiveTrue(
                         user.getId(), organizationId)) {
                     UserOrganization userOrganization = UserOrganization.builder()
                             .userId(user.getId())
                             .organizationId(organizationId)
                             .user(user)
                             .role(role)
-                            .active(true)
+                            .isActive(true)
                             .build();
 
                     writeTransactionService.saveUserOrganizationToRepository(userOrganization);
@@ -178,7 +181,7 @@ public class UserOrganizationServiceImpl implements UserOrganizationService {
         log.info("Checking if user {} can create organization", userId);
 
         List<UserOrganization> userOrganizations = userOrganizationRepository
-                .findByUserIdAndActiveTrue(userId);
+                .findByUserIdAndIsActiveTrue(userId);
 
         // User can create organization only if they don't belong to any organization
         return CollectionUtils.isEmpty(userOrganizations);
@@ -188,17 +191,9 @@ public class UserOrganizationServiceImpl implements UserOrganizationService {
     public UserOrganizationResponse linkCreatorToOrganization(String userId, String organizationId) {
         log.info("Linking creator {} to organization {}", userId, organizationId);
 
-        // Check if user already belongs to this organization
-        if (userOrganizationRepository.existsByUserIdAndOrganizationIdAndActiveTrue(userId, organizationId)) {
-            // Already linked, return existing
-            List<UserOrganization> userOrganizations = userOrganizationRepository
-                    .findByUserIdAndActiveTrue(userId);
-            return mapToResponse(userOrganizations.get(0));
-        }
-
-        // Fetch user and organization
-        List<User> users = readTransactionService.findUserByFilters(
-                java.util.Map.of("_id", new org.bson.types.ObjectId(userId)));
+        // Fetch user by UUID
+        List<User> users = readTransactionService.findUserDetailsByFilters(
+                java.util.Map.of("uuid", userId));
         if (CollectionUtils.isEmpty(users)) {
             throw new CustomException(ErrorCode.USER_NOT_FOUND);
         }
@@ -209,6 +204,14 @@ public class UserOrganizationServiceImpl implements UserOrganizationService {
             throw new CustomException(ErrorCode.ORGANIZATION_NOT_FOUND);
         }
 
+        // Check if user already belongs to this organization
+        if (userOrganizationRepository.existsByUserIdAndOrganizationIdAndIsActiveTrue(userId, organizationId)) {
+            // Already linked, return existing
+            List<UserOrganization> userOrganizations = userOrganizationRepository
+                    .findByUserIdAndIsActiveTrue(userId);
+            return mapToResponse(userOrganizations.get(0));
+        }
+
         // Create user-organization mapping with OWNER role
         UserOrganization userOrganization = UserOrganization.builder()
                 .userId(userId)
@@ -216,7 +219,7 @@ public class UserOrganizationServiceImpl implements UserOrganizationService {
                 .user(users.get(0))
                 .organization(organizations.get(0))
                 .role("OWNER")
-                .active(true)
+                .isActive(true)
                 .build();
 
         writeTransactionService.saveUserOrganizationToRepository(userOrganization);
@@ -244,7 +247,7 @@ public class UserOrganizationServiceImpl implements UserOrganizationService {
         log.info("Fetching members for organization {}", organizationId);
 
         List<UserOrganization> userOrganizations = userOrganizationRepository
-                .findByOrganizationIdAndActiveTrue(organizationId);
+                .findByOrganizationIdAndIsActiveTrue(organizationId);
 
         return userOrganizations.stream()
                 .map(this::mapToResponse)

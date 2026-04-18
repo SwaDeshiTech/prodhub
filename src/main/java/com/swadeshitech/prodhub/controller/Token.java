@@ -32,8 +32,8 @@ public class Token {
             @RequestBody TokenGenerateRequest request,
             @RequestHeader(name = "uuid") String uuid) {
 
-        String userId = UserContextUtil.getUserId();
-        String organizationId = UserContextUtil.getOrganizationId();
+        String userId = UserContextUtil.getUserIdFromRequestContext();
+        String organizationId = null; // TODO: Implement getOrganizationId when needed
 
         TokenResponse tokenResponse = tokenService.generateToken(request, userId, organizationId);
 
@@ -49,8 +49,8 @@ public class Token {
     @GetMapping("/list")
     public ResponseEntity<Response> listTokens(@RequestHeader(name = "uuid") String uuid) {
 
-        String userId = UserContextUtil.getUserId();
-        String organizationId = UserContextUtil.getOrganizationId();
+        String userId = UserContextUtil.getUserIdFromRequestContext();
+        String organizationId = null; // TODO: Implement getOrganizationId when needed
 
         List<TokenResponse> tokens = tokenService.listTokens(userId, organizationId);
 
@@ -68,8 +68,8 @@ public class Token {
             @PathVariable String tokenId,
             @RequestHeader(name = "uuid") String uuid) {
 
-        String userId = UserContextUtil.getUserId();
-        String organizationId = UserContextUtil.getOrganizationId();
+        String userId = UserContextUtil.getUserIdFromRequestContext();
+        String organizationId = null; // TODO: Implement getOrganizationId when needed
 
         tokenService.revokeToken(tokenId, userId, organizationId);
 
