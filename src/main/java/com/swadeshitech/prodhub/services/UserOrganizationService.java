@@ -20,4 +20,6 @@ public interface UserOrganizationService {
     boolean canUserCreateOrganization(String userId);
 
     UserOrganizationResponse linkCreatorToOrganization(String userId, String organizationId);
+
+    List<UserOrganizationResponse> getOrganizationMembers(String organizationId);
 }

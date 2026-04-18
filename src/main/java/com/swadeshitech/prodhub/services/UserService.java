@@ -23,4 +23,6 @@ public interface UserService {
     List<DropdownDTO> getAllUsersForDropdown();
 
     Set<Role> getUserRoles(String uuid);
+
+    Set<Role> getDefaultRoles();
 }

@@ -105,4 +105,18 @@ public class UserOrganization {
 
         return ResponseEntity.ok(res);
     }
+
+    @GetMapping("/organization/{organizationId}")
+    public ResponseEntity<Response> getOrganizationMembers(@PathVariable String organizationId) {
+
+        List<UserOrganizationResponse> members = userOrganizationService.getOrganizationMembers(organizationId);
+
+        Response res = Response.builder()
+                .httpStatus(HttpStatus.OK)
+                .message("Organization members fetched successfully")
+                .response(members)
+                .build();
+
+        return ResponseEntity.ok(res);
+    }
 }

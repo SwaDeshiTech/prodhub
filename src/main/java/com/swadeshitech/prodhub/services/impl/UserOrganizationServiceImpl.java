@@ -48,9 +48,9 @@ public class UserOrganizationServiceImpl implements UserOrganizationService {
             throw new CustomException(ErrorCode.USER_ORGANIZATION_ALREADY_EXISTS);
         }
 
-        // Fetch user and organization
+        // Fetch user by email (userId field contains email in this case)
         List<User> users = readTransactionService.findUserByFilters(
-                java.util.Map.of("_id", new org.bson.types.ObjectId(request.getUserId())));
+                java.util.Map.of("emailId", request.getUserId()));
         if (CollectionUtils.isEmpty(users)) {
             throw new CustomException(ErrorCode.USER_NOT_FOUND);
         }
@@ -61,13 +61,28 @@ public class UserOrganizationServiceImpl implements UserOrganizationService {
             throw new CustomException(ErrorCode.ORGANIZATION_NOT_FOUND);
         }
 
-        // Create user-organization mapping
+        // Create user-organization mapping with default role
+        String defaultRoleName;
+        try {
+            var defaultRoles = userService.getDefaultRoles();
+            if (defaultRoles == null || defaultRoles.isEmpty()) {
+                log.error("No default role found in system");
+                throw new CustomException(ErrorCode.ROLE_NOT_FOUND);
+            }
+            defaultRoleName = defaultRoles.iterator().next().getName();
+        } catch (CustomException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("Failed to get default role from UserService", e);
+            throw new CustomException(ErrorCode.ROLE_NOT_FOUND);
+        }
+
         UserOrganization userOrganization = UserOrganization.builder()
-                .userId(request.getUserId())
+                .userId(users.get(0).getId())
                 .organizationId(request.getOrganizationId())
                 .user(users.get(0))
                 .organization(organizations.get(0))
-                .role(request.getRole() != null ? request.getRole() : "MEMBER")
+                .role(defaultRoleName)
                 .active(true)
                 .build();
 
@@ -222,5 +237,17 @@ public class UserOrganizationServiceImpl implements UserOrganizationService {
                 .createdTime(userOrganization.getCreatedTime())
                 .lastModifiedTime(userOrganization.getLastModifiedTime())
                 .build();
+    }
+
+    @Override
+    public List<UserOrganizationResponse> getOrganizationMembers(String organizationId) {
+        log.info("Fetching members for organization {}", organizationId);
+
+        List<UserOrganization> userOrganizations = userOrganizationRepository
+                .findByOrganizationIdAndActiveTrue(organizationId);
+
+        return userOrganizations.stream()
+                .map(this::mapToResponse)
+                .collect(java.util.stream.Collectors.toList());
     }
 }

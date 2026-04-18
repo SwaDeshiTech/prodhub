@@ -171,7 +171,8 @@ public class UserServiceImpl implements UserService {
         return users.getFirst().getRoles();
     }
 
-    private Set<Role> getDefaultRoles() {
+    @Override
+    public Set<Role> getDefaultRoles() {
 
         Map<String, Object> filters = new HashMap<>();
         filters.put("isDefault", true);
