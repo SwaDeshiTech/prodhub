@@ -209,15 +209,41 @@ public class DeploymentServiceImpl implements DeploymentService {
     @Override
     public DeploymentPodResponse getDeployedPodDetails(String deploymentId, String ephemeralEnvironment) {
 
-        Deployment deployment = findDeployment(deploymentId);
+        String k8sClusterId;
+        String namespace;
 
-        // Use ephemeral environment name as namespace if provided, otherwise use deployment metadata namespace
-        String namespace = StringUtils.hasText(ephemeralEnvironment) 
-                ? ephemeralEnvironment 
-                : deployment.getMetaData().get("namespace").toString();
+        if (StringUtils.hasText(ephemeralEnvironment)) {
+            // For ephemeral environments, fetch ephemeral environment to get k8s cluster ID
+            List<com.swadeshitech.prodhub.entity.EphemeralEnvironment> ephemeralEnvironments = 
+                readTransactionService.findByDynamicOrFilters(
+                    Map.of("name", ephemeralEnvironment),
+                    com.swadeshitech.prodhub.entity.EphemeralEnvironment.class
+                );
+            
+            if (CollectionUtils.isEmpty(ephemeralEnvironments)) {
+                log.error("Ephemeral environment could not be found with name {}", ephemeralEnvironment);
+                throw new CustomException(ErrorCode.EPHEMERAL_ENVIRONMENT_NOT_FOUND);
+            }
+
+            com.swadeshitech.prodhub.entity.EphemeralEnvironment ephemeralEnv = ephemeralEnvironments.getFirst();
+            
+            // Get k8s cluster ID from ephemeral environment metadata
+            if (ephemeralEnv.getMetaData() == null || !ephemeralEnv.getMetaData().containsKey("k8sClusterId")) {
+                log.error("K8s cluster ID not found in ephemeral environment metadata for {}", ephemeralEnvironment);
+                throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
+            }
+            
+            k8sClusterId = ephemeralEnv.getMetaData().get("k8sClusterId").toString();
+            namespace = ephemeralEnvironment;
+        } else {
+            // For regular deployments, use deployment metadata
+            Deployment deployment = findDeployment(deploymentId);
+            k8sClusterId = deployment.getMetaData().get("k8sClusterId").toString();
+            namespace = deployment.getMetaData().get("namespace").toString();
+        }
 
         DeploymentPodResponse deploymentPodResponse = deplOrchClient
-                .getDeployedPodDetails(deployment.getMetaData().get("k8sClusterId").toString(), namespace)
+                .getDeployedPodDetails(k8sClusterId, namespace)
                 .block();
 
         if (Objects.isNull(deploymentPodResponse)) {
@@ -225,9 +251,9 @@ public class DeploymentServiceImpl implements DeploymentService {
         }
 
         List<CredentialProvider> credentialProviders = readTransactionService.findCredentialProviderByFilters(
-                Map.of("_id", new ObjectId(deployment.getMetaData().get("k8sClusterId").toString())));
+                Map.of("_id", new ObjectId(k8sClusterId)));
         if (credentialProviders.isEmpty()) {
-            log.error("K8s cluster could not be found in vault {}", deployment.getMetaData().get("k8sClusterId"));
+            log.error("K8s cluster could not be found in vault {}", k8sClusterId);
             throw new CustomException(ErrorCode.CREDENTIAL_PROVIDER_NOT_FOUND);
         }
 
