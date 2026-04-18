@@ -7,12 +7,10 @@ import com.swadeshitech.prodhub.config.ContextHolder;
 import com.swadeshitech.prodhub.constant.EphemeralEnvironmentConstants;
 import com.swadeshitech.prodhub.dto.EphemeralEnvironmentBuildAndDeployRequest;
 import com.swadeshitech.prodhub.dto.PipelineExecutionRequest;
-import com.swadeshitech.prodhub.dto.ReleaseCandidateRequest;
 import com.swadeshitech.prodhub.entity.Metadata;
 import com.swadeshitech.prodhub.entity.PipelineExecution;
 import com.swadeshitech.prodhub.entity.PipelineTemplate;
 import com.swadeshitech.prodhub.services.PipelineService;
-import com.swadeshitech.prodhub.services.ReleaseCandidateService;
 import com.swadeshitech.prodhub.transaction.read.ReadTransactionService;
 import com.swadeshitech.prodhub.utils.Base64Util;
 import lombok.extern.slf4j.Slf4j;
@@ -36,9 +34,6 @@ public class EphemeralEnvironment {
 
     @Autowired
     ReadTransactionService readTransactionService;
-
-    @Autowired
-    ReleaseCandidateService releaseCandidateService;
 
     @Autowired
     PipelineService pipelineService;
@@ -145,23 +140,30 @@ public class EphemeralEnvironment {
                 return;
             }
             com.swadeshitech.prodhub.entity.EphemeralEnvironment ephemeralEnvironment = ephemeralEnvironments.getFirst();
+            
+            // Process each profile and create pipeline execution
             for (EphemeralEnvironmentBuildAndDeployRequest.EphemeralEnvironmentServiceProfiles profile : request.getProfiles()) {
-                List<Metadata> metadataList = readTransactionService.findMetaDataByFilters(Map.of("_id", new ObjectId(profile.getBuildProfileId())));
-                if (CollectionUtils.isEmpty(metadataList)) {
-                    log.error("Metadata could not be found {}", profile.getBuildProfileId());
-                    continue;
-                }
-                Metadata metadata = metadataList.getFirst();
-                JsonNode data = objectMapper.readTree(Base64Util.convertToPlainText(metadata.getData()));
+                // Create metadata
                 Map<String, String> metaData = new HashMap<>();
-                metaData.put("branchName", data.path("branchName").asText());
-                metaData.put("commitId", data.path("commitId").asText());
-                releaseCandidateService.createReleaseCandidate(ReleaseCandidateRequest.builder()
-                                .buildProfile(metadata.getId())
-                                .ephemeralEnvironmentName(ephemeralEnvironment.getId())
-                                .serviceName(metadata.getApplication().getId())
-                                .metadata(metaData)
-                        .build());
+                metaData.put("ephemeralEnvironmentId", request.getEphemeralEnvironmentId());
+                metaData.put("ephemeralEnvironmentName", ephemeralEnvironment.getName());
+                metaData.put("buildProfileId", profile.getBuildProfileId());
+                metaData.put("deploymentProfileId", profile.getDeploymentProfileId());
+                
+                // Create pipeline execution request using builder pattern
+                PipelineExecutionRequest pipelineExecutionRequest = PipelineExecutionRequest.builder()
+                        .metaDataID(profile.getBuildProfileId())
+                        .metaData(metaData)
+                        .build();
+                
+                // Create pipeline execution with build and deployment profiles
+                PipelineExecution pipelineExecution = pipelineService.createEphemeralEnvironmentPipelineExecution(
+                        pipelineExecutionRequest,
+                        profile.getBuildProfileId(),
+                        profile.getDeploymentProfileId()
+                );
+                log.info("Created pipeline execution {} for ephemeral environment {} with build profile {} and deployment profile {}",
+                        pipelineExecution.getId(), request.getEphemeralEnvironmentId(), profile.getBuildProfileId(), profile.getDeploymentProfileId());
             }
         } catch (JsonProcessingException e) {
             log.error("{} Failed to parse the message", this.getClass().getCanonicalName(), e);

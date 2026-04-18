@@ -21,7 +21,7 @@ public interface DeploymentService {
 
     DeploymentResponse getDeploymentDetails(String deploymentId);
 
-    DeploymentPodResponse getDeployedPodDetails(String deploymentId);
+    DeploymentPodResponse getDeployedPodDetails(String deploymentId, String ephemeralEnvironment);
 
     PaginatedResponse<DeploymentRequestResponse> getAllDeployments(Integer page, Integer size, String sortBy, String order, String ephemeralEnvironment);
 

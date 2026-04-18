@@ -64,9 +64,11 @@ public class Deployment {
     }
 
     @GetMapping("/podDetails/{deploymentId}")
-    public ResponseEntity<Response> deploymentPodDetails(@PathVariable String deploymentId) {
+    public ResponseEntity<Response> deploymentPodDetails(
+            @PathVariable String deploymentId,
+            @RequestParam(required = false) String ephemeralEnvironment) {
 
-        DeploymentPodResponse deploymentPodResponse = deploymentService.getDeployedPodDetails(deploymentId);
+        DeploymentPodResponse deploymentPodResponse = deploymentService.getDeployedPodDetails(deploymentId, ephemeralEnvironment);
 
         Response response = Response.builder()
                 .httpStatus(HttpStatus.OK)

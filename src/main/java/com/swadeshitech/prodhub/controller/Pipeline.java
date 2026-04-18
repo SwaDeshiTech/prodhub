@@ -65,6 +65,7 @@ public class Pipeline {
     @RequestMapping("/executions")
     public ResponseEntity<Response> getPipelineExecutions(
             @RequestParam(required = false) String serviceId,
+            @RequestParam(required = false) String ephemeralEnvironmentName,
             @RequestParam(defaultValue = "0") Integer page,
             @RequestParam(defaultValue = "10") Integer size,
             @RequestParam(defaultValue = "createdTime") String sortBy,
@@ -73,6 +74,9 @@ public class Pipeline {
         Map<String, Object> filters = new HashMap<>();
         if (serviceId != null && !serviceId.isEmpty()) {
             filters.put("serviceId", serviceId);
+        }
+        if (ephemeralEnvironmentName != null && !ephemeralEnvironmentName.isEmpty()) {
+            filters.put("ephemeralEnvironmentName", ephemeralEnvironmentName);
         }
 
         PaginatedResponse<PipelineExecutionDetailsDTO> pipelineExecutions = pipelineService

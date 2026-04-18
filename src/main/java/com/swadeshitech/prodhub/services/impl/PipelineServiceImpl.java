@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.swadeshitech.prodhub.constant.Constants;
+import com.swadeshitech.prodhub.constant.EphemeralEnvironmentConstants;
 import com.swadeshitech.prodhub.dto.PaginatedResponse;
 import com.swadeshitech.prodhub.dto.PipelineExecutionDetailsDTO;
 import com.swadeshitech.prodhub.dto.PipelineExecutionRequest;
@@ -125,7 +126,7 @@ public class PipelineServiceImpl implements PipelineService {
             String buildProfileId,
             String deploymentProfileId) {
 
-        // Fetch build metadata to extract pipelineTemplateId
+        // Fetch build metadata to extract pipelineTemplateId and commitId
         List<Metadata> metadataList = readTransactionService.findMetaDataByFilters(
                 Map.of("_id", new ObjectId(buildProfileId)));
         if (CollectionUtils.isEmpty(metadataList)) {
@@ -134,7 +135,29 @@ public class PipelineServiceImpl implements PipelineService {
         }
         Metadata metadata = metadataList.getFirst();
 
-        String pipelineTemplateId = extractPipelineTemplateIdFromMetadata(metadata);
+        List<PipelineTemplate> pipelineTemplates = readTransactionService.findByDynamicOrFilters(
+                Map.of("name", EphemeralEnvironmentConstants.pipelineTemplate),
+                PipelineTemplate.class
+        );
+        if (CollectionUtils.isEmpty(pipelineTemplates)) {
+            log.error("Pipeline template could not be found {}", EphemeralEnvironmentConstants.pipelineTemplate);
+            throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
+        }
+
+        String pipelineTemplateId = pipelineTemplates.getFirst().getId();
+        
+        // Extract commitId from buildProfile metadata
+        String commitId = null;
+        try {
+            JsonNode metadataJson = objectMapper.readTree(
+                    Base64Util.convertToPlainText(metadata.getData()));
+            JsonNode commitIdNode = metadataJson.path("commitId");
+            if (!commitIdNode.isMissingNode() && StringUtils.hasText(commitIdNode.asText())) {
+                commitId = commitIdNode.asText();
+            }
+        } catch (JsonProcessingException e) {
+            log.warn("Unable to extract commitId from build profile metadata {}", buildProfileId, e);
+        }
 
         PipelineTemplate pipelineTemplate = fetchPipelineTemplate(
                 Map.of("_id", new ObjectId(pipelineTemplateId))
@@ -152,7 +175,7 @@ public class PipelineServiceImpl implements PipelineService {
         pipelineExecution.setPipelineTemplate(pipelineTemplate);
         pipelineExecution.setStatus(PipelineStatus.PENDING);
         
-        // Set metadata with both profile IDs
+        // Set metadata with both profile IDs and commitId
         Map<String, Object> metaData = new HashMap<>();
         metaData.put("metaDataId", buildProfileId);
         metaData.put("buildProfileId", buildProfileId);
@@ -160,13 +183,21 @@ public class PipelineServiceImpl implements PipelineService {
         if (deploymentProfileId != null) {
             metaData.put("deploymentProfileId", deploymentProfileId);
         }
+        if (commitId != null) {
+            metaData.put("commit_id", commitId);
+        }
         // Merge additional metadata from the request
         if (request.getMetaData() != null) {
             metaData.putAll(request.getMetaData());
         }
         pipelineExecution.setMetaData(metaData);
 
-        return writeTransactionService.savePipelineExecutionToRepository(pipelineExecution);
+        PipelineExecution savedPipelineExecution = writeTransactionService.savePipelineExecutionToRepository(pipelineExecution);
+        
+        // Start the pipeline execution after creation
+        startPipelineExecution(savedPipelineExecution);
+        
+        return savedPipelineExecution;
     }
 
     private String extractPipelineTemplateIdFromMetadata(Metadata metadata) {
@@ -260,19 +291,27 @@ public class PipelineServiceImpl implements PipelineService {
                 profileIdForStage = stageProfileMap.get("build");
             }
 
-            PipelineExecution.StageExecution stageExecution = PipelineExecution.StageExecution.builder()
-                    .id(UuidUtil.generateRandomUuid())
-                    .stageName(stageDefinition.getName())
-                    .startTime(LocalDateTime.now())
-                    .stopOnFailure(stageDefinition.isStopOnFailure())
-                    .order(stageDefinition.getOrder())
-                    .status(PipelineStepExecutionStatus.PENDING)
-                    .template(generateTemplateForPipeline(request, stageDefinition.getTemplateName(), profileIdForStage))
-                    .build();
-            if (stageDefinition.getName().equalsIgnoreCase("init")) {
-                stageExecution.setStatus(PipelineStepExecutionStatus.SUCCESS);
+            try {
+                Template template = generateTemplateForPipeline(request, stageDefinition.getTemplateName(), profileIdForStage);
+                
+                PipelineExecution.StageExecution stageExecution = PipelineExecution.StageExecution.builder()
+                        .id(UuidUtil.generateRandomUuid())
+                        .stageName(stageDefinition.getName())
+                        .startTime(LocalDateTime.now())
+                        .stopOnFailure(stageDefinition.isStopOnFailure())
+                        .order(stageDefinition.getOrder())
+                        .status(PipelineStepExecutionStatus.PENDING)
+                        .template(template)
+                        .build();
+                if (stageDefinition.getName().equalsIgnoreCase("init")) {
+                    stageExecution.setStatus(PipelineStepExecutionStatus.SUCCESS);
+                }
+                stages.add(stageExecution);
+            } catch (Exception e) {
+                log.error("Failed to create stage {} with template {}: {}", 
+                        stageDefinition.getName(), stageDefinition.getTemplateName(), e.getMessage());
+                // Skip this stage but continue with others
             }
-            stages.add(stageExecution);
         }
 
         return stages;
@@ -585,7 +624,19 @@ public class PipelineServiceImpl implements PipelineService {
             JsonNode profileConfig, Metadata buildProfile) {
 
         String decodedData = Base64Util.convertToPlainText(buildProfile.getData());
+        
+        // Extract commitId from request metadata
         String commitId = String.valueOf(request.getMetaData().get("commitId"));
+        
+        // For ephemeral environments, fallback to profileConfig if commitId is null in metadata
+        if ((commitId == null || commitId.equals("null")) 
+                && (request.getMetaData().containsKey("ephemeralEnvironmentId") 
+                    || request.getMetaData().containsKey("ephemeralEnvironmentName"))) {
+            JsonNode commitIdNode = profileConfig.path("commitId");
+            if (!commitIdNode.isMissingNode() && StringUtils.hasText(commitIdNode.asText())) {
+                commitId = commitIdNode.asText();
+            }
+        }
         
         // Safely extract commitId substring (handle cases where commitId is null or too short)
         String commitIdShort = "unknown";
@@ -674,6 +725,8 @@ public class PipelineServiceImpl implements PipelineService {
         filters.forEach((key, value) -> {
             if (key.equalsIgnoreCase("serviceId")) {
                 queryFilters.put("metaData.serviceId", value);
+            } else if (key.equalsIgnoreCase("ephemeralEnvironmentName")) {
+                queryFilters.put("metaData.ephemeralEnvironmentName", value);
             } else {
                 queryFilters.put(key, value);
             }

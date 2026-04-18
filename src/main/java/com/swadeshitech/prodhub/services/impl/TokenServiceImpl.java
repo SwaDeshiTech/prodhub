@@ -130,8 +130,14 @@ public class TokenServiceImpl implements TokenService {
     }
 
     private String hashToken(String token) {
-        // Hash the token for storage (in production, use a proper hashing algorithm like bcrypt)
-        return Base64Util.convertToPlainText(token);
+        // Hash the token for storage using SHA-256
+        try {
+            java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-256");
+            byte[] hashBytes = digest.digest(token.getBytes());
+            return java.util.Base64.getEncoder().encodeToString(hashBytes);
+        } catch (java.security.NoSuchAlgorithmException e) {
+            throw new RuntimeException("SHA-256 algorithm not available", e);
+        }
     }
 
     private TokenResponse mapToResponse(Token token) {

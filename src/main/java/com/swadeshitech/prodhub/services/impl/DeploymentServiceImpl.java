@@ -207,13 +207,17 @@ public class DeploymentServiceImpl implements DeploymentService {
     }
 
     @Override
-    public DeploymentPodResponse getDeployedPodDetails(String deploymentId) {
+    public DeploymentPodResponse getDeployedPodDetails(String deploymentId, String ephemeralEnvironment) {
 
         Deployment deployment = findDeployment(deploymentId);
 
+        // Use ephemeral environment name as namespace if provided, otherwise use deployment metadata namespace
+        String namespace = StringUtils.hasText(ephemeralEnvironment) 
+                ? ephemeralEnvironment 
+                : deployment.getMetaData().get("namespace").toString();
+
         DeploymentPodResponse deploymentPodResponse = deplOrchClient
-                .getDeployedPodDetails(deployment.getMetaData().get("k8sClusterId").toString(),
-                        deployment.getMetaData().get("namespace").toString())
+                .getDeployedPodDetails(deployment.getMetaData().get("k8sClusterId").toString(), namespace)
                 .block();
 
         if (Objects.isNull(deploymentPodResponse)) {
