@@ -10,6 +10,7 @@ import com.swadeshitech.prodhub.enums.ErrorCode;
 import com.swadeshitech.prodhub.exception.CustomException;
 
 import lombok.extern.slf4j.Slf4j;
+import com.swadeshitech.prodhub.repository.UserOrganizationRepository;
 
 @Service
 @Slf4j
@@ -74,6 +75,9 @@ public class WriteTransactionService {
 
     @Autowired
     PipelineTemplateRepository pipelineTemplateRepository;
+
+    @Autowired
+    private UserOrganizationRepository userOrganizationRepository;
 
     public Application saveApplicationToRepository(Application application) {
         try {
@@ -339,6 +343,18 @@ public class WriteTransactionService {
         } catch (Exception ex) {
             log.error("Failed to save data ", ex);
             throw new CustomException(ErrorCode.PIPELINE_EXECUTION_COULD_NOT_BE_CREATED);
+        }
+    }
+
+    public UserOrganization saveUserOrganizationToRepository(UserOrganization userOrganization) {
+        try {
+            return userOrganizationRepository.save(userOrganization);
+        } catch (DataIntegrityViolationException ex) {
+            log.error("DataIntegrity error ", ex);
+            throw new CustomException(ErrorCode.DATA_INTEGRITY_FAILURE);
+        } catch (Exception ex) {
+            log.error("Failed to save user organization mapping ", ex);
+            throw new CustomException(ErrorCode.USER_UPDATE_FAILED);
         }
     }
 }

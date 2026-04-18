@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -17,6 +18,8 @@ import com.swadeshitech.prodhub.dto.OrganizationRegisterRequest;
 import com.swadeshitech.prodhub.dto.OrganizationRegisterResponse;
 import com.swadeshitech.prodhub.dto.Response;
 import com.swadeshitech.prodhub.services.OrganizationService;
+import com.swadeshitech.prodhub.services.UserOrganizationService;
+import com.swadeshitech.prodhub.utils.UserContextUtil;
 
 @RestController
 @RequestMapping("/organization")
@@ -25,10 +28,19 @@ public class Organization {
     @Autowired
     private OrganizationService organizationService;
 
+    @Autowired
+    private UserOrganizationService userOrganizationService;
+
     @PostMapping
-    public ResponseEntity<Response> registerOrganization(@RequestBody OrganizationRegisterRequest request) {
+    public ResponseEntity<Response> registerOrganization(
+            @RequestBody OrganizationRegisterRequest request,
+            @RequestHeader(name = "uuid") String uuid) {
 
         OrganizationRegisterResponse organizationRegisterResponse = organizationService.registerOrganization(request);
+
+        // Link the creator to the organization as OWNER
+        String userId = UserContextUtil.getUserId();
+        userOrganizationService.linkCreatorToOrganization(userId, organizationRegisterResponse.getId());
 
         Response response = Response.builder()
                 .httpStatus(HttpStatus.CREATED)

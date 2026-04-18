@@ -928,6 +928,10 @@ public class PipelineServiceImpl implements PipelineService {
             }
         }
 
+        // Extract commitId and serviceName from metadata
+        String commitId = (String) pipelineExecution.getMetaData().get("commitId");
+        String serviceName = (String) responseMetaData.get("serviceName");
+
         return PipelineExecutionDetailsDTO.builder()
                 .id(pipelineExecution.getId())
                 .status(pipelineExecution.getStatus())
@@ -936,6 +940,8 @@ public class PipelineServiceImpl implements PipelineService {
                 .createdBy(pipelineExecution.getCreatedBy())
                 .createdTime(pipelineExecution.getCreatedTime())
                 .releaseCandidateId(releaseCandidateId)
+                .commitId(commitId)
+                .serviceName(serviceName)
                 .build();
     }
 }

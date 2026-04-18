@@ -18,4 +18,6 @@ public class PipelineExecutionDetailsDTO {
     private String createdBy;
     private String releaseCandidateId;
     private java.time.LocalDateTime createdTime;
+    private String commitId;
+    private String serviceName;
 }

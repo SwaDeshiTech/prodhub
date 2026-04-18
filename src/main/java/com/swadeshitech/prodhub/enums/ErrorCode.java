@@ -113,7 +113,19 @@ public enum ErrorCode {
                         HttpStatus.INTERNAL_SERVER_ERROR),
         PIPELINE_EXECUTION_COULD_NOT_BE_FOUND("PH-220002", "Pipeline execution could not be found",
                         HttpStatus.NOT_FOUND),
-        PIPELINE_SERVICE_ID_IS_MANDATORY("PH-220003", "Pipeline service ID is mandatory", HttpStatus.BAD_REQUEST);
+        PIPELINE_SERVICE_ID_IS_MANDATORY("PH-220003", "Pipeline service ID is mandatory", HttpStatus.BAD_REQUEST),
+
+        TOKEN_NOT_FOUND("PH-230001", "Token not found", HttpStatus.NOT_FOUND),
+        TOKEN_COULD_NOT_BE_GENERATED("PH-230002", "Token could not be generated", HttpStatus.INTERNAL_SERVER_ERROR),
+        TOKEN_COULD_NOT_BE_REVOKED("PH-230003", "Token could not be revoked", HttpStatus.INTERNAL_SERVER_ERROR),
+        UNAUTHORIZED_ACCESS("PH-230004", "Unauthorized access", HttpStatus.FORBIDDEN),
+        TOKEN_LIMIT_EXCEEDED("PH-230005", "Maximum token limit reached. Please delete an existing token to generate a new one.", HttpStatus.BAD_REQUEST),
+
+        USER_ORGANIZATION_ALREADY_EXISTS("PH-240001", "User already belongs to this organization", HttpStatus.BAD_REQUEST),
+        USER_ORGANIZATION_NOT_FOUND("PH-240002", "User organization mapping not found", HttpStatus.NOT_FOUND),
+        USER_ALREADY_HAS_ORGANIZATION("PH-240003", "User already belongs to an organization and cannot create a new one", HttpStatus.BAD_REQUEST),
+        CSV_UPLOAD_FAILED("PH-240004", "Failed to process CSV file", HttpStatus.BAD_REQUEST),
+        USER_NOT_FOUND_IN_CSV("PH-240005", "One or more users not found in CSV", HttpStatus.NOT_FOUND);
 
         private final String code;
         private final String description;
