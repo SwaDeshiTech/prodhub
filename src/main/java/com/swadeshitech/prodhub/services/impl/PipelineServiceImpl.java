@@ -323,7 +323,12 @@ public class PipelineServiceImpl implements PipelineService {
                     } else {
                         Map<String, Object> configs = new HashMap<>();
                         for (Map.Entry<String, Template.Step.TemplateStepParam> itr : step.getParams().entrySet()) {
-                            if (ObjectUtils.isEmpty(profileConfig.path(itr.getKey()))) {
+                            // Override namespace with ephemeral environment name if available
+                            if ("namespace".equalsIgnoreCase(itr.getKey()) 
+                                    && request.getMetaData() != null 
+                                    && request.getMetaData().containsKey("ephemeralEnvironmentName")) {
+                                configs.put(itr.getKey(), request.getMetaData().get("ephemeralEnvironmentName"));
+                            } else if (ObjectUtils.isEmpty(profileConfig.path(itr.getKey()))) {
                                 configs.put(itr.getKey(), "");
                             } else {
                                 configs.put(itr.getKey(), profileConfig.path(itr.getKey()).asText());

@@ -84,6 +84,7 @@ public class EphemeralEnvironment {
                     // Create pipeline execution request with metadata
                     Map<String, String> metaData = new HashMap<>();
                     metaData.put("ephemeralEnvironmentId", environmentId);
+                    metaData.put("ephemeralEnvironmentName", ephemeralEnvironment.getName());
                     metaData.put("applicationId", profile.getApplication().getId());
                     metaData.put("applicationName", profile.getApplication().getName());
                     metaData.put("buildProfileId", profile.getBuildProfile().getId());
