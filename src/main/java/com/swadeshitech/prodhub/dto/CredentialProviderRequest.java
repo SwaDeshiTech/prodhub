@@ -11,4 +11,5 @@ public class CredentialProviderRequest {
     private String provider;
     private String metaData;
     private String serviceId;
+    private Boolean isActive;
 }

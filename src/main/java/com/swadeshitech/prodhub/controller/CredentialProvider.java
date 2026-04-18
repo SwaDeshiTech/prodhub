@@ -85,4 +85,18 @@ public class CredentialProvider {
 
         return ResponseEntity.ok().body(response);
     }
+
+    @PutMapping("/details/{credentialId}")
+    public ResponseEntity<Response> updateCredentialProvider(@PathVariable String credentialId, @RequestBody CredentialProviderRequest request) {
+
+        CredentialProviderResponse credentialProviderResponse = credentialProviderService.updateCredentialProvider(credentialId, request);
+
+        Response response = Response.builder()
+                .httpStatus(HttpStatus.OK)
+                .message("Credential has been updated successfully")
+                .response(credentialProviderResponse)
+                .build();
+
+        return ResponseEntity.ok().body(response);
+    }
 }

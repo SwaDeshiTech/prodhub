@@ -79,6 +79,15 @@ public class WriteTransactionService {
     @Autowired
     private UserOrganizationRepository userOrganizationRepository;
 
+    @Autowired
+    private K8sClusterGroupRepository k8sClusterGroupRepository;
+
+    @Autowired
+    private ClusterResourceRepository clusterResourceRepository;
+
+    @Autowired
+    private ResourceAllocationRuleRepository resourceAllocationRuleRepository;
+
     public Application saveApplicationToRepository(Application application) {
         try {
             return applicationRepository.save(application);
@@ -355,6 +364,30 @@ public class WriteTransactionService {
         } catch (Exception ex) {
             log.error("Failed to save user organization mapping ", ex);
             throw new CustomException(ErrorCode.USER_UPDATE_FAILED);
+        }
+    }
+
+    public ClusterResource saveClusterResourceToRepository(ClusterResource clusterResource) {
+        try {
+            return clusterResourceRepository.save(clusterResource);
+        } catch (DataIntegrityViolationException ex) {
+            log.error("DataIntegrity error ", ex);
+            throw new CustomException(ErrorCode.DATA_INTEGRITY_FAILURE);
+        } catch (Exception ex) {
+            log.error("Failed to save cluster resource ", ex);
+            throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    public ResourceAllocationRule saveResourceAllocationRuleToRepository(ResourceAllocationRule resourceAllocationRule) {
+        try {
+            return resourceAllocationRuleRepository.save(resourceAllocationRule);
+        } catch (DataIntegrityViolationException ex) {
+            log.error("DataIntegrity error ", ex);
+            throw new CustomException(ErrorCode.DATA_INTEGRITY_FAILURE);
+        } catch (Exception ex) {
+            log.error("Failed to save resource allocation rule ", ex);
+            throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
     }
 }

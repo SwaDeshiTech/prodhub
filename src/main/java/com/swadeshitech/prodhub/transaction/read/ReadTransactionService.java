@@ -49,6 +49,23 @@ public class ReadTransactionService {
         return mongoTemplate.find(query, ResourceDetails.class);
     }
 
+    public <T> List<T> findByDynamicOrFilters(Map<String, Object> filters, Class<T> entityClass) {
+        Query query = new Query();
+        List<Criteria> criteriaList = new ArrayList<>();
+
+        filters.forEach((key, value) -> {
+            if (value != null) {
+                criteriaList.add(Criteria.where(key).is(value));
+            }
+        });
+
+        if (!criteriaList.isEmpty()) {
+            query.addCriteria(new Criteria().orOperator(criteriaList.toArray(new Criteria[0])));
+        }
+
+        return mongoTemplate.find(query, entityClass);
+    }
+
     public List<Role> findRoleDetailsByFilters(Map<String, Object> filters) {
         Query query = new Query();
 
@@ -437,23 +454,6 @@ public class ReadTransactionService {
             }
         });
         return mongoTemplate.find(query, CodeFreeze.class);
-    }
-
-    public <T> List<T> findByDynamicOrFilters(Map<String, Object> filters, Class<T> clazz) {
-        if (filters == null || filters.isEmpty()) {
-            return Collections.emptyList();
-        }
-        List<Criteria> orCriterias = new ArrayList<>();
-        for (Map.Entry<String, Object> entry : filters.entrySet()) {
-            String key = entry.getKey();
-            Object value = entry.getValue();
-            if (value != null) {
-                orCriterias.add(Criteria.where(key).is(value));
-            }
-        }
-        Criteria orCriteria = new Criteria().orOperator(orCriterias.toArray(new Criteria[0]));
-        Query query = new Query(orCriteria);
-        return mongoTemplate.find(query, clazz);
     }
 
     public <T> Page<T> findByDynamicOrFiltersPaginated(

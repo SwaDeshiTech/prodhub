@@ -22,4 +22,6 @@ public interface CredentialProviderService {
     List<DropdownDTO> getCredentialProvidersByType(String type);
 
     String extractSCMURL(String id);
+
+    CredentialProviderResponse updateCredentialProvider(String credentialId, CredentialProviderRequest request);
 }

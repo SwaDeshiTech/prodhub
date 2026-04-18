@@ -127,11 +127,12 @@ public class CredentialProviderServiceImpl implements CredentialProviderService 
         }
 
         CredentialProvider credentialProvider = credentialProviders.getFirst();
-        /* Map<String, Object> vaultResponse = vaultService.getSecret(credentialProvider.getCredentialPath());
-        response.setCredentialMetadata(vaultResponse != null ? vaultResponse.get("secret").toString() : null);
-        */
-
-        return mapEntityToDTO(credentialProvider);
+        Map<String, Object> vaultResponse = vaultService.getSecret(credentialProvider.getCredentialPath());
+        CredentialProviderResponse credentialProviderResponse = mapEntityToDTO(credentialProvider);
+        if(credentialProvider.getCredentialProvider().equals(com.swadeshitech.prodhub.enums.CredentialProvider.K8S)) {
+            credentialProviderResponse.setCredentialMetadata(vaultResponse != null ? vaultResponse.get("secret").toString() : null);
+        }
+        return credentialProviderResponse;
     }
 
     @Override
@@ -249,5 +250,54 @@ public class CredentialProviderServiceImpl implements CredentialProviderService 
                 .lastModifiedBy(credentialProvider.getLastModifiedBy())
                 .lastModifiedTime(credentialProvider.getLastModifiedTime())
                 .build();
+    }
+
+    @Override
+    public CredentialProviderResponse updateCredentialProvider(String credentialId, CredentialProviderRequest request) {
+        log.info("Updating credential provider with id: {}", credentialId);
+
+        List<CredentialProvider> credentialProviders = readTransactionService.findCredentialProviderByFilters(
+                Map.of("_id", new ObjectId(credentialId)));
+        
+        if (credentialProviders.isEmpty()) {
+            log.error("Credential provider not found with id: {}", credentialId);
+            throw new CustomException(ErrorCode.CREDENTIAL_PROVIDER_NOT_FOUND);
+        }
+
+        CredentialProvider credentialProvider = credentialProviders.getFirst();
+
+        // Update name if provided
+        if (StringUtils.isNotBlank(request.getName())) {
+            credentialProvider.setName(request.getName());
+        }
+
+        // Update description if provided
+        if (StringUtils.isNotBlank(request.getDescription())) {
+            credentialProvider.setDescription(request.getDescription());
+        }
+
+        // Update metadata in vault if provided
+        if (StringUtils.isNotBlank(request.getMetaData())) {
+            String credentialPath = credentialProvider.getCredentialPath();
+            Map<String, Object> credentials = new HashMap<>();
+            credentials.put("secret", request.getMetaData());
+
+            VaultRequest vaultRequest = VaultRequest.builder()
+                    .credentialPath(credentialPath)
+                    .data(credentials)
+                    .build();
+
+            vaultService.storeSecret(vaultRequest);
+        }
+
+        // Update active status if provided
+        if (request.getIsActive() != null) {
+            credentialProvider.setActive(request.getIsActive());
+        }
+
+        writeTransactionService.saveCredentialProviderToRepository(credentialProvider);
+
+        log.info("Credential provider updated successfully with id: {}", credentialId);
+        return mapEntityToDTO(credentialProvider);
     }
 }

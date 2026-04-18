@@ -16,11 +16,13 @@ import com.swadeshitech.prodhub.enums.EphemeralEnvrionmentStatus;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@EqualsAndHashCode(callSuper = false)
 @Document(collection = "ephemeralEnvironments")
 public class EphemeralEnvironment extends BaseEntity implements Serializable {
 
@@ -43,6 +45,9 @@ public class EphemeralEnvironment extends BaseEntity implements Serializable {
 
     @DBRef
     private Set<User> sharedWith;
+
+    @DBRef
+    private CredentialProvider k8sClusterAllocation;
 
     @Data
     @Builder

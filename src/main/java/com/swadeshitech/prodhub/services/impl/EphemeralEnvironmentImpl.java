@@ -8,7 +8,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.swadeshitech.prodhub.dto.*;
 import com.swadeshitech.prodhub.entity.*;
 import com.swadeshitech.prodhub.integration.kafka.producer.KafkaProducer;
+import com.swadeshitech.prodhub.services.EphemeralEnvironmentService;
 import com.swadeshitech.prodhub.services.MetadataService;
+import com.swadeshitech.prodhub.services.ResourceSchedulerService;
 import com.swadeshitech.prodhub.transaction.read.ReadTransactionService;
 import com.swadeshitech.prodhub.transaction.write.WriteTransactionService;
 import org.bson.types.ObjectId;
@@ -59,6 +61,9 @@ public class EphemeralEnvironmentImpl implements EphemeralEnvironmentService {
     @Autowired
     UserServiceImpl userService;
 
+    @Autowired
+    ResourceSchedulerService resourceSchedulerService;
+
     @Value("${spring.kafka.topic.ephemeralEnvironmentBuildAndDeployment}")
     String ephemeralEnvironmentBuildAndDeploymentTopic;
 
@@ -87,6 +92,17 @@ public class EphemeralEnvironmentImpl implements EphemeralEnvironmentService {
         setSharedWith(environment, request.getSharedWith());
 
         generateUpdatedProfiles(environment, request);
+
+        // Allocate k8s cluster using resource scheduler
+        try {
+            CredentialProvider allocatedCluster = resourceSchedulerService.allocateCluster(
+                    null, userId, 2, 4); // Default 2 CPU cores, 4 GB memory
+            environment.setK8sClusterAllocation(allocatedCluster);
+            log.info("Allocated cluster {} for ephemeral environment {}", allocatedCluster.getId(), environment.getName());
+        } catch (Exception e) {
+            log.warn("Failed to allocate cluster for ephemeral environment, will proceed without allocation", e);
+            // Continue without cluster allocation - can be configured later
+        }
 
         environment = writeTransactionService.saveEphemeralEnvironmentToRepository(environment);
 
