@@ -11,7 +11,7 @@ import java.io.Serializable;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Document(collection = "clusterResources")
+@Document(collection = "cluster_resources")
 @EqualsAndHashCode(callSuper = true)
 @Builder
 public class ClusterResource extends BaseEntity implements Serializable {

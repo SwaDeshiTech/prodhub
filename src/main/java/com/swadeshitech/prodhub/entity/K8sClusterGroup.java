@@ -12,7 +12,7 @@ import java.util.Set;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Document(collection = "k8sClusterGroups")
+@Document(collection = "k8s_cluster_groups")
 @EqualsAndHashCode(callSuper = true)
 @Builder
 public class K8sClusterGroup extends BaseEntity implements Serializable {

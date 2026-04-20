@@ -12,7 +12,7 @@ import java.util.Map;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Document(collection = "resourceAllocationRules")
+@Document(collection = "resource_allocation_rules")
 @EqualsAndHashCode(callSuper = true)
 @Builder
 public class ResourceAllocationRule extends BaseEntity implements Serializable {

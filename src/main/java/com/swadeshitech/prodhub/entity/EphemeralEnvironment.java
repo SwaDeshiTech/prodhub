@@ -23,7 +23,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @EqualsAndHashCode(callSuper = false)
-@Document(collection = "ephemeralEnvironments")
+@Document(collection = "ephemeral_environments")
 public class EphemeralEnvironment extends BaseEntity implements Serializable {
 
     @Id

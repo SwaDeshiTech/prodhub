@@ -16,7 +16,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 @JsonIgnoreProperties(ignoreUnknown = true)
-@Document(collection = "resourceDetails")
+@Document(collection = "resource_details")
 public class ResourceDetails extends BaseEntity implements Serializable {
 
     @Id
