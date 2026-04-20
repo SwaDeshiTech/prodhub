@@ -11,6 +11,7 @@ import com.swadeshitech.prodhub.entity.Application;
 import com.swadeshitech.prodhub.entity.CredentialProvider;
 import com.swadeshitech.prodhub.enums.ErrorCode;
 import com.swadeshitech.prodhub.exception.CustomException;
+import com.swadeshitech.prodhub.integration.cicaptain.CICaptainClient;
 import com.swadeshitech.prodhub.integration.vault.VaultApiService;
 import com.swadeshitech.prodhub.integration.vault.VaultRequest;
 import com.swadeshitech.prodhub.services.CredentialProviderService;
@@ -21,8 +22,10 @@ import org.apache.commons.lang3.StringUtils;
 import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
+import org.springframework.web.client.RestTemplate;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -299,5 +302,78 @@ public class CredentialProviderServiceImpl implements CredentialProviderService 
 
         log.info("Credential provider updated successfully with id: {}", credentialId);
         return mapEntityToDTO(credentialProvider);
+    }
+
+    @Override
+    public Map<String, Object> syncCredentials(String scmCredentialId, List<String> buildProviderIds) {
+        log.info("Syncing credentials from SCM provider {} to build providers {}", scmCredentialId, buildProviderIds);
+
+        // Fetch SCM credential details
+        List<CredentialProvider> scmCredentials = readTransactionService.findByDynamicOrFilters(
+                Map.of("_id", new ObjectId(scmCredentialId)), CredentialProvider.class);
+
+        if (CollectionUtils.isEmpty(scmCredentials)) {
+            log.error("SCM credential not found with id: {}", scmCredentialId);
+            throw new CustomException(ErrorCode.CREDENTIAL_PROVIDER_NOT_FOUND);
+        }
+
+        CredentialProvider scmCredential = scmCredentials.getFirst();
+
+        // Get SCM credentials from vault
+        Map<String, Object> vaultResponse = vaultService.getSecret(scmCredential.getCredentialPath());
+        String scmStoredData = vaultResponse.get("secret").toString();
+
+        // Parse SCM credentials
+        Map<String, String> scmCredentialsMap = new HashMap<>();
+        try {
+            JsonNode node = objectMapper.readTree(scmStoredData);
+            Iterator<Map.Entry<String, JsonNode>> fields = node.fields();
+            while (fields.hasNext()) {
+                Map.Entry<String, JsonNode> field = fields.next();
+                scmCredentialsMap.put(field.getKey(), field.getValue().asText());
+            }
+        } catch (JsonProcessingException e) {
+            log.error("Failed to parse SCM credentials", e);
+            throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
+        }
+
+        // Prepare request for ci-captain
+        Map<String, Object> ciCaptainRequest = new HashMap<>();
+        ciCaptainRequest.put("scmProviderId", scmCredentialId);
+        ciCaptainRequest.put("scmType", scmCredential.getCredentialProvider().getDisplayName());
+        ciCaptainRequest.put("scmCredentials", scmCredentialsMap);
+        ciCaptainRequest.put("buildProviderIds", buildProviderIds);
+
+        // Call ci-captain to sync credentials
+        String ciCaptainUrl = ciCaptainURI + "/api/v1/credentials/sync";
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(ciCaptainRequest, headers);
+
+        try {
+            ResponseEntity<Map> response = restTemplate.exchange(
+                    ciCaptainUrl,
+                    HttpMethod.POST,
+                    requestEntity,
+                    Map.class
+            );
+
+            if (response.getStatusCode() == HttpStatus.OK) {
+                Map<String, Object> responseBody = response.getBody();
+                log.info("Credentials synced successfully: {}", responseBody);
+
+                // Save sync result to credential provider metadata
+                // You might want to add a new field to CredentialProvider entity to store sync history
+
+                return responseBody != null ? responseBody : Map.of("status", "success");
+            } else {
+                log.error("Failed to sync credentials. Status: {}", response.getStatusCode());
+                throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
+            }
+        } catch (Exception e) {
+            log.error("Error calling ci-captain for credential sync", e);
+            throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
+        }
     }
 }

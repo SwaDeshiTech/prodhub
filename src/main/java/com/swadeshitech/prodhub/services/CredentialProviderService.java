@@ -7,6 +7,7 @@ import com.swadeshitech.prodhub.dto.DropdownDTO;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.Map;
 
 @Component
 public interface CredentialProviderService {
@@ -24,4 +25,6 @@ public interface CredentialProviderService {
     String extractSCMURL(String id);
 
     CredentialProviderResponse updateCredentialProvider(String credentialId, CredentialProviderRequest request);
+
+    Map<String, Object> syncCredentials(String scmCredentialId, List<String> buildProviderIds);
 }

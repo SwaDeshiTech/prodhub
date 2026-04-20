@@ -99,4 +99,21 @@ public class CredentialProvider {
 
         return ResponseEntity.ok().body(response);
     }
+
+    @PostMapping("/sync")
+    public ResponseEntity<Response> syncCredentials(@RequestBody Map<String, Object> request) {
+        String scmCredentialId = (String) request.get("scmCredentialId");
+        @SuppressWarnings("unchecked")
+        List<String> buildProviderIds = (List<String>) request.get("buildProviderIds");
+
+        Map<String, Object> syncResult = credentialProviderService.syncCredentials(scmCredentialId, buildProviderIds);
+
+        Response response = Response.builder()
+                .httpStatus(HttpStatus.OK)
+                .message("Credentials sync completed")
+                .response(syncResult)
+                .build();
+
+        return ResponseEntity.ok().body(response);
+    }
 }
