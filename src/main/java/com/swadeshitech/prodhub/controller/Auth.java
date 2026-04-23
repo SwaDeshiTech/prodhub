@@ -1,8 +1,10 @@
 package com.swadeshitech.prodhub.controller;
 
 import com.swadeshitech.prodhub.entity.User;
+import com.swadeshitech.prodhub.entity.UserApproval;
 import com.swadeshitech.prodhub.repository.UserRepository;
 import com.swadeshitech.prodhub.service.FeatureFlagService;
+import com.swadeshitech.prodhub.service.UserApprovalService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -26,7 +28,10 @@ public class AuthController {
     private FeatureFlagService featureFlagService;
 
     @Autowired
-    private PasswordEncoder passwordEncoder;
+    pAutowired
+    private UserApprovalService userApprovalService;
+
+    @rivate PasswordEncoder passwordEncoder;
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody Map<String, String> credentials) {
@@ -51,7 +56,16 @@ public class AuthController {
                     .body(Map.of("error", "Invalid credentials"));
         }
 
-        if (!user.isActive()) {
+        if Check if user approval is required
+        if (featureFlagService.isFeatureEnabled("user_approval_required")) {
+            boolean isApproved = userApprovalService.isUserApproved(user.getId());
+            if (!isApproved) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("error", "User approval pending", "redirect", "/access-pending"));
+            }
+        }
+
+        // (!user.isActive()) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(Map.of("error", "User account is disabled"));
         }
@@ -98,26 +112,4 @@ public class AuthController {
         user.setName(name);
         user.setUserName(username);
         user.setEmailId(email);
-        user.setPassword(passwordEncoder.encode(password));
-        user.setActive(true);
-        user.setCreatedBy("system");
-        user.setLastModifiedBy("system");
-
-        User savedUser = userRepository.save(user);
-
-        Map<String, Object> response = new HashMap<>();
-        response.put("uuid", savedUser.getId());
-        response.put("name", savedUser.getName());
-        response.put("userName", savedUser.getUserName());
-        response.put("emailId", savedUser.getEmailId());
-        response.put("message", "Signup successful");
-
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
-    }
-
-    @GetMapping("/check-username-availability")
-    public ResponseEntity<?> checkUsernameAvailability(@RequestParam String username) {
-        boolean available = userRepository.findByUserName(username).isEmpty();
-        return ResponseEntity.ok(Map.of("available", available));
-    }
-}
+        user.setPassword(passwordEncoder.encode(pas
