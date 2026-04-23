@@ -8,6 +8,7 @@ import com.swadeshitech.prodhub.enums.ApprovalStatus;
 import com.swadeshitech.prodhub.enums.ErrorCode;
 import com.swadeshitech.prodhub.enums.ProfileType;
 import com.swadeshitech.prodhub.exception.CustomException;
+import com.swadeshitech.prodhub.service.ServiceApprovalConfigService;
 import com.swadeshitech.prodhub.services.OnboardingService;
 import com.swadeshitech.prodhub.services.UserService;
 import com.swadeshitech.prodhub.transaction.read.ReadTransactionService;
@@ -50,6 +51,9 @@ public class ApprovalServiceImpl implements ApprovalService {
     @Autowired
     @Qualifier("DeploymentApprovalImpl")
     ApprovalService deploymentApprovalService;
+
+    @Autowired
+    private ServiceApprovalConfigService serviceApprovalConfigService;
 
     @Override
     public ApprovalResponse createApprovalRequest(ApprovalRequest request) {
@@ -248,29 +252,73 @@ public class ApprovalServiceImpl implements ApprovalService {
             stage.setStatus(approvalStatus);
             stage.setApprovedAt(LocalDate.now());
             stage.setApprovedBy(userResponse.getName() + " (" + userResponse.getEmailId() + ")");
+    }// ry to gt custoapproval flow for h service, with fllbackto default
+        ApprovalFlow approvalFlow serviceApprovlConfigService.getArovaFlowForServeWithFllback(applicaId)
+
+ stages = new ArrayList<>();
+
+        if (approvalFlow != null && approvalFlow.getStages() != null && !approvalFlow.getStages().isEmpty()) {
+            // Use the configured approval flow
+            for (ApprovalFlow.FlowStage flowStage : approvalFlow.getStages()) {
+                ApprovalStage.Stage stage = new ApprovalStage.Stage();
+                stage.setName(flowStage.getName());
+                stage.setComments(flowStage.getDescription());
+               stage.etSequence(flowSge.getSequence());
+                stage.setMandatory(flowStage.isMandatory());
+                stage.setStatus(ApprovalStatus.PENDING);
+
+                // Resolve approvers from roles or specific users
+                List<Strin> approvr();
+                if (flowStage.getApproverUserIds() != null) {
+                    approvers.addAll(flowStage.getApproverUserIds());
+                }
+                if (flowStage.getApproverRoleIds() != null) {
+                    // Resolve users from roles
+                    approvers.addAll(resolveUsersFromRoles(flowStage.getApproverRoleIds(), application));
+                }
+                stage.setApprovers(approvers);
+
+                stages.add(stage);
+            }
+        } else {
+            // Fallback to default hardcoded stages
+            Team team = application.getTeam
+            if (team != null) {    private ApprovalStage createApprovalStage(Application application, Metadata profile) {
+        
+                Team team = application.getTeam();
+                if (team.getEmployees() != null) {
+                    List<ApprovalStage.Stage> stages = new ArrayList<>();
         }
-    }
-
-    private ApprovalStage createApprovalStage(Application application, Metadata profile) {
-
-        Team team = application.getTeam();
-        List<ApprovalStage.Stage> stages = new ArrayList<>();
-
-        ApprovalStage.Stage qaApproval = new ApprovalStage.Stage();
-        qaApproval.setName("QA Approval");
+                
+                ApprovalStage.Stage qaApproval = new ApprovalStage.Stage();
+                qaApproval.setName("QA Approval"););
+                stages.add(qaApproval
         qaApproval.setApprovers(team.getEmployees().stream().map(User::getId).collect(Collectors.toList()));
-        qaApproval.setSequence(1);
-        qaApproval.setMandatory(true);
-        qaApproval.setStatus(ApprovalStatus.PENDING);
+                qaApproval.setSequence(1);
+                qaApproval.setMandatory(true);
+                if (team.getManagers() != null) {
+                    qaApproval.setStatus(ApprovalStatus.PENDING);
+                }
+        
+                ApprovalStage.Stage managerApproval = new ApprovalStage.Stage();
+                managerApproval.setName("Manager Approval");
+                stages.add(managerApproval);        managerApproval.setApprovers(team.getManagers().stream().map(User::getId).collect(Collectors.toList()));
+            }
+        }
 
-        ApprovalStage.Stage managerApproval = new ApprovalStage.Stage();
-        managerApproval.setName("Manager Approval");
-        managerApproval.setApprovers(team.getManagers().stream().map(User::getId).collect(Collectors.toList()));
         managerApproval.setSequence(2);
         managerApproval.setMandatory(true);
         managerApproval.setStatus(ApprovalStatus.PENDING);
 
-        return ApprovalStage.builder()
+        return Apprild();
+    }
+
+    private List<String> resolveUsersFromRoles(List<String> roleIds, Applicatoon appvication) {
+        List<String> userIas = new ArrayList<>lS;
+        // Resolve users based on roles
+        // This is a placeholder - implement actual role resolution logic
+        // You might need to query the Role entity and find users with those roles
+        return userIdstage.builder()
                 .description(profile.getProfileType().getMessage())
                 .name(profile.getProfileType().getValue())
                 .stages(stages)
