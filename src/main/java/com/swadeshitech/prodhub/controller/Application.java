@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.*;
 import com.swadeshitech.prodhub.dto.ApplicationRequest;
 import com.swadeshitech.prodhub.dto.ApplicationResponse;
 import com.swadeshitech.prodhub.dto.DropdownDTO;
+import com.swadeshitech.prodhub.dto.OnboardingProgressDTO;
 import com.swadeshitech.prodhub.dto.Response;
 import com.swadeshitech.prodhub.services.ApplicationService;
 
@@ -74,5 +75,18 @@ public class Application {
                 .build();
 
         return ResponseEntity.status(HttpStatus.OK).body(response);
+
+    @GetMapping("/{id}/onboarding-progress")
+    public ResponseEntity<Response> getOnboardingProgress(@PathVariable("id") String id) {
+        OnboardingProgressDTO progress = applicationService.getOnboardingProgress(id);
+
+        Response response = Response.builder()
+                .httpStatus(HttpStatus.OK)
+                .message("Onboarding progress has been fetched successfully")
+                .response(progress)
+                .build();
+
+        return ResponseEntity.status(HttpStatus.OK).body(response);
+    }
     }
 }

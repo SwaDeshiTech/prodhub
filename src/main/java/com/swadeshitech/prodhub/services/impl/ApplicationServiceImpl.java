@@ -4,6 +4,7 @@ import java.util.*;
 
 import com.swadeshitech.prodhub.dto.*;
 import com.swadeshitech.prodhub.entity.*;
+import com.swadeshitech.prodhub.enums.ProfileType;
 import com.swadeshitech.prodhub.transaction.read.ReadTransactionService;
 import com.swadeshitech.prodhub.utils.UserContextUtil;
 import org.modelmapper.ModelMapper;
@@ -192,6 +193,106 @@ public class ApplicationServiceImpl implements ApplicationService {
             }
         }
         return false;
+    }
+
+    @Override
+    public OnboardingProgressDTO getOnboardingProgress(String serviceId) {
+        if (StringUtils.isEmpty(serviceId)) {
+            log.error("Service ID is empty/null");
+            throw new CustomException(ErrorCode.BAD_REQUEST);
+        }
+
+        Optional<Application> applicationOptional = applicationRepository.findById(serviceId);
+        if (applicationOptional.isEmpty()) {
+            log.error("Application could not be found", serviceId);
+            throw new CustomException(ErrorCode.APPLICATION_NOT_FOUND);
+        }
+
+        Application application = applicationOptional.get();
+        List<OnboardingProgressDTO.OnboardingStep> steps = new ArrayList<>();
+        int completedSteps = 0;
+
+        // Step 1: Service creation (always completed if service exists)
+        steps.add(OnboardingProgressDTO.OnboardingStep.builder()
+                .name("Service Creation")
+                .completed(true)
+                .description("Service has been created")
+                .sequence(1)
+                .status("COMPLETED")
+                .build());
+        completedSteps++;
+
+        // Step 2: Department linkage
+        boolean hasDepartment = application.getDepartment() != null;
+        steps.add(OnboardingProgressDTO.OnboardingStep.builder()
+                .name("Department Linkage")
+                .completed(hasDepartment)
+                .description(hasDepartment ? "Linked to department: " + application.getDepartment().getName() : "Not linked to any department")
+                .sequence(2)
+                .status(hasDepartment ? "COMPLETED" : "PENDING")
+                .build());
+        if (hasDepartment) completedSteps++;
+
+        // Step 3: Team linkage
+        boolean hasTeam = application.getTeam() != null;
+        steps.add(OnboardingProgressDTO.OnboardingStep.builder()
+                .name("Team Linkage")
+                .completed(hasTeam)
+                .description(hasTeam ? "Linked to team: " + application.getTeam().getName() : "Not linked to any team")
+                .sequence(3)
+                .status(hasTeam ? "COMPLETED" : "PENDING")
+                .build());
+        if (hasTeam) completedSteps++;
+
+        // Step 4: Build Profile
+        boolean hasBuildProfile = application.getProfiles() != null &&
+                application.getProfiles().stream()
+                        .anyMatch(p -> p.getProfileType() == ProfileType.BUILD);
+        steps.add(OnboardingProgressDTO.OnboardingStep.builder()
+                .name("Build Profile")
+                .completed(hasBuildProfile)
+                .description(hasBuildProfile ? "Build profile configured" : "Build profile not configured")
+                .sequence(4)
+                .status(hasBuildProfile ? "COMPLETED" : "PENDING")
+                .build());
+        if (hasBuildProfile) completedSteps++;
+
+        // Step 5: Deployment Profile
+        boolean hasDeploymentProfile = application.getProfiles() != null &&
+                application.getProfiles().stream()
+                        .anyMatch(p -> p.getProfileType() == ProfileType.DEPLOYMENT);
+        steps.add(OnboardingProgressDTO.OnboardingStep.builder()
+                .name("Deployment Profile")
+                .completed(hasDeploymentProfile)
+                .description(hasDeploymentProfile ? "Deployment profile configured" : "Deployment profile not configured")
+                .sequence(5)
+                .status(hasDeploymentProfile ? "COMPLETED" : "PENDING")
+                .build());
+        if (hasDeploymentProfile) completedSteps++;
+
+        // Step 6: Logging Profile (optional)
+        boolean hasLoggingProfile = application.getProfiles() != null &&
+                application.getProfiles().stream()
+                        .anyMatch(p -> p.getProfileType() == ProfileType.LOGGING);
+        steps.add(OnboardingProgressDTO.OnboardingStep.builder()
+                .name("Logging Profile")
+                .completed(hasLoggingProfile)
+                .description(hasLoggingProfile ? "Logging profile configured" : "Logging profile not configured")
+                .sequence(6)
+                .status(hasLoggingProfile ? "COMPLETED" : "OPTIONAL")
+                .build());
+
+        int totalSteps = steps.size();
+        int progressPercentage = (completedSteps * 100) / totalSteps;
+
+        return OnboardingProgressDTO.builder()
+                .serviceId(application.getId())
+                .serviceName(application.getName())
+                .totalSteps(totalSteps)
+                .completedSteps(completedSteps)
+                .progressPercentage(progressPercentage)
+                .steps(steps)
+                .build();
     }
 
     private ApplicationResponse mapEntityToDTO(Application application) {

@@ -7,6 +7,7 @@ import org.springframework.stereotype.Component;
 import com.swadeshitech.prodhub.dto.ApplicationRequest;
 import com.swadeshitech.prodhub.dto.ApplicationResponse;
 import com.swadeshitech.prodhub.dto.DropdownDTO;
+import com.swadeshitech.prodhub.dto.OnboardingProgressDTO;
 
 @Component
 public interface ApplicationService {
@@ -18,4 +19,6 @@ public interface ApplicationService {
     public List<DropdownDTO> getAllApplicationsDropdown();
 
     public List<DropdownDTO> getApplicationDropdownByUserAccess();
+
+    public OnboardingProgressDTO getOnboardingProgress(String serviceId);
 }
