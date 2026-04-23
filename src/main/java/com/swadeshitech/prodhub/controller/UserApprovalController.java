@@ -27,7 +27,7 @@ public class UserApprovalController {
 
     @PostMapping("/{userId}/approve")
     public ResponseEntity<UserApproval> approveUser(@PathVariable String userId) {
-        String approvedBy = UserContextUtil.getUserId();
+        String approvedBy = UserContextUtil.getUserIdFromRequestContext();
         UserApproval approval = userApprovalService.approveUser(userId, approvedBy);
         return ResponseEntity.ok(approval);
     }
@@ -36,7 +36,7 @@ public class UserApprovalController {
     public ResponseEntity<UserApproval> blockUser(
             @PathVariable String userId,
             @RequestBody Map<String, String> request) {
-        String blockedBy = UserContextUtil.getUserId();
+        String blockedBy = UserContextUtil.getUserIdFromRequestContext();
         String reason = request.get("reason");
         UserApproval approval = userApprovalService.blockUser(userId, blockedBy, reason);
         return ResponseEntity.ok(approval);
@@ -44,7 +44,7 @@ public class UserApprovalController {
 
     @PostMapping("/{userId}/unblock")
     public ResponseEntity<UserApproval> unblockUser(@PathVariable String userId) {
-        String unblockedBy = UserContextUtil.getUserId();
+        String unblockedBy = UserContextUtil.getUserIdFromRequestContext();
         UserApproval approval = userApprovalService.unblockUser(userId, unblockedBy);
         return ResponseEntity.ok(approval);
     }

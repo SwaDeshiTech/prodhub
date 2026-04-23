@@ -11,7 +11,6 @@ import com.swadeshitech.prodhub.entity.Application;
 import com.swadeshitech.prodhub.entity.CredentialProvider;
 import com.swadeshitech.prodhub.enums.ErrorCode;
 import com.swadeshitech.prodhub.exception.CustomException;
-import com.swadeshitech.prodhub.integration.cicaptain.CICaptainClient;
 import com.swadeshitech.prodhub.integration.vault.VaultApiService;
 import com.swadeshitech.prodhub.integration.vault.VaultRequest;
 import com.swadeshitech.prodhub.services.CredentialProviderService;
@@ -48,6 +47,12 @@ public class CredentialProviderServiceImpl implements CredentialProviderService 
 
     @Value("${github.baseURL}")
     String githubBaseURL;
+
+    @Value("${cicaptain.baseURL:http://localhost:8081}")
+    String ciCaptainURI;
+
+    @Autowired
+    RestTemplate restTemplate;
 
     @Override
     public CredentialProviderResponse onboardCredentialProvider(CredentialProviderRequest request) {

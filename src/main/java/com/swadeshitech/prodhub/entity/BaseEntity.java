@@ -28,4 +28,8 @@ public class BaseEntity {
     @LastModifiedDate
     private LocalDateTime lastModifiedTime;
 
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.lastModifiedTime = updatedAt;
+    }
+
 }

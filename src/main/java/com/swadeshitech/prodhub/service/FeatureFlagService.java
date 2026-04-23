@@ -18,6 +18,10 @@ public class FeatureFlagService {
         return featureFlagRepository.findAll();
     }
 
+    public Optional<FeatureFlag> getFeatureFlagById(String id) {
+        return featureFlagRepository.findById(id);
+    }
+
     public Optional<FeatureFlag> getFeatureFlagByKey(String key) {
         return featureFlagRepository.findByKey(key);
     }

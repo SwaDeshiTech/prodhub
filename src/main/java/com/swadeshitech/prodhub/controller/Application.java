@@ -75,6 +75,7 @@ public class Application {
                 .build();
 
         return ResponseEntity.status(HttpStatus.OK).body(response);
+    }
 
     @GetMapping("/{id}/onboarding-progress")
     public ResponseEntity<Response> getOnboardingProgress(@PathVariable("id") String id) {
@@ -87,6 +88,5 @@ public class Application {
                 .build();
 
         return ResponseEntity.status(HttpStatus.OK).body(response);
-    }
     }
 }

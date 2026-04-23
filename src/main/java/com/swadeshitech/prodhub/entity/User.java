@@ -28,10 +28,18 @@ public class User extends BaseEntity implements Serializable {
 
     private String phoneNumber;
 
+    private String userName;
+
     @Indexed(unique = true)
     private String emailId;
 
+    private String password;
+
     private Boolean isActive;
+
+    public boolean isActive() {
+        return isActive != null && isActive;
+    }
 
     private String profilePicture;
 

@@ -28,10 +28,10 @@ public class AuthController {
     private FeatureFlagService featureFlagService;
 
     @Autowired
-    pAutowired
     private UserApprovalService userApprovalService;
 
-    @rivate PasswordEncoder passwordEncoder;
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody Map<String, String> credentials) {
@@ -56,7 +56,7 @@ public class AuthController {
                     .body(Map.of("error", "Invalid credentials"));
         }
 
-        if Check if user approval is required
+        // Check if user approval is required
         if (featureFlagService.isFeatureEnabled("user_approval_required")) {
             boolean isApproved = userApprovalService.isUserApproved(user.getId());
             if (!isApproved) {
@@ -65,7 +65,7 @@ public class AuthController {
             }
         }
 
-        // (!user.isActive()) {
+        if (!user.isActive()) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(Map.of("error", "User account is disabled"));
         }
@@ -112,4 +112,26 @@ public class AuthController {
         user.setName(name);
         user.setUserName(username);
         user.setEmailId(email);
-        user.setPassword(passwordEncoder.encode(pas
+        user.setPassword(passwordEncoder.encode(password));
+        user.setIsActive(true);
+        user.setCreatedBy("system");
+        user.setLastModifiedBy("system");
+
+        User savedUser = userRepository.save(user);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("uuid", savedUser.getId());
+        response.put("name", savedUser.getName());
+        response.put("userName", savedUser.getUserName());
+        response.put("emailId", savedUser.getEmailId());
+        response.put("message", "Signup successful");
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @GetMapping("/check-username-availability")
+    public ResponseEntity<?> checkUsernameAvailability(@RequestParam String username) {
+        boolean available = userRepository.findByUserName(username).isEmpty();
+        return ResponseEntity.ok(Map.of("available", available));
+    }
+}

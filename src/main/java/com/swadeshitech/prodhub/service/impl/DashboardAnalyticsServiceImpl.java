@@ -145,9 +145,7 @@ public class DashboardAnalyticsServiceImpl implements DashboardAnalyticsService 
 
             for (DeploymentSet deploymentSet : allDeploymentSets) {
                 if (deploymentSet.getCreatedTime() != null) {
-                    LocalDate createdDate = deploymentSet.getCreatedTime().toInstant()
-                            .atZone(ZoneId.systemDefault())
-                            .toLocalDate();
+                    LocalDate createdDate = deploymentSet.getCreatedTime().toLocalDate();
                     
                     if (createdDate.equals(date)) {
                         totalCount++;
@@ -185,9 +183,7 @@ public class DashboardAnalyticsServiceImpl implements DashboardAnalyticsService 
 
             for (ReleaseCandidate build : allBuilds) {
                 if (build.getCreatedTime() != null) {
-                    LocalDate createdDate = build.getCreatedTime().toInstant()
-                            .atZone(ZoneId.systemDefault())
-                            .toLocalDate();
+                    LocalDate createdDate = build.getCreatedTime().toLocalDate();
                     
                     if (createdDate.equals(date)) {
                         totalCount++;
@@ -216,13 +212,13 @@ public class DashboardAnalyticsServiceImpl implements DashboardAnalyticsService 
 
         int totalDeployments = allDeployments.size();
         int successfulDeployments = (int) allDeployments.stream()
-                .filter(d -> d.getStatus() == DeploymentStatus.SUCCESS)
+                .filter(d -> d.getStatus() == DeploymentStatus.COMPLETED)
                 .count();
         int failedDeployments = (int) allDeployments.stream()
                 .filter(d -> d.getStatus() == DeploymentStatus.FAILED)
                 .count();
         int pendingDeployments = (int) allDeployments.stream()
-                .filter(d -> d.getStatus() == DeploymentStatus.PENDING)
+                .filter(d -> d.getStatus() == DeploymentStatus.CREATED)
                 .count();
 
         return DeploymentAnalyticsDTO.DeploymentStats.builder()
@@ -345,13 +341,13 @@ public class DashboardAnalyticsServiceImpl implements DashboardAnalyticsService 
 
         List<PeerComparisonDTO.DeploymentTimeEntry> timeEntries = new ArrayList<>();
         for (DeploymentSet ds : userDeploymentSets) {
-            if (ds.getCreatedTime() != null && ds.getUpdatedTime() != null) {
-                long durationMinutes = (ds.getUpdatedTime().getTime() - ds.getCreatedTime().getTime()) / (1000 * 60);
+            if (ds.getCreatedTime() != null && ds.getLastModifiedTime() != null) {
+                long durationMinutes = java.time.Duration.between(ds.getCreatedTime(), ds.getLastModifiedTime()).toMinutes();
                 timeEntries.add(PeerComparisonDTO.DeploymentTimeEntry.builder()
                         .deploymentId(ds.getId())
                         .serviceName(ds.getApplication() != null ? ds.getApplication().getName() : "N/A")
-                        .startTime(ds.getCreatedTime().getTime())
-                        .endTime(ds.getUpdatedTime().getTime())
+                        .startTime(ds.getCreatedTime().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli())
+                        .endTime(ds.getLastModifiedTime().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli())
                         .durationMinutes(durationMinutes)
                         .status(ds.getStatus() != null ? ds.getStatus().name() : "UNKNOWN")
                         .build());
@@ -438,16 +434,12 @@ public class DashboardAnalyticsServiceImpl implements DashboardAnalyticsService 
 
         int deploymentsLast7Days = (int) userDeploymentSets.stream()
                 .filter(ds -> ds.getCreatedTime() != null)
-                .filter(ds -> ds.getCreatedTime().toInstant()
-                        .atZone(ZoneId.systemDefault())
-                        .toLocalDate().isAfter(sevenDaysAgo.minusDays(1)))
+                .filter(ds -> ds.getCreatedTime().toLocalDate().isAfter(sevenDaysAgo.minusDays(1)))
                 .count();
 
         int deploymentsLast30Days = (int) userDeploymentSets.stream()
                 .filter(ds -> ds.getCreatedTime() != null)
-                .filter(ds -> ds.getCreatedTime().toInstant()
-                        .atZone(ZoneId.systemDefault())
-                        .toLocalDate().isAfter(thirtyDaysAgo.minusDays(1)))
+                .filter(ds -> ds.getCreatedTime().toLocalDate().isAfter(thirtyDaysAgo.minusDays(1)))
                 .count();
 
         return PeerComparisonDTO.PeerMetrics.builder()
@@ -541,8 +533,8 @@ public class DashboardAnalyticsServiceImpl implements DashboardAnalyticsService 
         double totalTime = 0;
         int count = 0;
         for (DeploymentSet ds : deploymentSets) {
-            if (ds.getCreatedTime() != null && ds.getUpdatedTime() != null) {
-                long durationMinutes = (ds.getUpdatedTime().getTime() - ds.getCreatedTime().getTime()) / (1000 * 60);
+            if (ds.getCreatedTime() != null && ds.getLastModifiedTime() != null) {
+                long durationMinutes = java.time.Duration.between(ds.getCreatedTime(), ds.getLastModifiedTime()).toMinutes();
                 totalTime += durationMinutes;
                 count++;
             }
@@ -559,8 +551,8 @@ public class DashboardAnalyticsServiceImpl implements DashboardAnalyticsService 
         double totalTime = 0;
         int count = 0;
         for (ReleaseCandidate rc : builds) {
-            if (rc.getCreatedTime() != null && rc.getUpdatedTime() != null) {
-                long durationMinutes = (rc.getUpdatedTime().getTime() - rc.getCreatedTime().getTime()) / (1000 * 60);
+            if (rc.getCreatedTime() != null && rc.getLastModifiedTime() != null) {
+                long durationMinutes = java.time.Duration.between(rc.getCreatedTime(), rc.getLastModifiedTime()).toMinutes();
                 totalTime += durationMinutes;
                 count++;
             }
