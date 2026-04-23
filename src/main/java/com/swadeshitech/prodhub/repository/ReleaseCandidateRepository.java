@@ -5,6 +5,9 @@ import org.springframework.stereotype.Repository;
 
 import com.swadeshitech.prodhub.entity.ReleaseCandidate;
 
+import java.util.List;
+
 @Repository
 public interface ReleaseCandidateRepository extends MongoRepository<ReleaseCandidate, String> {
+    List<ReleaseCandidate> findTop5ByOrderByCreatedTimeDesc();
 }
