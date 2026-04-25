@@ -11,6 +11,7 @@ public class TabRequest {
 
     private String name;
     private String link;
+    private Integer sortOrder;
     private Set<String> roles;
     private Set<TabRequest> children;
 }

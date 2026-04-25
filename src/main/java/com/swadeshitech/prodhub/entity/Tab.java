@@ -30,6 +30,8 @@ public class Tab extends BaseEntity implements Serializable {
 
     private String link;
 
+    private Integer sortOrder;
+
     private Set<Tab> children;
 
     @DBRef

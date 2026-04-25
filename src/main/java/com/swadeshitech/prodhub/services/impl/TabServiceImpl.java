@@ -65,6 +65,7 @@ public class TabServiceImpl implements TabService {
         tab.setActive(true);
         tab.setLink(request.getLink());
         tab.setName(request.getName());
+        tab.setSortOrder(request.getSortOrder());
         tab.setRoles(new HashSet<>(roles));
 
         if (Objects.nonNull(request) && Objects.nonNull(request.getChildren())) {
@@ -74,6 +75,7 @@ public class TabServiceImpl implements TabService {
                 child.setActive(true);
                 child.setLink(tabRequest.getLink());
                 child.setName(tabRequest.getName());
+                child.setSortOrder(tabRequest.getSortOrder());
                 child.setRoles(new HashSet<>(roles));
                 children.add(child);
             }
@@ -120,29 +122,46 @@ public class TabServiceImpl implements TabService {
         List<TabResponse> activeTabs = new ArrayList<>();
 
         for (Tab tab : tabs) {
-            TabResponse tabResponse = mapEntityToDTO(tab);
-            tabResponse.setChildren(new ArrayList<>());
-            if (Objects.nonNull(tab.getChildren())) {
-                for (Tab child : tab.getChildren()) {
-                    tabResponse.getChildren().add(mapEntityToDTO(child));
-                }
-            }
-            activeTabs.add(tabResponse);
+            activeTabs.add(mapEntityToDTO(tab));
         }
+
+        activeTabs.sort((t1, t2) -> {
+            int order1 = t1.getSortOrder() != null ? t1.getSortOrder() : Integer.MAX_VALUE;
+            int order2 = t2.getSortOrder() != null ? t2.getSortOrder() : Integer.MAX_VALUE;
+            return Integer.compare(order1, order2);
+        });
 
         return activeTabs;
     }
 
     private TabResponse mapEntityToDTO(Tab tab) {
-        return TabResponse.builder()
+        TabResponse response = TabResponse.builder()
                 .id(tab.getId())
                 .link(tab.getLink())
                 .name(tab.getName())
+                .sortOrder(tab.getSortOrder())
                 .createdBy(tab.getCreatedBy())
                 .createdTime(tab.getCreatedTime())
                 .lastModifiedBy(tab.getLastModifiedBy())
                 .lastModifiedTime(tab.getLastModifiedTime())
                 .build();
+
+        if (tab.getChildren() != null && !tab.getChildren().isEmpty()) {
+            List<TabResponse> childrenResponses = new ArrayList<>();
+            for (Tab child : tab.getChildren()) {
+                childrenResponses.add(mapEntityToDTO(child));
+            }
+            childrenResponses.sort((t1, t2) -> {
+                int order1 = t1.getSortOrder() != null ? t1.getSortOrder() : Integer.MAX_VALUE;
+                int order2 = t2.getSortOrder() != null ? t2.getSortOrder() : Integer.MAX_VALUE;
+                return Integer.compare(order1, order2);
+            });
+            response.setChildren(childrenResponses);
+        } else {
+            response.setChildren(new ArrayList<>());
+        }
+
+        return response;
     }
 
 }

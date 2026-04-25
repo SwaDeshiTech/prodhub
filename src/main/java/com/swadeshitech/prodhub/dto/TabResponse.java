@@ -10,5 +10,6 @@ import lombok.experimental.SuperBuilder;
 public class TabResponse extends BaseResponse {
     private String name;
     private String link;
+    private Integer sortOrder;
     private List<TabResponse> children;
 }
