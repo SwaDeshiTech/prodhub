@@ -253,4 +253,18 @@ public class UserOrganizationServiceImpl implements UserOrganizationService {
                 .map(this::mapToResponse)
                 .collect(java.util.stream.Collectors.toList());
     }
+
+    @Override
+    public void removeUserFromOrganization(String userId, String organizationId) {
+        log.info("Removing user {} from organization {}", userId, organizationId);
+
+        UserOrganization userOrganization = userOrganizationRepository
+                .findByUserIdAndOrganizationIdAndIsActiveTrue(userId, organizationId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_ORGANIZATION_NOT_FOUND));
+
+        userOrganization.setActive(false);
+        writeTransactionService.saveUserOrganizationToRepository(userOrganization);
+
+        log.info("User {} removed from organization {} successfully", userId, organizationId);
+    }
 }

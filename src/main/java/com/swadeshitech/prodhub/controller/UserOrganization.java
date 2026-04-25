@@ -5,6 +5,7 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -115,6 +116,22 @@ public class UserOrganization {
                 .httpStatus(HttpStatus.OK)
                 .message("Organization members fetched successfully")
                 .response(members)
+                .build();
+
+        return ResponseEntity.ok(res);
+    }
+
+    @DeleteMapping("/organization/{organizationId}/user/{userId}")
+    public ResponseEntity<Response> removeUserFromOrganization(
+            @PathVariable String organizationId,
+            @PathVariable String userId,
+            @RequestHeader(name = "uuid") String uuid) {
+
+        userOrganizationService.removeUserFromOrganization(userId, organizationId);
+
+        Response res = Response.builder()
+                .httpStatus(HttpStatus.OK)
+                .message("User removed from organization successfully")
                 .build();
 
         return ResponseEntity.ok(res);

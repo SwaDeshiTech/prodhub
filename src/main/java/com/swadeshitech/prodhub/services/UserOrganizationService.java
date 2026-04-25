@@ -22,4 +22,6 @@ public interface UserOrganizationService {
     UserOrganizationResponse linkCreatorToOrganization(String userId, String organizationId);
 
     List<UserOrganizationResponse> getOrganizationMembers(String organizationId);
+
+    void removeUserFromOrganization(String userId, String organizationId);
 }
