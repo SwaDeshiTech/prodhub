@@ -13,6 +13,7 @@ import com.swadeshitech.prodhub.dto.TemplateResponse;
 import com.swadeshitech.prodhub.entity.Application;
 import com.swadeshitech.prodhub.entity.CredentialProvider;
 import com.swadeshitech.prodhub.entity.Metadata;
+import com.swadeshitech.prodhub.entity.SyncedCredential;
 import com.swadeshitech.prodhub.entity.PipelineExecution;
 import com.swadeshitech.prodhub.entity.PipelineTemplate;
 import com.swadeshitech.prodhub.entity.Template;
@@ -670,6 +671,11 @@ public class PipelineServiceImpl implements PipelineService {
                     case "dockerImageHashValue":
                         itr.getValue().setValue(dockerImageHashValue);
                         break;
+                    case "gitCredential":
+                        String buildProviderId = profileConfig.path("buildProviderId").asText();
+                        String gitCredentialId = resolveSyncedCredentialId(buildProviderId);
+                        itr.getValue().setValue(gitCredentialId != null ? gitCredentialId : "");
+                        break;
                     default:
                         itr.getValue().setValue(profileConfig.path(itr.getKey()).asText());
                         configs.put(itr.getKey(), profileConfig.path(itr.getKey()).asText());
@@ -679,6 +685,34 @@ public class PipelineServiceImpl implements PipelineService {
         step.setValues(configs);
         step.setMetadata(new HashMap<>());
         step.setStatus(StepExecutionStatus.IN_PROGRESS);
+    }
+
+    private String resolveSyncedCredentialId(String buildProviderId) {
+        if (!StringUtils.hasText(buildProviderId)) {
+            return null;
+        }
+        try {
+            List<CredentialProvider> providers = readTransactionService.findCredentialProviderByFilters(
+                    Map.of("_id", new ObjectId(buildProviderId)));
+            if (CollectionUtils.isEmpty(providers)) {
+                log.warn("Build provider not found for id: {}, cannot resolve git credential", buildProviderId);
+                return null;
+            }
+            CredentialProvider buildProvider = providers.getFirst();
+            List<SyncedCredential> syncedCredentials = buildProvider.getSyncedCredentials();
+            if (CollectionUtils.isEmpty(syncedCredentials)) {
+                log.warn("No synced credentials found for build provider: {}", buildProviderId);
+                return null;
+            }
+            // Return the most recently synced credential ID
+            return syncedCredentials.stream()
+                    .max(Comparator.comparing(SyncedCredential::getSyncedAt))
+                    .map(SyncedCredential::getCredentialId)
+                    .orElse(null);
+        } catch (Exception e) {
+            log.error("Failed to resolve synced credential for build provider: {}", buildProviderId, e);
+            return null;
+        }
     }
 
     @Override
@@ -777,11 +811,12 @@ public class PipelineServiceImpl implements PipelineService {
             return;
         }
         
-        // Get buildRefId from metadata
+        // Get buildRefId from metadata, or fallback to pipelineExecutionId
+        // CI-Captain stores pipelineExecutionId as RefID in build records
         String buildRefId = (String) pipelineExecution.getMetaData().get("ciCaptainBuildId");
         if (!StringUtils.hasText(buildRefId)) {
-            log.warn("BuildRefId not found in metadata for pipeline execution {}", pipelineExecutionId);
-            return;
+            log.info("ciCaptainBuildId not found in metadata, using pipelineExecutionId as buildRefId for {}", pipelineExecutionId);
+            buildRefId = pipelineExecutionId;
         }
         
         // Get providerID from metadata or build profile

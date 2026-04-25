@@ -78,18 +78,35 @@ public class BuildConsumer {
     }
 
     private String resolvePipelineExecutionId(BuildUpdateMessage buildUpdateMessage) {
+        // 1. Check if pipeline_execution_id is in the message data
         if (buildUpdateMessage.data() != null && StringUtils.hasText(buildUpdateMessage.data().pipelineExecutionId())) {
             return buildUpdateMessage.data().pipelineExecutionId();
         }
 
+        // 2. Look up by metaData.ciCaptainBuildId
         List<PipelineExecution> pipelineExecutions = readTransactionService.findByDynamicOrFilters(
                 Map.of("metaData.ciCaptainBuildId", buildUpdateMessage.buildId()),
                 PipelineExecution.class
         );
-        if (CollectionUtils.isEmpty(pipelineExecutions)) {
-            return null;
+        if (!CollectionUtils.isEmpty(pipelineExecutions)) {
+            return pipelineExecutions.getFirst().getId();
         }
-        return pipelineExecutions.getFirst().getId();
+
+        // 3. Fallback: CI-Captain uses pipelineExecutionId as build_id (ref_id), so look up by _id directly
+        try {
+            List<PipelineExecution> byId = readTransactionService.findByDynamicOrFilters(
+                    Map.of("_id", new ObjectId(buildUpdateMessage.buildId())),
+                    PipelineExecution.class
+            );
+            if (!CollectionUtils.isEmpty(byId)) {
+                log.info("Resolved pipeline execution by build_id (fallback) for {}", buildUpdateMessage.buildId());
+                return byId.getFirst().getId();
+            }
+        } catch (Exception e) {
+            log.debug("build_id is not a valid ObjectId, skipping direct lookup: {}", buildUpdateMessage.buildId());
+        }
+
+        return null;
     }
 
     private void updateExecutionAndBuildStep(PipelineExecution pipelineExecution, BuildUpdateMessage buildUpdateMessage) {

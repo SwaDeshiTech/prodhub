@@ -1,9 +1,12 @@
 package com.swadeshitech.prodhub.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.swadeshitech.prodhub.entity.SyncedCredential;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
+
+import java.util.List;
 
 @Data
 @SuperBuilder
@@ -19,4 +22,5 @@ public class CredentialProviderResponse extends BaseResponse {
     private String serviceName;
     private String serviceId;
     private String credentialMetadata;
+    private List<SyncedCredential> syncedCredentials;
 }

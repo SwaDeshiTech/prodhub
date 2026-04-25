@@ -397,7 +397,33 @@ public class ReadTransactionService {
                 }
             }
         });
+
+        List<CredentialProvider> credentialProviders = findCredentialProvidersByQuery(query);
+        if (!credentialProviders.isEmpty()) {
+            return credentialProviders;
+        }
+
+        List<CredentialProvider> legacyCollectionProviders = findCredentialProvidersByQuery(query, "credentialProvider");
+        if (!legacyCollectionProviders.isEmpty()) {
+            log.warn("Fetched credential providers from legacy collection 'credentialProvider'. Consider migrating to 'credential_providers'. Filters: {}", filters);
+            return legacyCollectionProviders;
+        }
+
+        legacyCollectionProviders = findCredentialProvidersByQuery(query, "credentialProviders");
+        if (!legacyCollectionProviders.isEmpty()) {
+            log.warn("Fetched credential providers from legacy collection 'credentialProviders'. Consider migrating to 'credential_providers'. Filters: {}", filters);
+            return legacyCollectionProviders;
+        }
+
+        return credentialProviders;
+    }
+
+    private List<CredentialProvider> findCredentialProvidersByQuery(Query query) {
         return mongoTemplate.find(query, CredentialProvider.class);
+    }
+
+    private List<CredentialProvider> findCredentialProvidersByQuery(Query query, String collectionName) {
+        return mongoTemplate.find(query, CredentialProvider.class, collectionName);
     }
 
     public List<Approvals> findApprovalsByFilters(Map<String, Object> filters) {

@@ -9,6 +9,7 @@ import com.swadeshitech.prodhub.dto.CredentialProviderResponse;
 import com.swadeshitech.prodhub.dto.DropdownDTO;
 import com.swadeshitech.prodhub.entity.Application;
 import com.swadeshitech.prodhub.entity.CredentialProvider;
+import com.swadeshitech.prodhub.entity.SyncedCredential;
 import com.swadeshitech.prodhub.enums.ErrorCode;
 import com.swadeshitech.prodhub.exception.CustomException;
 import com.swadeshitech.prodhub.integration.vault.VaultApiService;
@@ -26,6 +27,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 import org.springframework.web.client.RestTemplate;
 
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -48,7 +50,7 @@ public class CredentialProviderServiceImpl implements CredentialProviderService 
     @Value("${github.baseURL}")
     String githubBaseURL;
 
-    @Value("${cicaptain.baseURL:http://localhost:8081}")
+    @Value("${cicaptain.uri:http://localhost:4457/ci-captain}")
     String ciCaptainURI;
 
     @Autowired
@@ -147,6 +149,7 @@ public class CredentialProviderServiceImpl implements CredentialProviderService 
     public List<CredentialProviderResponse> credentialProviders(CredentialProviderFilter credentialProviderFilter) {
 
         Map<String, Object> filters = createFilterObject(credentialProviderFilter);
+        log.info("Fetching credential providers with filters: {}", filters);
 
         List<CredentialProvider> credentialProviders = readTransactionService.findCredentialProviderByFilters(filters);
         if(CollectionUtils.isEmpty(credentialProviders)) {
@@ -161,7 +164,7 @@ public class CredentialProviderServiceImpl implements CredentialProviderService 
         }
 
         return credentialProviderResponses;
-    }
+    } 
 
     @Override
     public List<DropdownDTO> getCredentialProvidersByType(String type) {
@@ -257,6 +260,7 @@ public class CredentialProviderServiceImpl implements CredentialProviderService 
                 .createdTime(credentialProvider.getCreatedTime())
                 .lastModifiedBy(credentialProvider.getLastModifiedBy())
                 .lastModifiedTime(credentialProvider.getLastModifiedTime())
+                .syncedCredentials(credentialProvider.getSyncedCredentials())
                 .build();
     }
 
@@ -350,7 +354,10 @@ public class CredentialProviderServiceImpl implements CredentialProviderService 
         ciCaptainRequest.put("buildProviderIds", buildProviderIds);
 
         // Call ci-captain to sync credentials
-        String ciCaptainUrl = ciCaptainURI + "/api/v1/credentials/sync";
+        String ciCaptainBaseUrl = ciCaptainURI.endsWith("/")
+                ? ciCaptainURI.substring(0, ciCaptainURI.length() - 1)
+                : ciCaptainURI;
+        String ciCaptainUrl = ciCaptainBaseUrl + "/api/v1/credentials/sync";
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
@@ -368,8 +375,14 @@ public class CredentialProviderServiceImpl implements CredentialProviderService 
                 Map<String, Object> responseBody = response.getBody();
                 log.info("Credentials synced successfully: {}", responseBody);
 
-                // Save sync result to credential provider metadata
-                // You might want to add a new field to CredentialProvider entity to store sync history
+                // Extract credential IDs from response and persist to build providers
+                if (responseBody != null && responseBody.containsKey("data")) {
+                    Map<String, Object> data = (Map<String, Object>) responseBody.get("data");
+                    Map<String, Object> details = (Map<String, Object>) data.get("details");
+                    if (details != null) {
+                        persistSyncedCredentials(buildProviderIds, details);
+                    }
+                }
 
                 return responseBody != null ? responseBody : Map.of("status", "success");
             } else {
@@ -379,6 +392,51 @@ public class CredentialProviderServiceImpl implements CredentialProviderService 
         } catch (Exception e) {
             log.error("Error calling ci-captain for credential sync", e);
             throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    private void persistSyncedCredentials(List<String> buildProviderIds, Map<String, Object> details) {
+        for (String buildProviderId : buildProviderIds) {
+            Map<String, Object> providerResult = (Map<String, Object>) details.get(buildProviderId);
+            if (providerResult == null || !"success".equals(providerResult.get("status"))) {
+                continue;
+            }
+
+            String credentialName = (String) providerResult.get("credentialName");
+            if (StringUtils.isBlank(credentialName)) {
+                continue;
+            }
+
+            try {
+                List<CredentialProvider> providers = readTransactionService.findCredentialProviderByFilters(
+                        Map.of("_id", new ObjectId(buildProviderId)));
+
+                if (providers.isEmpty()) {
+                    log.warn("Build provider not found for id: {}, skipping synced credential persist", buildProviderId);
+                    continue;
+                }
+
+                CredentialProvider buildProvider = providers.getFirst();
+                List<SyncedCredential> syncedCredentials = buildProvider.getSyncedCredentials();
+                if (syncedCredentials == null) {
+                    syncedCredentials = new ArrayList<>();
+                }
+
+                // Replace existing entry for this build provider or add new
+                syncedCredentials.removeIf(sc -> buildProviderId.equals(sc.getBuildProviderId()));
+                syncedCredentials.add(SyncedCredential.builder()
+                        .buildProviderId(buildProviderId)
+                        .credentialId(credentialName)
+                        .syncedAt(LocalDateTime.now())
+                        .build());
+
+                buildProvider.setSyncedCredentials(syncedCredentials);
+                writeTransactionService.saveCredentialProviderToRepository(buildProvider);
+
+                log.info("Persisted synced credential '{}' for build provider {}", credentialName, buildProviderId);
+            } catch (Exception e) {
+                log.error("Failed to persist synced credential for build provider {}", buildProviderId, e);
+            }
         }
     }
 }
