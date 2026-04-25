@@ -40,7 +40,7 @@ public class ReleaseCandidateConsumer {
     @Autowired
     private WriteTransactionService writeTransactionService;
 
-    @KafkaListener(topics = "${spring.kafka.topic.releaseCandidate}", groupId = "default_group")
+    @KafkaListener(topics = "${spring.kafka.topic.releaseCandidate}", groupId = "default_group", containerFactory = "kafkaListenerContainerFactory")
     public void listen(String message) {
         log.info("Message received for release candidate creation: {}", message);
         
@@ -211,7 +211,7 @@ public class ReleaseCandidateConsumer {
                 .status(ReleaseCandidateStatus.CERTIFIABLE)
                 .metaData(metadata)
                 .buildRefId(releaseCandidateEvent.buildId())
-                .ephemeralEnvironment(ephemeralEnvironment)
+                .ephemeralEnvironmentId(ephemeralEnvironment != null ? ephemeralEnvironment.getId() : null)
                 .initiatedBy(initiatedBy)
                 .pipelineExecution(pipelineExecution)
                 .build();

@@ -12,8 +12,7 @@ import java.util.List;
 import java.util.Optional;
 
 @RestController
-@RequestMapping("/api/approval-flows")
-@CrossOrigin(origins = "*")
+@RequestMapping("/approval-flows")
 public class ApprovalFlowController {
 
     @Autowired

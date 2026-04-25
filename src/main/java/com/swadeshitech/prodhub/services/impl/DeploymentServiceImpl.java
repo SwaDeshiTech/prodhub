@@ -340,7 +340,7 @@ public class DeploymentServiceImpl implements DeploymentService {
         configMap.put("releaseName",
                 deploymentProfile.getApplication().getName() + "-" + deploymentProfile.extractMetaDataName());
         configMap.put("imageTag", releaseCandidate.getMetaData().get("dockerImageHashValue"));
-        configMap.put("ephemeralEnvironment", releaseCandidate.getEphemeralEnvironment().getId());
+        configMap.put("ephemeralEnvironment", releaseCandidate.getEphemeralEnvironmentId());
 
         Deployment deployment = Deployment.builder()
                 .status(DeploymentStatus.CREATED)

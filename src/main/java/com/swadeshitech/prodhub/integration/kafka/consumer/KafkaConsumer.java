@@ -14,7 +14,7 @@ public class KafkaConsumer {
     @Autowired
     DeploymentService deploymentService;
 
-    @KafkaListener(topics = "${spring.kafka.topic.deploymentConfigAndSubmit}", groupId = "default_group")
+    @KafkaListener(topics = "${spring.kafka.topic.deploymentConfigAndSubmit}", groupId = "default_group", containerFactory = "kafkaListenerContainerFactory")
     public void listen(String message) {
 
         log.info("{}: Request for deployment config and submit {}", this.getClass().getCanonicalName(), message);

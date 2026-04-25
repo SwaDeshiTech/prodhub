@@ -11,8 +11,7 @@ import java.util.List;
 import java.util.Optional;
 
 @RestController
-@RequestMapping("/api/oauth-providers")
-@CrossOrigin(origins = "*")
+@RequestMapping("/oauth-providers")
 public class OAuthProviderController {
 
     @Autowired
@@ -35,8 +34,8 @@ public class OAuthProviderController {
                     .providerType(provider.getProviderType())
                     .displayName(provider.getDisplayName())
                     .description(provider.getDescription())
-                    .isActive(provider.isActive())
-                    .isDefault(provider.isDefault())
+                    .isActive(provider.getIsActive())
+                    .isDefault(provider.getIsDefault())
                     .redirectUrl(provider.getRedirectUrl())
                     .scopes(provider.getScopes())
                     .authUrl(provider.getAuthUrl())

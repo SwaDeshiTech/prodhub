@@ -47,7 +47,7 @@ public class DeploymentUpdateConsumer {
     @Autowired
     org.springframework.context.ApplicationContext applicationContext;
 
-    @KafkaListener(topics = "${spring.kafka.topic.deploymentUpdates}", groupId = "default_group")
+    @KafkaListener(topics = "${spring.kafka.topic.deploymentUpdates}", groupId = "default_group", containerFactory = "kafkaListenerContainerFactory")
     public void listen(String message) {
 
         log.info("{}: Request for deployment update {}", this.getClass().getCanonicalName(), message);

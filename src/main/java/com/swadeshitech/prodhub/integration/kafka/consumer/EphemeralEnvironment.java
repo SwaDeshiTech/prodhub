@@ -38,7 +38,7 @@ public class EphemeralEnvironment {
     @Autowired
     PipelineService pipelineService;
 
-    @KafkaListener(topics = "${spring.kafka.topic.ephemeralEnvironmentUpdate}", groupId = "default_group")
+    @KafkaListener(topics = "${spring.kafka.topic.ephemeralEnvironmentUpdate}", groupId = "default_group", containerFactory = "kafkaListenerContainerFactory")
     public void listen(String message) {
         log.info("{} Message received for ephemeralEnvironmentUpdate {}", this.getClass().getCanonicalName(), message);
 
@@ -120,7 +120,7 @@ public class EphemeralEnvironment {
         }
     }
 
-    @KafkaListener(topics = "${spring.kafka.topic.ephemeralEnvironmentBuildAndDeployment}", groupId = "default_group")
+    @KafkaListener(topics = "${spring.kafka.topic.ephemeralEnvironmentBuildAndDeployment}", groupId = "default_group", containerFactory = "kafkaListenerContainerFactory")
     public void listenBuildAndDeploymentRequest(String message) {
         log.info("{} Message received for buildAndDeploy in ephemeral environment {}", this.getClass().getCanonicalName(), message);
         try {

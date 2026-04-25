@@ -90,7 +90,7 @@ public class ReleaseCandidateServiceImpl implements ReleaseCandidateService {
                 log.error("Ephemeral environment could not be found {}", request.getEphemeralEnvironmentName());
                 throw new CustomException(ErrorCode.EPHEMERAL_ENVIRONMENT_NOT_FOUND);
             }
-            releaseCandidate.setEphemeralEnvironment(ephemeralEnvironments.getFirst());
+            releaseCandidate.setEphemeralEnvironmentId(ephemeralEnvironments.getFirst().getId());
         }
 
         releaseCandidate = writeTransactionService.saveReleaseCandidateToRepository(releaseCandidate);

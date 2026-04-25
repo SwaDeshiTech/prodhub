@@ -23,7 +23,7 @@ public class PipelineExecutionConsumer {
     @Autowired
     PipelineService pipelineService;
 
-    @KafkaListener(topics = "${spring.kafka.topic.pipeline-execution}", groupId = "default_group")
+    @KafkaListener(topics = "${spring.kafka.topic.pipeline-execution}", groupId = "default_group", containerFactory = "kafkaListenerContainerFactory")
     public void listen(String pipelineExecutionId) {
         log.info("Message received for pipeline-execution for pipeline {}", pipelineExecutionId);
 

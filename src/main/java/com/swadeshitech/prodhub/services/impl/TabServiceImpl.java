@@ -91,17 +91,26 @@ public class TabServiceImpl implements TabService {
 
         String uuid = UserContextUtil.getUserIdFromRequestContext();
         Set<Role> roles = userService.getUserRoles(uuid);
-        List<ObjectId> ids = new ArrayList<>();
+        List<org.bson.types.ObjectId> ids = new ArrayList<>();
+
+        log.info("user uuid : {}", uuid);
 
         if (Objects.nonNull(roles)) {
             for (Role role : roles) {
-                ids.add(new ObjectId(role.getId()));
+                ids.add(new org.bson.types.ObjectId(role.getId()));
             }
         }
 
+        List<com.mongodb.DBRef> dbRefs = new ArrayList<>();
+        for (ObjectId id : ids) {
+            dbRefs.add(new com.mongodb.DBRef("roles", id));
+        }
+
         Map<String, Object> filters = new HashMap<>();
-        filters.put("roles._id", ids);
-        filters.put("children.roles._id", ids);
+        filters.put("roles", dbRefs);
+        filters.put("children.roles", dbRefs);
+
+        log.info("tab filters : {}", filters);
 
         List<Tab> tabs = readTransactionService.findTabDetailsByFilters(filters);
         if (CollectionUtils.isEmpty(tabs)) {

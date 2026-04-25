@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/k8sClusterGroup")
+@RequestMapping("/v1/k8sClusterGroup")
 public class K8sClusterGroup {
 
     @Autowired

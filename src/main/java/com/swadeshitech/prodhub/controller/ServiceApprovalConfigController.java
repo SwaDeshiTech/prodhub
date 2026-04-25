@@ -12,8 +12,7 @@ import java.util.Map;
 import java.util.Optional;
 
 @RestController
-@RequestMapping("/api/service-approval-configs")
-@CrossOrigin(origins = "*")
+@RequestMapping("/service-approval-configs")
 public class ServiceApprovalConfigController {
 
     @Autowired

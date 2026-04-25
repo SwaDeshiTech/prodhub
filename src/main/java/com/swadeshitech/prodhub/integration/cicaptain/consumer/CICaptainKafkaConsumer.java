@@ -14,6 +14,7 @@ import com.swadeshitech.prodhub.services.PipelineService;
 import com.swadeshitech.prodhub.services.ReleaseCandidateService;
 import com.swadeshitech.prodhub.transaction.read.ReadTransactionService;
 import lombok.extern.slf4j.Slf4j;
+import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -48,7 +49,7 @@ public class CICaptainKafkaConsumer {
     @Value("${cicaptain.default.provider.id}")
     String defaultProviderId;
 
-    @KafkaListener(topics = "${spring.kafka.topic.buildStatus}", groupId = "default_group")
+    @KafkaListener(topics = "${spring.kafka.topic.buildStatus}", groupId = "default_group", containerFactory = "kafkaListenerContainerFactory")
     public void listen(String message) {
         log.info("{}: Syncing build status {}", this.getClass().getCanonicalName(), message);
 
@@ -61,7 +62,7 @@ public class CICaptainKafkaConsumer {
         releaseCandidateService.syncStatus(releaseCandidate.getId(), "true");
     }
 
-    @KafkaListener(topics = "${spring.kafka.topic.buildStatusComplete}", groupId = "default_group")
+    @KafkaListener(topics = "${spring.kafka.topic.buildStatusComplete}", groupId = "default_group", containerFactory = "kafkaListenerContainerFactory")
     public void listenBuildComplete(String message) {
         log.info("{}: Complete build status {}", this.getClass().getCanonicalName(), message);
         
@@ -114,12 +115,21 @@ public class CICaptainKafkaConsumer {
             log.warn("Release candidate not found for deployment trigger, skipping");
             return;
         }
-        if(Objects.nonNull(releaseCandidate.getEphemeralEnvironment())) {
-            for(EphemeralEnvironment.Profile profile : releaseCandidate.getEphemeralEnvironment().getAttachedProfiles()) {
+        if(Objects.nonNull(releaseCandidate.getEphemeralEnvironmentId())) {
+            // Fetch EphemeralEnvironment by ID
+            List<EphemeralEnvironment> ephemeralEnvironments = readTransactionService.findByDynamicOrFilters(
+                    Map.of("_id", new ObjectId(releaseCandidate.getEphemeralEnvironmentId())), EphemeralEnvironment.class);
+            if(CollectionUtils.isEmpty(ephemeralEnvironments)) {
+                log.warn("Ephemeral environment not found for ID: {}", releaseCandidate.getEphemeralEnvironmentId());
+                return;
+            }
+            EphemeralEnvironment ephemeralEnvironment = ephemeralEnvironments.getFirst();
+            
+            for(EphemeralEnvironment.Profile profile : ephemeralEnvironment.getAttachedProfiles()) {
                 if(profile.getBuildProfile().equals(releaseCandidate.getBuildProfile())) {
                     log.info("Triggering the deployment for ephemeral environment {} for deployment profile {}",
-                            releaseCandidate.getEphemeralEnvironment().getName(), profile.getDeploymentProfile().getName());
-                    Deployment deployment = deploymentService.triggerDeploymentForEphemeralEnvironment(releaseCandidate.getEphemeralEnvironment(),
+                            ephemeralEnvironment.getName(), profile.getDeploymentProfile().getName());
+                    Deployment deployment = deploymentService.triggerDeploymentForEphemeralEnvironment(ephemeralEnvironment,
                             profile.getDeploymentProfile(), releaseCandidate);
                     deploymentService.submitDeploymentRequest(deployment.getId());
                     return;

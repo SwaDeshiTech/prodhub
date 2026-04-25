@@ -104,7 +104,7 @@ public class ReadTransactionService {
                 Criteria criteria = createCriteria(key, value);
 
                 // Group specific fields that should be treated as OR
-                if (key.equals("roles._id") || key.equals("children.roles._id")) {
+                if (key.equals("roles") || key.equals("children.roles") || key.equals("roles.$id") || key.equals("children.roles.$id") || key.equals("roles._id") || key.equals("children.roles._id")) {
                     orCriteriaList.add(criteria);
                 } else {
                     andCriteriaList.add(criteria);

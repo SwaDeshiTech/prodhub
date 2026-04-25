@@ -11,7 +11,6 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/dashboard-analytics")
-@CrossOrigin(origins = "*")
 public class DashboardAnalyticsController {
 
     @Autowired

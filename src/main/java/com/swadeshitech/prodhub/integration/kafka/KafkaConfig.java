@@ -1,12 +1,14 @@
 package com.swadeshitech.prodhub.integration.kafka;
 
+import jakarta.annotation.PostConstruct;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
 import org.springframework.kafka.annotation.EnableKafka;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
 import org.springframework.kafka.core.*;
@@ -18,8 +20,20 @@ import java.util.Map;
 @Configuration
 public class KafkaConfig {
 
-    @Value("${spring.kafka.bootstrap-servers}")
-    String bootstrapServers;
+    @Autowired
+    private Environment environment;
+
+    private String bootstrapServers;
+
+    public KafkaConfig() {
+        System.out.println("KafkaConfig constructor called");
+    }
+
+    @PostConstruct
+    public void init() {
+        bootstrapServers = environment.getProperty("spring.kafka.bootstrap-servers");
+        System.out.println("Kafka bootstrap-servers: " + bootstrapServers);
+    }
 
     // Producer config
     @Bean
@@ -61,6 +75,9 @@ public class KafkaConfig {
         props.put(
                 ConsumerConfig.AUTO_OFFSET_RESET_CONFIG,
                 "earliest");
+        props.put(
+                ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG,
+                false);
         return new DefaultKafkaConsumerFactory<>(props);
     }
 

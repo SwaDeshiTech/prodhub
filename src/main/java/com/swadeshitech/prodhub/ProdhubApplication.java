@@ -2,9 +2,10 @@ package com.swadeshitech.prodhub;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
-@SpringBootApplication
+@SpringBootApplication(exclude = {KafkaAutoConfiguration.class})
 @EnableScheduling
 public class ProdhubApplication {
 

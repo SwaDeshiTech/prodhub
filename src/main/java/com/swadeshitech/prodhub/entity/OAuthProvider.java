@@ -29,9 +29,9 @@ public class OAuthProvider extends BaseEntity implements Serializable {
 
     private String description;
 
-    private boolean isActive;
+    private Boolean isActive;
 
-    private boolean isDefault;
+    private Boolean isDefault;
 
     private String clientId;
 

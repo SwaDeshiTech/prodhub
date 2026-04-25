@@ -41,7 +41,7 @@ public class BuildConsumer {
     @Autowired
     private PipelineService pipelineService;
 
-    @KafkaListener(topics = "${spring.kafka.topic.buildUpdate}", groupId = "default_group")
+    @KafkaListener(topics = "${spring.kafka.topic.buildUpdate}", groupId = "default_group", containerFactory = "kafkaListenerContainerFactory")
     public void listen(String message) {
         log.info("Message received for build update {}", message);
         BuildUpdateMessage buildUpdateMessage;

@@ -46,7 +46,7 @@ public class DeploymentStatusUpdateConsumer {
     @Value("${spring.kafka.topic.pipeline-execution-update}")
     String pipelineExecutionUpdateTopic;
 
-    @KafkaListener(topics = "${spring.kafka.topic.pipeline-execution-update}", groupId = "default_group")
+    @KafkaListener(topics = "${spring.kafka.topic.pipeline-execution-update}", groupId = "default_group", containerFactory = "kafkaListenerContainerFactory")
     public void listen(String message) {
         log.info("Message received for pipeline-execution-update: {}", message);
 

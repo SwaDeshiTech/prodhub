@@ -21,7 +21,7 @@ import com.swadeshitech.prodhub.services.TokenService;
 import com.swadeshitech.prodhub.utils.UserContextUtil;
 
 @RestController
-@RequestMapping("/api/v1/token")
+@RequestMapping("/v1/token")
 public class Token {
 
     @Autowired

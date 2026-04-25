@@ -13,7 +13,7 @@ public class DeploymentSetConsumer {
     @Autowired
     DeploymentSetService deploymentSetService;
 
-    @KafkaListener(topics = "${spring.kafka.topic.deploymentSetStatusUpdate}", groupId = "default_group")
+    @KafkaListener(topics = "${spring.kafka.topic.deploymentSetStatusUpdate}", groupId = "default_group", containerFactory = "kafkaListenerContainerFactory")
     public void listen(String message) {
 
         log.info("{}: Request for deployment set update {}", this.getClass().getCanonicalName(), message);
