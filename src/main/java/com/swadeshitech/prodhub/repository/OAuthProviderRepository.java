@@ -10,6 +10,8 @@ import java.util.Optional;
 @Repository
 public interface OAuthProviderRepository extends MongoRepository<OAuthProvider, String> {
 
+    List<OAuthProvider> findAllByOrderBySortOrderAsc();
+
     Optional<OAuthProvider> findByProviderTypeAndIsActive(String providerType, boolean isActive);
 
     List<OAuthProvider> findByIsActiveTrueOrderBySortOrderAsc();

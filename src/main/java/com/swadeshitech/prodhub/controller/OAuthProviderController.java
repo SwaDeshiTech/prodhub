@@ -1,5 +1,7 @@
 package com.swadeshitech.prodhub.controller;
 
+import com.swadeshitech.prodhub.dto.OAuthProviderResponse;
+import com.swadeshitech.prodhub.dto.Response;
 import com.swadeshitech.prodhub.entity.OAuthProvider;
 import com.swadeshitech.prodhub.service.OAuthProviderService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,35 +20,39 @@ public class OAuthProviderController {
     private OAuthProviderService oauthProviderService;
 
     @GetMapping
-    public ResponseEntity<List<OAuthProvider>> getAllActiveProviders() {
-        List<OAuthProvider> providers = oauthProviderService.getAllActiveProviders();
+    public ResponseEntity<List<OAuthProviderResponse>> getAllProviders() {
+        List<OAuthProviderResponse> providers = oauthProviderService.getAllActiveProvidersSafe();
         return ResponseEntity.ok(providers);
     }
 
+    @GetMapping("/active")
+    public ResponseEntity<Response> getAllActiveProvidersSafe() {
+        List<OAuthProviderResponse> providers = oauthProviderService.getAllActiveProvidersSafe();
+        Response response = Response.builder()
+                .message("Active OAuth providers fetched successfully")
+                .httpStatus(HttpStatus.OK)
+                .response(providers)
+                .build();
+        return ResponseEntity.ok(response);
+    }
+
     @GetMapping("/type/{providerType}")
-    public ResponseEntity<OAuthProvider> getProviderByType(@PathVariable String providerType) {
+    public ResponseEntity<Response> getProviderByType(@PathVariable String providerType) {
         try {
             OAuthProvider provider = oauthProviderService.getProviderConfig(providerType);
-            // Return without sensitive data
-            OAuthProvider safeProvider = OAuthProvider.builder()
-                    .id(provider.getId())
-                    .name(provider.getName())
-                    .providerType(provider.getProviderType())
-                    .displayName(provider.getDisplayName())
-                    .description(provider.getDescription())
-                    .isActive(provider.getIsActive())
-                    .isDefault(provider.getIsDefault())
-                    .redirectUrl(provider.getRedirectUrl())
-                    .scopes(provider.getScopes())
-                    .authUrl(provider.getAuthUrl())
-                    .tokenUrl(provider.getTokenUrl())
-                    .userInfoUrl(provider.getUserInfoUrl())
-                    .logoUrl(provider.getLogoUrl())
-                    .sortOrder(provider.getSortOrder())
+            OAuthProvider safeProvider = oauthProviderService.toSafeProvider(provider);
+            Response response = Response.builder()
+                    .message("OAuth provider fetched successfully")
+                    .httpStatus(HttpStatus.OK)
+                    .response(safeProvider)
                     .build();
-            return ResponseEntity.ok(safeProvider);
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
-            return ResponseEntity.notFound().build();
+            Response response = Response.builder()
+                    .message("OAuth provider not found")
+                    .httpStatus(HttpStatus.NOT_FOUND)
+                    .build();
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
         }
     }
 
@@ -61,34 +67,69 @@ public class OAuthProviderController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<OAuthProvider> getProviderById(@PathVariable String id) {
+    public ResponseEntity<Response> getProviderById(@PathVariable String id) {
         Optional<OAuthProvider> provider = oauthProviderService.getProviderById(id);
-        return provider.map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
+        if (provider.isPresent()) {
+            Response response = Response.builder()
+                    .message("OAuth provider fetched successfully")
+                    .httpStatus(HttpStatus.OK)
+                    .response(provider.get())
+                    .build();
+            return ResponseEntity.ok(response);
+        } else {
+            Response response = Response.builder()
+                    .message("OAuth provider not found")
+                    .httpStatus(HttpStatus.NOT_FOUND)
+                    .build();
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+        }
     }
 
     @PostMapping
-    public ResponseEntity<OAuthProvider> createProvider(@RequestBody OAuthProvider provider) {
+    public ResponseEntity<Response> createProvider(@RequestBody OAuthProvider provider) {
         OAuthProvider createdProvider = oauthProviderService.createProvider(provider);
-        return ResponseEntity.status(HttpStatus.CREATED).body(createdProvider);
+        Response response = Response.builder()
+                .message("OAuth provider created successfully")
+                .httpStatus(HttpStatus.CREATED)
+                .response(createdProvider)
+                .build();
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<OAuthProvider> updateProvider(@PathVariable String id, @RequestBody OAuthProvider provider) {
+    public ResponseEntity<Response> updateProvider(@PathVariable String id, @RequestBody OAuthProvider provider) {
         try {
             OAuthProvider updatedProvider = oauthProviderService.updateProvider(id, provider);
-            return ResponseEntity.ok(updatedProvider);
+            Response response = Response.builder()
+                    .message("OAuth provider updated successfully")
+                    .httpStatus(HttpStatus.OK)
+                    .response(updatedProvider)
+                    .build();
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
-            return ResponseEntity.notFound().build();
+            Response response = Response.builder()
+                    .message("OAuth provider not found")
+                    .httpStatus(HttpStatus.NOT_FOUND)
+                    .build();
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
         }
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteProvider(@PathVariable String id) {
+    public ResponseEntity<Response> deleteProvider(@PathVariable String id) {
         try {
             oauthProviderService.deleteProvider(id);
-            return ResponseEntity.noContent().build();
+            Response response = Response.builder()
+                    .message("OAuth provider deleted successfully")
+                    .httpStatus(HttpStatus.NO_CONTENT)
+                    .build();
+            return ResponseEntity.status(HttpStatus.NO_CONTENT).body(response);
         } catch (Exception e) {
-            return ResponseEntity.notFound().build();
+            Response response = Response.builder()
+                    .message("OAuth provider not found")
+                    .httpStatus(HttpStatus.NOT_FOUND)
+                    .build();
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
         }
     }
 }
