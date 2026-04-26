@@ -27,7 +27,7 @@ spring:
         maintenance-frequency: 1000
         max-connection-idle-time: 5
   kafka:
-    bootstrap-servers: localhost:9092
+    bootstrap-servers: 35.209.84.86:9092
     topic:
       buildStatus: buildStatus
       deploymentConfigAndSubmit: deployment-config-and-submit

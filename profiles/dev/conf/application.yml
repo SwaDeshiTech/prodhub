@@ -14,7 +14,7 @@ springdoc:
 spring:
   data:
     mongodb:
-      host: 192.168.1.2
+      host: 35.209.84.86
       port: 27017
       database: prodhub
       pool:
@@ -27,7 +27,7 @@ spring:
         maintenance-frequency: 1000
         max-connection-idle-time: 5
   kafka:
-    bootstrap-servers: 192.168.1.2:9092
+    bootstrap-servers: 35.209.84.86:9092
     topic:
       buildStatus: buildStatus
       deploymentConfigAndSubmit: deployment-config-and-submit
@@ -46,15 +46,15 @@ management:
       show-details: always
 
 vault:
-  uri: http://192.168.1.2:8200
+  uri: http://35.209.84.86:8200
   token: hvs.kuonI3JQThkmxiaySCBuPwrT
 
 cicaptain:
-  uri: http://192.168.1.2:4457/ci-captain
+  uri: http://cicaptain-app:4457/ci-captain
   triggerBuildPath: /api/v1/pipeline-executions/trigger
   buildStatus: /api/v1/providers/%s/job/%s/status
 
 deplorch:
-  uri: http://192.168.1.2:4458/cloudedge-deployer
+  uri: http://cloudedgedeployer-app:4458/cloudedge-deployer
   initiateDeployment: /api/v1/deployment/start
   initiatePipelineDeployment: /api/v1/pipeline/start

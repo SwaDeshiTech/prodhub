@@ -14,7 +14,7 @@ springdoc:
 spring:
   data:
     mongodb:
-      host: 127.0.0.1
+      host: 35.209.84.86
       port: 27017
       database: prodhub
       pool:
@@ -51,11 +51,11 @@ management:
       show-details: always
 
 vault:
-  uri: http://localhost:8200
+  uri: http://35.209.84.86:8200
   token: hvs.kuonI3JQThkmxiaySCBuPwrT
 
 cicaptain:
-  uri: http://localhost:4457/ci-captain
+  uri: http://cicaptain-app:4457/ci-captain
   triggerBuildPath: /api/v1/pipeline-executions/trigger
   buildStatus: /api/v1/providers/%s/job/%s/status
   default:
@@ -63,7 +63,7 @@ cicaptain:
       id: default-provider
 
 deploch:
-  uri: http://localhost:4458/cloudedge-deployer
+  uri: http://cloudedgedeployer-app:4458/cloudedge-deployer
   initiateDeployment: /api/v1/deployment/start
   deployedPodDetails: /api/v1/pods
   initiatePipelineDeployment: /api/v1/pipeline/deployment
