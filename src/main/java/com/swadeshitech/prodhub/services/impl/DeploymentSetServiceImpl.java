@@ -319,6 +319,12 @@ public class DeploymentSetServiceImpl implements DeploymentSetService {
         // Fetch deployment set
         DeploymentSet deploymentSet = fetchDeploymentSet(Map.of("_id", new ObjectId(deploymentSetId)));
         
+        // Ensure deployment set is completed (all approvals are done)
+        if (deploymentSet.getStatus() != DeploymentSetStatus.COMPLETED) {
+            log.error("Deployment set {} is not completed. Current status: {}", deploymentSetId, deploymentSet.getStatus());
+            throw new CustomException(ErrorCode.DEPLOYMENT_SET_NOT_COMPLETED);
+        }
+        
         // Extract pipelineTemplateId from deployment profile metadata
         String pipelineTemplateId = null;
         try {

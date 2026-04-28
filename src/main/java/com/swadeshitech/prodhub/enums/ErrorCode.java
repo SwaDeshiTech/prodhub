@@ -91,6 +91,7 @@ public enum ErrorCode {
         DEPLOYMENT_SET_COULD_NOT_BE_CREATED("PH-19001", "Deployment set could not be created",
                         HttpStatus.INTERNAL_SERVER_ERROR),
         DEPLOYMENT_SET_NOT_FOUND("PH-19002", "Deployment set could not be found", HttpStatus.NOT_FOUND),
+        DEPLOYMENT_SET_NOT_COMPLETED("PH-19003", "Deployment set approvals are not completed yet", HttpStatus.BAD_REQUEST),
 
         DEPLOYMENT_COULD_NOT_BE_CREATED("PH-19001", "Deployment could not be created",
                         HttpStatus.INTERNAL_SERVER_ERROR),
