@@ -14,7 +14,7 @@ springdoc:
 spring:
   data:
     mongodb:
-      host: 35.209.84.86
+      host: 10.128.0.2
       port: 27017
       database: prodhub
       pool:
@@ -27,7 +27,7 @@ spring:
         maintenance-frequency: 1000
         max-connection-idle-time: 5
   kafka:
-    bootstrap-servers: 35.209.84.86:29092
+    bootstrap-servers: 10.128.0.2:29092
     topic:
       buildStatus: buildStatus
       deploymentConfigAndSubmit: deployment-config-and-submit
@@ -51,8 +51,8 @@ management:
       show-details: always
 
 vault:
-  uri: http://35.209.84.86:8200
-  token: hvs.kuonI3JQThkmxiaySCBuPwrT
+  uri: http://10.128.0.2:8200
+  token:
 
 cicaptain:
   uri: http://cicaptain-app:4457/ci-captain
