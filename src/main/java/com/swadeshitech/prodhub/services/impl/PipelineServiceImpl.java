@@ -920,6 +920,7 @@ public class PipelineServiceImpl implements PipelineService {
 
         // Fetch release candidate ID associated with this pipeline execution
         String releaseCandidateId = null;
+        Boolean releaseCandidateCertified = false;
         try {
             List<com.swadeshitech.prodhub.entity.ReleaseCandidate> releaseCandidates = 
                 readTransactionService.findByDynamicOrFilters(
@@ -927,7 +928,9 @@ public class PipelineServiceImpl implements PipelineService {
                     com.swadeshitech.prodhub.entity.ReleaseCandidate.class
                 );
             if (!CollectionUtils.isEmpty(releaseCandidates)) {
-                releaseCandidateId = releaseCandidates.getFirst().getId();
+                com.swadeshitech.prodhub.entity.ReleaseCandidate rc = releaseCandidates.getFirst();
+                releaseCandidateId = rc.getId();
+                releaseCandidateCertified = com.swadeshitech.prodhub.enums.ReleaseCandidateStatus.CERTIFIED.equals(rc.getStatus());
             }
         } catch (Exception e) {
             log.warn("Failed to fetch release candidate for pipeline execution {}", pipelineExecution.getId(), e);
@@ -1028,6 +1031,7 @@ public class PipelineServiceImpl implements PipelineService {
                 .createdBy(pipelineExecution.getCreatedBy())
                 .createdTime(pipelineExecution.getCreatedTime())
                 .releaseCandidateId(releaseCandidateId)
+                .releaseCandidateCertified(releaseCandidateCertified)
                 .commitId(commitId)
                 .serviceName(serviceName)
                 .build();

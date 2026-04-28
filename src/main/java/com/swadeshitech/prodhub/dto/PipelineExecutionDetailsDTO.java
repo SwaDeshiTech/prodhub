@@ -17,6 +17,7 @@ public class PipelineExecutionDetailsDTO {
     private Map<String, Object> metaData;
     private String createdBy;
     private String releaseCandidateId;
+    private Boolean releaseCandidateCertified;
     private java.time.LocalDateTime createdTime;
     private String commitId;
     private String serviceName;

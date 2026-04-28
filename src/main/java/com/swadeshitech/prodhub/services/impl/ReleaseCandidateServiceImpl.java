@@ -225,12 +225,17 @@ public class ReleaseCandidateServiceImpl implements ReleaseCandidateService {
             throw new CustomException(ErrorCode.RELEASE_CANDIDATE_NOT_FOUND);
         }
 
+        // Sort release candidates by created time in descending order (newest first)
+        releaseCandidates.sort((rc1, rc2) -> rc2.getCreatedTime().compareTo(rc1.getCreatedTime()));
+
         List<DropdownDTO> dropdownDTOList = new ArrayList<>();
 
         for (ReleaseCandidate releaseCandidate : releaseCandidates) {
-            String key = "Commit ID: " + releaseCandidate.getMetaData().get("commitId") +
-                    " Certified by: " +
-                    releaseCandidate.getCertifiedBy().getNameAndEmailId();
+            String timestamp = releaseCandidate.getCreatedTime().format(java.time.format.DateTimeFormatter.ofPattern("MMM dd, yyyy HH:mm"));
+            String key = "Commit: " + releaseCandidate.getMetaData().get("commitId").substring(0, Math.min(7, releaseCandidate.getMetaData().get("commitId").length())) +
+                    " | Certified by: " + releaseCandidate.getCertifiedBy().getName() +
+                    " | Created: " + timestamp;
+                    
             dropdownDTOList.add(DropdownDTO.builder()
                             .key(releaseCandidate.getId())
                             .value(key)

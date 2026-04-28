@@ -12,6 +12,7 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/feature-flags")
+@CrossOrigin(origins = "*")
 public class FeatureFlagController {
 
     @Autowired

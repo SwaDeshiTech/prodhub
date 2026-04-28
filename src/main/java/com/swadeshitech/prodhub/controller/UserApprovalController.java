@@ -13,6 +13,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/user-approvals")
+@CrossOrigin(origins = "*")
 public class UserApprovalController {
 
     @Autowired
