@@ -5,8 +5,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.swadeshitech.prodhub.constant.Constants;
 import com.swadeshitech.prodhub.transaction.write.WriteTransactionService;
+import com.swadeshitech.prodhub.utils.Base64Util;
 import org.bson.types.ObjectId;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,6 +38,9 @@ public class MetadataServiceImpl implements MetadataService {
 
     @Autowired
     private WriteTransactionService writeTransactionService;
+
+    @Autowired
+    ObjectMapper objectMapper;
 
     @Override
     public MetaDataResponse getMetadataDetails(String id) {
@@ -111,6 +118,18 @@ public class MetadataServiceImpl implements MetadataService {
     @Override
     public Metadata cloneProfile(String sourceProfileId, String cloneProfileName) {
         return fetchAndCloneMetadataProfile(sourceProfileId, cloneProfileName);
+    }
+
+    @Override
+    public String extractValueFromKey(Metadata metadata, String key) {
+        try {
+            JsonNode metadataJson = objectMapper.readTree(
+                    Base64Util.convertToPlainText(metadata.getData()));
+            return String.valueOf(metadataJson.path(key));
+        } catch (JsonProcessingException e) {
+            log.error("Unable to parse metadata data for ID {}", metadata.getId(), e);
+            throw new CustomException(ErrorCode.METADATA_PROFILE_INVALID_DATA);
+        }
     }
 
     private Metadata fetchAndCloneMetadataProfile(String metaDataProfileId, String cloneProfileName) {

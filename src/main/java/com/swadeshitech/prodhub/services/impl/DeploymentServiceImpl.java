@@ -15,6 +15,7 @@ import com.swadeshitech.prodhub.integration.deplorch.DeplOrchClient;
 import com.swadeshitech.prodhub.integration.deplorch.DeploymentPodResponse;
 import com.swadeshitech.prodhub.integration.kafka.producer.KafkaProducer;
 import com.swadeshitech.prodhub.services.DeploymentService;
+import com.swadeshitech.prodhub.services.MetadataService;
 import com.swadeshitech.prodhub.transaction.read.ReadTransactionService;
 import com.swadeshitech.prodhub.transaction.write.WriteTransactionService;
 import com.swadeshitech.prodhub.utils.Base64Util;
@@ -55,6 +56,9 @@ public class DeploymentServiceImpl implements DeploymentService {
 
     @Autowired
     UserServiceImpl userService;
+
+    @Autowired
+    MetadataService metadataService;
 
     @Override
     public DeploymentRequestResponse triggerDeployment(String deploymentSetID) {
@@ -214,7 +218,7 @@ public class DeploymentServiceImpl implements DeploymentService {
 
         if (StringUtils.hasText(ephemeralEnvironment)) {
             // For ephemeral environments, fetch ephemeral environment to get k8s cluster ID
-            List<com.swadeshitech.prodhub.entity.EphemeralEnvironment> ephemeralEnvironments = 
+            /*List<com.swadeshitech.prodhub.entity.EphemeralEnvironment> ephemeralEnvironments =
                 readTransactionService.findByDynamicOrFilters(
                     Map.of("name", ephemeralEnvironment),
                     com.swadeshitech.prodhub.entity.EphemeralEnvironment.class
@@ -233,13 +237,23 @@ public class DeploymentServiceImpl implements DeploymentService {
                 throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
             }
             
-            k8sClusterId = ephemeralEnv.getMetaData().get("k8sClusterId").toString();
-            namespace = ephemeralEnvironment;
+            k8sClusterId = parseObjectIdToHex(ephemeralEnv.getMetaData().get("k8sClusterId"));
+            namespace = ephemeralEnvironment;*/
+            return null;
         } else {
-            // For regular deployments, use deployment metadata
-            Deployment deployment = findDeployment(deploymentId);
-            k8sClusterId = deployment.getMetaData().get("k8sClusterId").toString();
-            namespace = deployment.getMetaData().get("namespace").toString();
+            PipelineExecution pipelineExecution = findPipelineExecutionById(deploymentId);
+            if (pipelineExecution == null) {
+                throw new CustomException(ErrorCode.DEPLOYMENT_NOT_FOUND);
+            }
+            String deploymentProfileId = String.valueOf(pipelineExecution.getMetaData().get("metaDataId"));
+            List<Metadata> deploymentProfile = readTransactionService.findMetaDataByFilters(Map.of("_id",
+                    new ObjectId(deploymentProfileId)));
+            if(CollectionUtils.isEmpty(deploymentProfile)) {
+                log.error("Deployment profile could not be found {}", deploymentProfileId);
+                throw new CustomException(ErrorCode.METADATA_PROFILE_NOT_FOUND);
+            }
+            k8sClusterId = metadataService.extractValueFromKey(deploymentProfile.getFirst(), "k8sClusterName");
+            namespace = metadataService.extractValueFromKey(deploymentProfile.getFirst(), "namespace");
         }
 
         DeploymentPodResponse deploymentPodResponse = deplOrchClient
@@ -391,6 +405,20 @@ public class DeploymentServiceImpl implements DeploymentService {
             throw new CustomException(ErrorCode.DEPLOYMENT_NOT_FOUND);
         }
         return deployments.getFirst();
+    }
+
+    private PipelineExecution findPipelineExecutionById(String pipelineExecutionId) {
+        if (!ObjectId.isValid(pipelineExecutionId)) {
+            return null;
+        }
+
+        List<PipelineExecution> executions = readTransactionService.findPipelineExecutionsByFilters(
+                Map.of("_id", new ObjectId(pipelineExecutionId)));
+        if (CollectionUtils.isEmpty(executions)) {
+            log.error("Pipeline execution could not be found with id {}", pipelineExecutionId);
+            throw new CustomException(ErrorCode.PIPELINE_EXECUTION_COULD_NOT_BE_FOUND);
+        }
+        return executions.getFirst();
     }
 
     private void updateDeploymentStatus(Deployment deployment) {

@@ -2,9 +2,11 @@ package com.swadeshitech.prodhub.integration.vault;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.net.URI;
@@ -21,11 +23,50 @@ public class VaultApiService {
     @Value("${vault.uri}")
     private String vaultUri;
 
-    @Value("${vault.token}")
-    private String vaultToken;
+    private String currentToken;
 
     private final ObjectMapper objectMapper;
     private static final HttpClient httpClient = HttpClient.newHttpClient();
+
+    @Scheduled(fixedRate = 3600000) // Every 1 hour
+    @PostConstruct
+    public void loginToVault() {
+        log.info("Attempting Vault Login via GCP Workload Identity...");
+        try {
+            // 1. Get Google ID Token from Metadata Server
+            HttpRequest metadataRequest = HttpRequest.newBuilder()
+                    .uri(URI.create("http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/identity?audience=vault/prodhub-app-role"))
+                    .header("Metadata-Flavor", "Google")
+                    .GET()
+                    .build();
+
+            String jwt = httpClient.send(metadataRequest, HttpResponse.BodyHandlers.ofString()).body();
+
+            // 2. Exchange for Vault Token
+            Map<String, String> loginPayload = Map.of(
+                    "role", "prodhub-app-role",
+                    "jwt", jwt
+            );
+
+            HttpRequest vaultLogin = HttpRequest.newBuilder()
+                    .uri(URI.create(vaultUri + "/v1/auth/gcp/login"))
+                    .header("Content-Type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(loginPayload)))
+                    .build();
+
+            HttpResponse<String> loginResponse = httpClient.send(vaultLogin, HttpResponse.BodyHandlers.ofString());
+
+            if (loginResponse.statusCode() == 200) {
+                JsonNode loginJson = objectMapper.readTree(loginResponse.body());
+                this.currentToken = loginJson.path("auth").path("client_token").asText();
+                log.info("Vault token refreshed successfully.");
+            } else {
+                log.error("Vault login failed: {}", loginResponse.body());
+            }
+        } catch (Exception e) {
+            log.error("Critical error connecting to Vault: {}", e.getMessage());
+        }
+    }
 
     public void storeSecret(VaultRequest vaultRequest) {
         String vaultKvUrl = vaultUri + "/v1/secret/data/" + vaultRequest.getCredentialPath();
@@ -34,7 +75,7 @@ public class VaultApiService {
 
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(vaultKvUrl))
-                    .header("X-Vault-Token", vaultToken)
+                    .header("X-Vault-Token", this.currentToken)
                     .header("Content-Type", "application/json")
                     .POST(HttpRequest.BodyPublishers.ofString(jsonPayload))
                     .build();
@@ -52,11 +93,14 @@ public class VaultApiService {
     }
 
     public Map<String, Object> getSecret(String path) {
+        if (currentToken == null) {
+            loginToVault();
+        }
         String vaultKvUrl = vaultUri + "/v1/secret/data/" + path;
         try {
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(vaultKvUrl))
-                    .header("X-Vault-Token", vaultToken)
+                    .header("X-Vault-Token", this.currentToken)
                     .GET()
                     .build();
 

@@ -18,4 +18,6 @@ public interface MetadataService {
     List<DropdownDTO> getAllMetadataNames(String applicationId, String type);
 
     Metadata cloneProfile(String sourceProfileId, String cloneProfileName);
+
+    String extractValueFromKey(Metadata metadata, String key);
 }
