@@ -125,11 +125,14 @@ public class MetadataServiceImpl implements MetadataService {
         try {
             JsonNode metadataJson = objectMapper.readTree(
                     Base64Util.convertToPlainText(metadata.getData()));
-            return String.valueOf(metadataJson.path(key));
+            if(metadataJson.path(key) != null) {
+                return metadataJson.path(key).asText();
+            }
         } catch (JsonProcessingException e) {
             log.error("Unable to parse metadata data for ID {}", metadata.getId(), e);
             throw new CustomException(ErrorCode.METADATA_PROFILE_INVALID_DATA);
         }
+        return null;
     }
 
     private Metadata fetchAndCloneMetadataProfile(String metaDataProfileId, String cloneProfileName) {
