@@ -37,27 +37,32 @@ public class VaultApiService {
         log.info("Attempting Vault Login via GCP Workload Identity...");
         try {
             // 1. Get Google ID Token from Metadata Server
+            String metadataUri = "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/identity?audience=vault/prodhub-app-role";
+            log.info("Step 1: Fetching JWT from Metadata Server: {}", metadataUri);
             HttpRequest metadataRequest = HttpRequest.newBuilder()
-                    .uri(URI.create("http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/identity?audience=vault/prodhub-app-role"))
+                    .uri(URI.create(metadataUri))
                     .header("Metadata-Flavor", "Google")
                     .GET()
                     .build();
 
             HttpResponse<String> jwtResponse = httpClient.send(metadataRequest, HttpResponse.BodyHandlers.ofString());
             if (jwtResponse.statusCode() != 200) {
-                log.error("Failed to get JWT from Metadata Server. Status: {}, Body: {}", jwtResponse.statusCode(), jwtResponse.body());
+                log.error("Step 1 Failed: Metadata Server returned status {}. Body: {}", jwtResponse.statusCode(), jwtResponse.body());
                 return;
             }
             String jwt = jwtResponse.body();
+            log.info("Step 1 Success: JWT retrieved (length: {})", jwt.length());
 
             // 2. Exchange for Vault Token
+            String loginUri = vaultUri + "/v1/auth/gcp/login";
+            log.info("Step 2: Exchanging JWT for Vault Token at: {}", loginUri);
             Map<String, String> loginPayload = Map.of(
                     "role", "prodhub-app-role",
                     "jwt", jwt
             );
 
             HttpRequest vaultLogin = HttpRequest.newBuilder()
-                    .uri(URI.create(vaultUri + "/v1/auth/gcp/login"))
+                    .uri(URI.create(loginUri))
                     .header("Content-Type", "application/json")
                     .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(loginPayload)))
                     .build();
@@ -67,9 +72,9 @@ public class VaultApiService {
             if (loginResponse.statusCode() == 200) {
                 JsonNode loginJson = objectMapper.readTree(loginResponse.body());
                 this.currentToken = loginJson.path("auth").path("client_token").asText();
-                log.info("Vault token refreshed successfully.");
+                log.info("Step 2 Success: Vault token refreshed successfully.");
             } else {
-                log.error("Vault login failed: {}", loginResponse.body());
+                log.error("Step 2 Failed: Vault login returned status {}. Body: {}", loginResponse.statusCode(), loginResponse.body());
             }
         } catch (Exception e) {
             log.error("Critical error connecting to Vault: {}", e.getMessage());
