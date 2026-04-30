@@ -26,7 +26,10 @@ public class VaultApiService {
     private String currentToken;
 
     private final ObjectMapper objectMapper;
-    private static final HttpClient httpClient = HttpClient.newHttpClient();
+    private static final java.time.Duration TIMEOUT = java.time.Duration.ofSeconds(10);
+    private static final HttpClient httpClient = HttpClient.newBuilder()
+            .connectTimeout(TIMEOUT)
+            .build();
 
     @Scheduled(fixedRate = 3600000) // Every 1 hour
     @PostConstruct
