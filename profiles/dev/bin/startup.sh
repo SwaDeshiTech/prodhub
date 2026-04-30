@@ -1,4 +1,4 @@
-#bash
+#!/bin/bash
 
 echo "Setting environment variable"
 . /"$APP"/bin/setenv.sh
