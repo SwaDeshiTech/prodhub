@@ -62,7 +62,7 @@ cicaptain:
     provider:
       id: default-provider
 
-deploch:
+deplorch:
   uri: http://cloudedgedeployer-app:4458/cloudedge-deployer
   initiateDeployment: /api/v1/deployment/start
   deployedPodDetails: /api/v1/pods

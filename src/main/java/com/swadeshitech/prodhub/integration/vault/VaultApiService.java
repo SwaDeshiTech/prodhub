@@ -43,7 +43,12 @@ public class VaultApiService {
                     .GET()
                     .build();
 
-            String jwt = httpClient.send(metadataRequest, HttpResponse.BodyHandlers.ofString()).body();
+            HttpResponse<String> jwtResponse = httpClient.send(metadataRequest, HttpResponse.BodyHandlers.ofString());
+            if (jwtResponse.statusCode() != 200) {
+                log.error("Failed to get JWT from Metadata Server. Status: {}, Body: {}", jwtResponse.statusCode(), jwtResponse.body());
+                return;
+            }
+            String jwt = jwtResponse.body();
 
             // 2. Exchange for Vault Token
             Map<String, String> loginPayload = Map.of(
@@ -72,6 +77,11 @@ public class VaultApiService {
     }
 
     public void storeSecret(VaultRequest vaultRequest) {
+        if (this.currentToken == null) {
+            log.error("Cannot store secret: Vault token is null. Attempting re-login...");
+            loginToVault();
+            if (this.currentToken == null) return;
+        }
         String vaultKvUrl = vaultUri + "/v1/secret/data/" + vaultRequest.getCredentialPath();
         try {
             String jsonPayload = objectMapper.writeValueAsString(Map.of("data", vaultRequest.getData()));
@@ -96,8 +106,13 @@ public class VaultApiService {
     }
 
     public Map<String, Object> getSecret(String path) {
-        if (currentToken == null) {
+        if (this.currentToken == null) {
+            log.warn("Vault token is null. Attempting re-login...");
             loginToVault();
+        }
+        if (this.currentToken == null) {
+            log.error("Vault token is still null after re-login attempt. Cannot fetch secret: {}", path);
+            return null;
         }
         String vaultKvUrl = vaultUri + "/v1/secret/data/" + path;
         try {
