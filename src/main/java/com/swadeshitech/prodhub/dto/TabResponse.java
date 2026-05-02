@@ -12,4 +12,5 @@ public class TabResponse extends BaseResponse {
     private String link;
     private Integer sortOrder;
     private List<TabResponse> children;
+    private Boolean isActive;
 }

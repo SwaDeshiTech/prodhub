@@ -9,9 +9,11 @@ import lombok.Data;
 // @Builder
 public class TabRequest {
 
+    private String id;
     private String name;
     private String link;
     private Integer sortOrder;
     private Set<String> roles;
+    private String parentId;
     private Set<TabRequest> children;
 }

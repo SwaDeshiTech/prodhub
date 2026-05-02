@@ -13,6 +13,7 @@ import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
+import org.springframework.util.StringUtils;
 
 import com.swadeshitech.prodhub.dto.TabRequest;
 import com.swadeshitech.prodhub.dto.TabResponse;
@@ -45,47 +46,138 @@ public class TabServiceImpl implements TabService {
 
         log.info("tab request {}", request);
 
-        List<ObjectId> ids = new ArrayList<>();
-
-        if (Objects.nonNull(request.getRoles())) {
-            for (String role : request.getRoles()) {
-                ids.add(new ObjectId(role));
-            }
-        }
-
-        Map<String, Object> filters = new HashMap<>();
-        filters.put("_id", ids);
-
-        List<Role> roles = readTransactionService.findRoleDetailsByFilters(filters);
-        if (CollectionUtils.isEmpty(roles)) {
-            throw new CustomException(ErrorCode.ROLE_NOT_FOUND);
-        }
+        Set<Role> roles = fetchRoles(request.getRoles());
 
         Tab tab = new Tab();
+        tab.setId(new ObjectId().toString());
         tab.setActive(true);
         tab.setLink(request.getLink());
         tab.setName(request.getName());
         tab.setSortOrder(request.getSortOrder());
-        tab.setRoles(new HashSet<>(roles));
+        tab.setRoles(roles);
 
-        if (Objects.nonNull(request) && Objects.nonNull(request.getChildren())) {
+        if (Objects.nonNull(request.getChildren())) {
             Set<Tab> children = new HashSet<>();
             for (TabRequest tabRequest : request.getChildren()) {
                 Tab child = new Tab();
+                child.setId(new ObjectId().toString());
                 child.setActive(true);
                 child.setLink(tabRequest.getLink());
                 child.setName(tabRequest.getName());
                 child.setSortOrder(tabRequest.getSortOrder());
-                child.setRoles(new HashSet<>(roles));
+                child.setRoles(roles);
                 children.add(child);
             }
             log.info("printing children {}", children.size());
             tab.setChildren(children);
         }
 
+        if (StringUtils.hasText(request.getParentId())) {
+            Map<String, Object> parentFilters = new HashMap<>();
+            parentFilters.put("_id", new ObjectId(request.getParentId()));
+            List<Tab> parentTabs = readTransactionService.findTabDetailsByFilters(parentFilters);
+            if (!CollectionUtils.isEmpty(parentTabs)) {
+                Tab parent = parentTabs.get(0);
+                if (parent.getChildren() == null) {
+                    parent.setChildren(new HashSet<>());
+                }
+                parent.getChildren().add(tab);
+                writeTransactionService.saveTabToRepository(parent);
+                return mapEntityToDTO(tab);
+            }
+        }
+
         writeTransactionService.saveTabToRepository(tab);
 
         return mapEntityToDTO(tab);
+    }
+
+    private Set<Role> fetchRoles(Set<String> roleIds) {
+        if (CollectionUtils.isEmpty(roleIds)) {
+            return new HashSet<>();
+        }
+        List<ObjectId> ids = new ArrayList<>();
+        for (String role : roleIds) {
+            ids.add(new ObjectId(role));
+        }
+        Map<String, Object> filters = new HashMap<>();
+        filters.put("_id", ids);
+        List<Role> roles = readTransactionService.findRoleDetailsByFilters(filters);
+        if (CollectionUtils.isEmpty(roles)) {
+            throw new CustomException(ErrorCode.ROLE_NOT_FOUND);
+        }
+        return new HashSet<>(roles);
+    }
+
+    @Override
+    public TabResponse updateTab(String id, TabRequest request) {
+        log.info("updating tab {} with request {}", id, request);
+        
+        // 1. Try to find as a root tab
+        Map<String, Object> filters = new HashMap<>();
+        filters.put("_id", id);
+        List<Tab> tabs = readTransactionService.findTabDetailsByFilters(filters);
+        
+        if (!CollectionUtils.isEmpty(tabs)) {
+            Tab tab = tabs.get(0);
+            updateTabFields(tab, request);
+            writeTransactionService.saveTabToRepository(tab);
+            return mapEntityToDTO(tab);
+        }
+        
+        // 2. Try to find as a sub-tab
+        Map<String, Object> parentFilters = new HashMap<>();
+        parentFilters.put("children._id", id);
+        List<Tab> parents = readTransactionService.findTabDetailsByFilters(parentFilters);
+        
+        if (!CollectionUtils.isEmpty(parents)) {
+            for (Tab parent : parents) {
+                if (parent.getChildren() != null) {
+                    for (Tab child : parent.getChildren()) {
+                        if (id.equals(child.getId())) {
+                            updateTabFields(child, request);
+                            writeTransactionService.saveTabToRepository(parent);
+                            return mapEntityToDTO(child);
+                        }
+                    }
+                }
+            }
+        }
+        
+        throw new CustomException(ErrorCode.TAB_NOT_FOUND);
+    }
+
+    private void updateTabFields(Tab tab, TabRequest request) {
+        tab.setName(request.getName());
+        tab.setLink(request.getLink());
+        tab.setSortOrder(request.getSortOrder());
+        tab.setRoles(fetchRoles(request.getRoles()));
+    }
+
+    @Override
+    public void deleteTab(String id) {
+        log.info("deleting tab {}", id);
+        
+        // 1. Try to delete as a root tab
+        writeTransactionService.removeTabFromRepository(id);
+        
+        // 2. Also search if it's a sub-tab of any root tab
+        // We look for any tab that has this ID in its children set
+        Map<String, Object> filters = new HashMap<>();
+        filters.put("children._id", id);
+        List<Tab> parents = readTransactionService.findTabDetailsByFilters(filters);
+        
+        if (!CollectionUtils.isEmpty(parents)) {
+            for (Tab parent : parents) {
+                if (parent.getChildren() != null) {
+                    boolean removed = parent.getChildren().removeIf(child -> id.equals(child.getId()));
+                    if (removed) {
+                        log.info("Removed sub-tab {} from parent {}", id, parent.getId());
+                        writeTransactionService.saveTabToRepository(parent);
+                    }
+                }
+            }
+        }
     }
 
     @Override
@@ -140,6 +232,7 @@ public class TabServiceImpl implements TabService {
                 .link(tab.getLink())
                 .name(tab.getName())
                 .sortOrder(tab.getSortOrder())
+                .isActive(tab.isActive())
                 .createdBy(tab.getCreatedBy())
                 .createdTime(tab.getCreatedTime())
                 .lastModifiedBy(tab.getLastModifiedBy())

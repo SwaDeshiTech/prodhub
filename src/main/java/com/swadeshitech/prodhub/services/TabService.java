@@ -12,5 +12,9 @@ public interface TabService {
 
     public TabResponse addTab(TabRequest request);
 
+    public TabResponse updateTab(String id, TabRequest request);
+
+    public void deleteTab(String id);
+
     public List<TabResponse> getActiveTabsByUser();
 }

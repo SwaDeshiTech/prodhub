@@ -148,6 +148,15 @@ public class WriteTransactionService {
         }
     }
 
+    public void removeTabFromRepository(String id) {
+        try {
+            tabRepository.deleteById(id);
+        } catch (Exception ex) {
+            log.error("Failed to delete Tab with id: {}", id, ex);
+            throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
+        }
+    }
+
     public User saveUserToRepository(User user) {
         try {
             return userRepository.save(user);

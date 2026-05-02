@@ -18,6 +18,7 @@ import com.swadeshitech.prodhub.repository.ConstantsRepository;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.StringUtils;
+import org.bson.types.ObjectId;
 
 import java.util.*;
 
@@ -122,14 +123,19 @@ public class ReadTransactionService {
 
     // Helper to keep logic clean
     private Criteria createCriteria(String key, Object value) {
-        if (value instanceof Iterable) {
-            List<Object> list = new ArrayList<>();
-            ((Iterable<?>) value).forEach(list::add);
-            return Criteria.where(key).in(list);
-        } else if (value.getClass().isArray()) {
-            return Criteria.where(key).in(Arrays.asList((Object[]) value));
+        Object finalValue = value;
+        if (value instanceof String && (key.endsWith("id") || key.endsWith("_id")) && ObjectId.isValid((String) value)) {
+            finalValue = new ObjectId((String) value);
         }
-        return Criteria.where(key).is(value);
+        
+        if (finalValue instanceof Iterable) {
+            List<Object> list = new ArrayList<>();
+            ((Iterable<?>) finalValue).forEach(list::add);
+            return Criteria.where(key).in(list);
+        } else if (finalValue.getClass().isArray()) {
+            return Criteria.where(key).in(Arrays.asList((Object[]) finalValue));
+        }
+        return Criteria.where(key).is(finalValue);
     }
 
     public List<User> findUserDetailsByFilters(Map<String, Object> filters) {

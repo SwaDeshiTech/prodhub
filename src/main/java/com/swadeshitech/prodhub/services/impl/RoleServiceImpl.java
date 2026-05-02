@@ -141,7 +141,7 @@ public class RoleServiceImpl implements RoleService {
             }
         }
 
-        User user = userDetails.get(0);
+        User user = userDetails.getFirst();
         user.setRoles(updatedRoles);
 
         writeTransactionService.saveUserToRepository(user);
