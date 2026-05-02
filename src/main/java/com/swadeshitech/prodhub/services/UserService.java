@@ -3,6 +3,8 @@ package com.swadeshitech.prodhub.services;
 import java.util.List;
 import java.util.Set;
 
+import com.swadeshitech.prodhub.entity.Department;
+import com.swadeshitech.prodhub.entity.Team;
 import org.springframework.stereotype.Component;
 
 import com.swadeshitech.prodhub.dto.UserRequest;
@@ -25,4 +27,8 @@ public interface UserService {
     Set<Role> getUserRoles(String uuid);
 
     Set<Role> getDefaultRoles();
+
+    Set<Team> getDefaultTeams();
+
+    Set<Department> getDefaultDepartments();
 }

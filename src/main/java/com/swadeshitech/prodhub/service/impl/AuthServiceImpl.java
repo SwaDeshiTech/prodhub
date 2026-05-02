@@ -1,10 +1,14 @@
 package com.swadeshitech.prodhub.service.impl;
 
 import com.swadeshitech.prodhub.dto.Response;
+import com.swadeshitech.prodhub.entity.Department;
 import com.swadeshitech.prodhub.entity.Role;
+import com.swadeshitech.prodhub.entity.Team;
 import com.swadeshitech.prodhub.entity.User;
 import com.swadeshitech.prodhub.entity.FeatureFlag;
+import com.swadeshitech.prodhub.repository.DepartmentRepository;
 import com.swadeshitech.prodhub.repository.RoleRepository;
+import com.swadeshitech.prodhub.repository.TeamRepository;
 import com.swadeshitech.prodhub.repository.UserRepository;
 import com.swadeshitech.prodhub.service.AuthService;
 import com.swadeshitech.prodhub.service.FeatureFlagService;
@@ -36,6 +40,12 @@ public class AuthServiceImpl implements AuthService {
 
     @Autowired
     private RoleRepository roleRepository;
+
+    @Autowired
+    private TeamRepository teamRepository;
+
+    @Autowired
+    private DepartmentRepository departmentRepository;
 
     @Override
     public Response internalLogin(Map<String, String> credentials) {
@@ -148,6 +158,26 @@ public class AuthServiceImpl implements AuthService {
             Optional<Role> defaultRole = roleRepository.findByName(roleName);
             if (defaultRole.isPresent()) {
                 user.setRoles(java.util.Set.of(defaultRole.get()));
+            }
+        }
+
+        // Set default team from feature flag
+        Optional<FeatureFlag> defaultTeamFlag = featureFlagService.getFeatureFlagByKey("user_default_team");
+        if (defaultTeamFlag.isPresent()) {
+            String teamName = defaultTeamFlag.get().getDefaultValue();
+            Optional<Team> defaultTeam = teamRepository.findByName(teamName);
+            if (defaultTeam.isPresent()) {
+                user.setTeams(java.util.Set.of(defaultTeam.get()));
+            }
+        }
+
+        // Set default department from feature flag
+        Optional<FeatureFlag> defaultDeptFlag = featureFlagService.getFeatureFlagByKey("user_default_department");
+        if (defaultDeptFlag.isPresent()) {
+            String deptName = defaultDeptFlag.get().getDefaultValue();
+            Optional<Department> defaultDept = departmentRepository.findByName(deptName);
+            if (defaultDept.isPresent()) {
+                user.setDepartments(java.util.Set.of(defaultDept.get()));
             }
         }
 

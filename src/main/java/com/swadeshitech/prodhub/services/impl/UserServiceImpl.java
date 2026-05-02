@@ -23,7 +23,9 @@ import com.swadeshitech.prodhub.entity.Team;
 import com.swadeshitech.prodhub.entity.User;
 import com.swadeshitech.prodhub.enums.ErrorCode;
 import com.swadeshitech.prodhub.exception.CustomException;
+import com.swadeshitech.prodhub.repository.DepartmentRepository;
 import com.swadeshitech.prodhub.repository.RoleRepository;
+import com.swadeshitech.prodhub.repository.TeamRepository;
 import com.swadeshitech.prodhub.repository.UserRepository;
 import com.swadeshitech.prodhub.service.FeatureFlagService;
 import com.swadeshitech.prodhub.services.UserService;
@@ -52,6 +54,12 @@ public class UserServiceImpl implements UserService {
 
     @Autowired
     private RoleRepository roleRepository;
+
+    @Autowired
+    private TeamRepository teamRepository;
+
+    @Autowired
+    private DepartmentRepository departmentRepository;
 
     @Override
     public UserResponse getUserDetail(String uuid) {
@@ -116,6 +124,8 @@ public class UserServiceImpl implements UserService {
 
         user.setIsActive(Boolean.TRUE);
         user.setRoles(getDefaultRoles());
+        user.setTeams(getDefaultTeams());
+        user.setDepartments(getDefaultDepartments());
 
         saveUserDetailToRepository(user);
 
@@ -208,6 +218,30 @@ public class UserServiceImpl implements UserService {
         }
 
         return defaultRoles;
+    }
+
+    public Set<Team> getDefaultTeams() {
+        Optional<FeatureFlag> defaultTeamFlag = featureFlagService.getFeatureFlagByKey("user_default_team");
+        if (defaultTeamFlag.isPresent() && Strings.isNotBlank(defaultTeamFlag.get().getDefaultValue())) {
+            String teamName = defaultTeamFlag.get().getDefaultValue();
+            Optional<Team> defaultTeam = teamRepository.findByName(teamName);
+            if (defaultTeam.isPresent()) {
+                return Set.of(defaultTeam.get());
+            }
+        }
+        return new HashSet<>();
+    }
+
+    public Set<Department> getDefaultDepartments() {
+        Optional<FeatureFlag> defaultDeptFlag = featureFlagService.getFeatureFlagByKey("user_default_department");
+        if (defaultDeptFlag.isPresent() && Strings.isNotBlank(defaultDeptFlag.get().getDefaultValue())) {
+            String deptName = defaultDeptFlag.get().getDefaultValue();
+            Optional<Department> defaultDept = departmentRepository.findByName(deptName);
+            if (defaultDept.isPresent()) {
+                return Set.of(defaultDept.get());
+            }
+        }
+        return new HashSet<>();
     }
 
     private User saveUserDetailToRepository(User user) {
