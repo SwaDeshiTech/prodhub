@@ -185,6 +185,7 @@ public class TabServiceImpl implements TabService {
 
         String uuid = UserContextUtil.getUserIdFromRequestContext();
         Set<Role> roles = userService.getUserRoles(uuid);
+        Set<String> userRoleIds = new HashSet<>();
         List<org.bson.types.ObjectId> ids = new ArrayList<>();
 
         log.info("user uuid : {}", uuid);
@@ -192,6 +193,7 @@ public class TabServiceImpl implements TabService {
         if (Objects.nonNull(roles)) {
             for (Role role : roles) {
                 ids.add(new org.bson.types.ObjectId(role.getId()));
+                userRoleIds.add(role.getId());
             }
         }
 
@@ -214,7 +216,10 @@ public class TabServiceImpl implements TabService {
         List<TabResponse> activeTabs = new ArrayList<>();
 
         for (Tab tab : tabs) {
-            activeTabs.add(mapEntityToDTO(tab));
+            TabResponse tabDto = mapEntityToDTOWithFilter(tab, userRoleIds);
+            if (tabDto != null) {
+                activeTabs.add(tabDto);
+            }
         }
 
         activeTabs.sort((t1, t2) -> {
@@ -227,7 +232,19 @@ public class TabServiceImpl implements TabService {
     }
 
     private TabResponse mapEntityToDTO(Tab tab) {
-        TabResponse response = TabResponse.builder()
+        List<TabResponse> childrenResponses = new ArrayList<>();
+        if (tab.getChildren() != null && !tab.getChildren().isEmpty()) {
+            for (Tab child : tab.getChildren()) {
+                childrenResponses.add(mapEntityToDTO(child));
+            }
+            childrenResponses.sort((t1, t2) -> {
+                int order1 = t1.getSortOrder() != null ? t1.getSortOrder() : Integer.MAX_VALUE;
+                int order2 = t2.getSortOrder() != null ? t2.getSortOrder() : Integer.MAX_VALUE;
+                return Integer.compare(order1, order2);
+            });
+        }
+
+        return TabResponse.builder()
                 .id(tab.getId())
                 .link(tab.getLink())
                 .name(tab.getName())
@@ -237,24 +254,53 @@ public class TabServiceImpl implements TabService {
                 .createdTime(tab.getCreatedTime())
                 .lastModifiedBy(tab.getLastModifiedBy())
                 .lastModifiedTime(tab.getLastModifiedTime())
+                .children(childrenResponses)
                 .build();
+    }
 
+    private TabResponse mapEntityToDTOWithFilter(Tab tab, Set<String> userRoleIds) {
+        boolean userHasAccessToThisTab = hasAccess(tab, userRoleIds);
+
+        List<TabResponse> childrenResponses = new ArrayList<>();
         if (tab.getChildren() != null && !tab.getChildren().isEmpty()) {
-            List<TabResponse> childrenResponses = new ArrayList<>();
             for (Tab child : tab.getChildren()) {
-                childrenResponses.add(mapEntityToDTO(child));
+                TabResponse childDto = mapEntityToDTOWithFilter(child, userRoleIds);
+                if (childDto != null) {
+                    childrenResponses.add(childDto);
+                }
             }
             childrenResponses.sort((t1, t2) -> {
                 int order1 = t1.getSortOrder() != null ? t1.getSortOrder() : Integer.MAX_VALUE;
                 int order2 = t2.getSortOrder() != null ? t2.getSortOrder() : Integer.MAX_VALUE;
                 return Integer.compare(order1, order2);
             });
-            response.setChildren(childrenResponses);
-        } else {
-            response.setChildren(new ArrayList<>());
         }
 
-        return response;
+        // If the user doesn't have access to this tab and it has no accessible children, skip it
+        if (!userHasAccessToThisTab && childrenResponses.isEmpty()) {
+            return null;
+        }
+
+        return TabResponse.builder()
+                .id(tab.getId())
+                .link(tab.getLink())
+                .name(tab.getName())
+                .sortOrder(tab.getSortOrder())
+                .isActive(tab.isActive())
+                .createdBy(tab.getCreatedBy())
+                .createdTime(tab.getCreatedTime())
+                .lastModifiedBy(tab.getLastModifiedBy())
+                .lastModifiedTime(tab.getLastModifiedTime())
+                .children(childrenResponses)
+                .build();
+    }
+
+    private boolean hasAccess(Tab tab, Set<String> userRoleIds) {
+        if (CollectionUtils.isEmpty(tab.getRoles())) {
+            return true;
+        }
+        return tab.getRoles().stream()
+                .anyMatch(role -> userRoleIds.contains(role.getId()));
     }
 
 }

@@ -145,6 +145,14 @@ public class UserOrganizationServiceImpl implements UserOrganizationService {
                     user.setEmailId(email);
                     user.setName(email.split("@")[0]); // Use email prefix as name
                     user.setIsActive(true);
+
+                    // Set default roles
+                    try {
+                        user.setRoles(userService.getDefaultRoles());
+                    } catch (Exception e) {
+                        log.warn("Failed to set default roles for new user {}: {}", email, e.getMessage());
+                    }
+
                     writeTransactionService.saveUserToRepository(user);
                     log.info("Created new user with email {}", email);
                 } else {

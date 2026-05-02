@@ -1,7 +1,10 @@
 package com.swadeshitech.prodhub.service.impl;
 
 import com.swadeshitech.prodhub.dto.Response;
+import com.swadeshitech.prodhub.entity.Role;
 import com.swadeshitech.prodhub.entity.User;
+import com.swadeshitech.prodhub.entity.FeatureFlag;
+import com.swadeshitech.prodhub.repository.RoleRepository;
 import com.swadeshitech.prodhub.repository.UserRepository;
 import com.swadeshitech.prodhub.service.AuthService;
 import com.swadeshitech.prodhub.service.FeatureFlagService;
@@ -30,6 +33,9 @@ public class AuthServiceImpl implements AuthService {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private RoleRepository roleRepository;
 
     @Override
     public Response internalLogin(Map<String, String> credentials) {
@@ -134,6 +140,16 @@ public class AuthServiceImpl implements AuthService {
         user.setIsActive(true);
         user.setCreatedBy("system");
         user.setLastModifiedBy("system");
+
+        // Set default role from feature flag
+        Optional<FeatureFlag> defaultRoleFlag = featureFlagService.getFeatureFlagByKey("user_default_role");
+        if (defaultRoleFlag.isPresent()) {
+            String roleName = defaultRoleFlag.get().getDefaultValue();
+            Optional<Role> defaultRole = roleRepository.findByName(roleName);
+            if (defaultRole.isPresent()) {
+                user.setRoles(java.util.Set.of(defaultRole.get()));
+            }
+        }
 
         User savedUser = userRepository.save(user);
 

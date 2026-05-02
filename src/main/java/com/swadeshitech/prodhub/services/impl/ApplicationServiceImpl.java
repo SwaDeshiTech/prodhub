@@ -300,8 +300,10 @@ public class ApplicationServiceImpl implements ApplicationService {
         Set<MetaDataResponse> metaDataResponseSet = new HashSet<>();
         TeamResponse teamResponse = teamService.mapEntityToDTO(application.getTeam());
 
-        for(Metadata metadata : application.getProfiles()) {
-            metaDataResponseSet.add(metadataService.mapToMetaDataResponse(metadata));
+        if (Objects.nonNull(application.getProfiles())) {
+            for(Metadata metadata : application.getProfiles()) {
+                metaDataResponseSet.add(metadataService.mapToMetaDataResponse(metadata));
+            }
         }
 
         return ApplicationResponse.builder()

@@ -248,33 +248,34 @@ public class DeploymentApprovalImpl implements ApprovalService {
 
         List<ApprovalResponse.ApprovalStageResponse.StageResponse> stageResponseList = new ArrayList<>();
 
-        for(ApprovalStage.Stage stageItr : approvalStage.getStages()) {
+        if (Objects.nonNull(approvalStage.getStages())) {
+            for (ApprovalStage.Stage stageItr : approvalStage.getStages()) {
 
-            List<String> userDetail = new ArrayList<>();
-            for(String userItr : stageItr.getApprovers()) {
-                UserResponse userResponse = userService.getUserDetail(userItr);
-                if(Objects.isNull(userResponse)) {
-                    log.error("User not found {}", userItr);
-                    throw new CustomException(ErrorCode.USER_NOT_FOUND);
+                List<String> userDetail = new ArrayList<>();
+                if (Objects.nonNull(stageItr.getApprovers())) {
+                    for (String userItr : stageItr.getApprovers()) {
+                        UserResponse userResponse = userService.getUserDetail(userItr);
+                        if (Objects.isNull(userResponse)) {
+                            log.error("User not found {}", userItr);
+                            throw new CustomException(ErrorCode.USER_NOT_FOUND);
+                        }
+                        userDetail.add(userResponse.getName() + " (" + userResponse.getEmailId() + ")");
+                    }
                 }
-                userDetail.add(userResponse.getName() + " (" + userResponse.getEmailId() + ")");
+
+                stageResponseList.add(ApprovalResponse.ApprovalStageResponse.StageResponse.builder()
+                        .approvedAt(stageItr.getApprovedAt())
+                        .approvedBy(stageItr.getApprovedBy())
+                        .status(stageItr.getStatus().getDisplayName())
+                        .comments(stageItr.getComments())
+                        .sequence(stageItr.getSequence())
+                        .isMandatory(stageItr.isMandatory())
+                        .name(stageItr.getName())
+                        .approvers(userDetail)
+                        .build());
             }
-
-            stageResponseList.add(ApprovalResponse.ApprovalStageResponse.StageResponse.builder()
-                    .approvedAt(stageItr.getApprovedAt())
-                    .approvedBy(stageItr.getApprovedBy())
-                    .status(stageItr.getStatus().getDisplayName())
-                    .comments(stageItr.getComments())
-                    .sequence(stageItr.getSequence())
-                    .isMandatory(stageItr.isMandatory())
-                    .name(stageItr.getName())
-                    .approvers(userDetail)
-                    .build());
         }
-
         return ApprovalResponse.ApprovalStageResponse.builder()
-                .id(approvalStage.getId())
-                .name(approvalStage.getName())
                 .description(approvalStage.getDescription())
                 .stageResponses(stageResponseList)
                 .build();
@@ -282,6 +283,9 @@ public class DeploymentApprovalImpl implements ApprovalService {
 
     private void markRequestComplete(Approvals approvals) {
         List<ApprovalStage.Stage> stages = approvals.getApprovalStage().getStages();
+        if (CollectionUtils.isEmpty(stages)) {
+            return;
+        }
         int total = 0, totalCompleted = 0;
         for(ApprovalStage.Stage stage : stages) {
             if(stage.isMandatory()) {

@@ -93,13 +93,15 @@ public class TeamServiceImpl implements TeamService {
         department.setTeams(departmentTeams);
 
         Set<Application> applications = new HashSet<>();
-        for(String applicationId : teamRequest.getApplications()) {
-            List<Application> application = readTransactionService.findApplicationByFilters(Map.of("_id", new ObjectId(applicationId)));
-            if(CollectionUtils.isEmpty(application)) {
-                log.error("Application ID could not be found {}", applicationId);
-                throw new CustomException(ErrorCode.APPLICATION_NOT_FOUND);
+        if (Objects.nonNull(teamRequest.getApplications())) {
+            for(String applicationId : teamRequest.getApplications()) {
+                List<Application> application = readTransactionService.findApplicationByFilters(Map.of("_id", new ObjectId(applicationId)));
+                if(CollectionUtils.isEmpty(application)) {
+                    log.error("Application ID could not be found {}", applicationId);
+                    throw new CustomException(ErrorCode.APPLICATION_NOT_FOUND);
+                }
+                applications.add(application.getFirst());
             }
-            applications.add(application.getFirst());
         }
         team.setApplications(applications);
 

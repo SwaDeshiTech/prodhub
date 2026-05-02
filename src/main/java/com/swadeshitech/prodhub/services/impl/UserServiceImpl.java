@@ -17,12 +17,15 @@ import com.swadeshitech.prodhub.dto.UserResponse;
 import com.swadeshitech.prodhub.dto.UserUpdateRequest;
 import com.swadeshitech.prodhub.dto.DropdownDTO;
 import com.swadeshitech.prodhub.entity.Department;
+import com.swadeshitech.prodhub.entity.FeatureFlag;
 import com.swadeshitech.prodhub.entity.Role;
 import com.swadeshitech.prodhub.entity.Team;
 import com.swadeshitech.prodhub.entity.User;
 import com.swadeshitech.prodhub.enums.ErrorCode;
 import com.swadeshitech.prodhub.exception.CustomException;
+import com.swadeshitech.prodhub.repository.RoleRepository;
 import com.swadeshitech.prodhub.repository.UserRepository;
+import com.swadeshitech.prodhub.service.FeatureFlagService;
 import com.swadeshitech.prodhub.services.UserService;
 import com.swadeshitech.prodhub.transaction.read.ReadTransactionService;
 import com.swadeshitech.prodhub.utils.UserContextUtil;
@@ -43,6 +46,12 @@ public class UserServiceImpl implements UserService {
 
     @Autowired
     private ReadTransactionService readTransactionService;
+
+    @Autowired
+    private FeatureFlagService featureFlagService;
+
+    @Autowired
+    private RoleRepository roleRepository;
 
     @Override
     public UserResponse getUserDetail(String uuid) {
@@ -174,6 +183,17 @@ public class UserServiceImpl implements UserService {
     @Override
     public Set<Role> getDefaultRoles() {
 
+        // Try to get default role from feature flag
+        Optional<FeatureFlag> defaultRoleFlag = featureFlagService.getFeatureFlagByKey("user_default_role");
+        if (defaultRoleFlag.isPresent() && Strings.isNotBlank(defaultRoleFlag.get().getDefaultValue())) {
+            String roleName = defaultRoleFlag.get().getDefaultValue();
+            Optional<Role> defaultRole = roleRepository.findByName(roleName);
+            if (defaultRole.isPresent()) {
+                return Set.of(defaultRole.get());
+            }
+        }
+
+        // Fallback to isDefault=true roles
         Map<String, Object> filters = new HashMap<>();
         filters.put("isDefault", true);
 
