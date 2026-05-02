@@ -160,7 +160,11 @@ public class TeamServiceImpl implements TeamService {
         // First, remove team from all current employees and their departments
         Set<User> currentEmployees = team.getEmployees();
         if (currentEmployees != null) {
-            for (User currentEmployee : currentEmployees) {
+            for (User currentEmployeeProxy : currentEmployees) {
+                // Fetch the full user object to avoid losing roles or other fields
+                User currentEmployee = userRepository.findByUuid(currentEmployeeProxy.getUuid())
+                        .orElse(currentEmployeeProxy);
+                
                 // Remove team from user's teams
                 Set<Team> userTeams = currentEmployee.getTeams();
                 if (userTeams != null) {
@@ -182,7 +186,11 @@ public class TeamServiceImpl implements TeamService {
         // First, remove team from all current managers and their departments
         Set<User> currentManagers = team.getManagers();
         if (currentManagers != null) {
-            for (User currentManager : currentManagers) {
+            for (User currentManagerProxy : currentManagers) {
+                // Fetch the full user object to avoid losing roles or other fields
+                User currentManager = userRepository.findByUuid(currentManagerProxy.getUuid())
+                        .orElse(currentManagerProxy);
+
                 // Remove team from user's teams
                 Set<Team> userTeams = currentManager.getTeams();
                 if (userTeams != null) {

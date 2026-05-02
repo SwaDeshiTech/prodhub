@@ -147,7 +147,11 @@ public class DepartmentServiceImpl implements DepartmentService {
             removedHeads.removeAll(newHeadOfDepartment);
 
             // Process added heads
-            for (User addedHead : addedHeads) {
+            for (User addedHeadProxy : addedHeads) {
+                // Fetch the full user object to avoid losing roles or other fields
+                User addedHead = userRepository.findByUuid(addedHeadProxy.getUuid())
+                        .orElse(addedHeadProxy);
+
                 // Add department to user's departments
                 if (addedHead.getDepartments() == null) {
                     addedHead.setDepartments(new HashSet<>());
@@ -165,7 +169,11 @@ public class DepartmentServiceImpl implements DepartmentService {
             }
 
             // Process removed heads
-            for (User removedHead : removedHeads) {
+            for (User removedHeadProxy : removedHeads) {
+                // Fetch the full user object to avoid losing roles or other fields
+                User removedHead = userRepository.findByUuid(removedHeadProxy.getUuid())
+                        .orElse(removedHeadProxy);
+
                 // Remove department from user's departments
                 if (removedHead.getDepartments() != null) {
                     removedHead.getDepartments().remove(department);
