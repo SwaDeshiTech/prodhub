@@ -75,6 +75,9 @@ public class PipelineServiceImpl implements PipelineService {
     com.swadeshitech.prodhub.integration.cicaptain.config.CiCaptainClient ciCaptainClient;
 
     @Autowired
+    com.swadeshitech.prodhub.services.ReleaseCandidateService releaseCandidateService;
+
+    @Autowired
     ApplicationContext applicationContext;
 
     @Override
@@ -566,6 +569,9 @@ public class PipelineServiceImpl implements PipelineService {
         }
 
         writeTransactionService.savePipelineExecutionToRepository(pipelineExecution);
+        
+        // Create Release Candidate if missing
+        releaseCandidateService.handleReleaseCandidateCreation(pipelineExecution, buildStatus);
 
         // Trigger next stage if current stage succeeded
         if ("SUCCESS".equalsIgnoreCase(buildStatus)) {
@@ -870,6 +876,9 @@ public class PipelineServiceImpl implements PipelineService {
                         }
                     });
                 }
+
+                // Create Release Candidate if missing
+                releaseCandidateService.handleReleaseCandidateCreation(pipelineExecution, response.status());
                 
                 // Check if all stages are completed
                 boolean allStagesCompleted = pipelineExecution.getStageExecutions().stream()

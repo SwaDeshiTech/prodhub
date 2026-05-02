@@ -281,6 +281,141 @@ public class ReleaseCandidateServiceImpl implements ReleaseCandidateService {
         log.info("Deleted release candidate with ID: {}", id);
     }
 
+    @Override
+    public void handleReleaseCandidateCreation(PipelineExecution pipelineExecution, String buildStatus) {
+        if (!"SUCCESS".equalsIgnoreCase(buildStatus)) {
+            log.info("Build status is not SUCCESS for pipeline execution {}, skipping release candidate creation", pipelineExecution.getId());
+            return;
+        }
+
+        // Check if release candidate already exists for this pipeline execution
+        List<ReleaseCandidate> existingRCs = readTransactionService.findByDynamicOrFilters(
+                Map.of("pipelineExecution.$id", new ObjectId(pipelineExecution.getId())),
+                ReleaseCandidate.class
+        );
+
+        if (!CollectionUtils.isEmpty(existingRCs)) {
+            log.info("Release candidate already exists for pipeline execution {}, skipping creation", pipelineExecution.getId());
+            return;
+        }
+
+        log.info("Release candidate missing for successful build in pipeline execution {}. Creating manually...", pipelineExecution.getId());
+
+        try {
+            // 1. Get Application
+            String serviceId = (String) pipelineExecution.getMetaData().get("serviceId");
+            if (!StringUtils.hasText(serviceId)) {
+                log.error("serviceId not found in pipeline execution metadata {}", pipelineExecution.getId());
+                return;
+            }
+            List<Application> applications = readTransactionService.findApplicationByFilters(Map.of("_id", new ObjectId(serviceId)));
+            if (CollectionUtils.isEmpty(applications)) {
+                log.error("Application not found for serviceId {}", serviceId);
+                return;
+            }
+            Application application = applications.getFirst();
+
+            // 2. Get Build Profile
+            String metaDataId = (String) pipelineExecution.getMetaData().get("metaDataId");
+            if (!StringUtils.hasText(metaDataId)) {
+                log.error("metaDataId not found in pipeline execution metadata {}", pipelineExecution.getId());
+                return;
+            }
+            List<Metadata> buildProfiles = readTransactionService.findMetaDataByFilters(Map.of("_id", new ObjectId(metaDataId)));
+            if (CollectionUtils.isEmpty(buildProfiles)) {
+                log.error("Build profile not found for metaDataId {}", metaDataId);
+                return;
+            }
+            Metadata buildProfile = buildProfiles.getFirst();
+
+            // 3. Extract Metadata from Pipeline Execution
+            Map<String, String> metadata = new HashMap<>();
+            String buildRefId = (String) pipelineExecution.getMetaData().get("ciCaptainBuildId");
+            metadata.put("buildRefId", buildRefId);
+            metadata.put("providerID", (String) pipelineExecution.getMetaData().get("providerID"));
+            metadata.put("system", "CI-CAPTAIN");
+
+            // Extract parameters from build stage if possible
+            if (pipelineExecution.getStageExecutions() != null) {
+                for (PipelineExecution.StageExecution stage : pipelineExecution.getStageExecutions()) {
+                    if ("build".equalsIgnoreCase(stage.getStageName()) && stage.getTemplate() != null
+                            && !CollectionUtils.isEmpty(stage.getTemplate().getSteps())) {
+                        for (Template.Step step : stage.getTemplate().getSteps()) {
+                            if ("build".equalsIgnoreCase(step.getStepName())) {
+                                if (step.getParams() != null) {
+                                    metadata.put("repoURL", extractParamValue(step.getParams(), "repoURL"));
+                                    metadata.put("branchName", extractParamValue(step.getParams(), "branchName"));
+                                    metadata.put("commitId", extractParamValue(step.getParams(), "commitId"));
+                                    metadata.put("dockerImageHashValue", extractParamValue(step.getParams(), "dockerImageHashValue"));
+                                    metadata.put("buildCommand", extractParamValue(step.getParams(), "buildCommand"));
+                                    metadata.put("artifactPath", extractParamValue(step.getParams(), "artifactPath"));
+                                }
+                                if (step.getMetadata() != null && step.getMetadata().containsKey("buildUrl")) {
+                                    metadata.put("buildUrl", String.valueOf(step.getMetadata().get("buildUrl")));
+                                }
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 4. Get Ephemeral Environment (optional)
+            String ephemeralEnvId = (String) pipelineExecution.getMetaData().get("ephemeralEnvironmentId");
+            String ephemeralEnvIdToSet = null;
+            if (StringUtils.hasText(ephemeralEnvId)) {
+                ephemeralEnvIdToSet = ephemeralEnvId;
+            }
+
+            // 5. Create Release Candidate
+            User initiatedBy = null;
+            if (StringUtils.hasText(pipelineExecution.getCreatedBy())) {
+                List<User> users = readTransactionService.findByDynamicOrFilters(
+                        Map.of("email", pipelineExecution.getCreatedBy()),
+                        User.class
+                );
+                if (!CollectionUtils.isEmpty(users)) {
+                    initiatedBy = users.getFirst();
+                }
+            }
+
+            ReleaseCandidate releaseCandidate = ReleaseCandidate.builder()
+                    .service(application)
+                    .buildProfile(buildProfile)
+                    .status(ReleaseCandidateStatus.CERTIFIABLE)
+                    .metaData(metadata)
+                    .buildRefId(buildRefId)
+                    .ephemeralEnvironmentId(ephemeralEnvIdToSet)
+                    .initiatedBy(initiatedBy)
+                    .pipelineExecution(pipelineExecution)
+                    .build();
+
+            writeTransactionService.saveReleaseCandidateToRepository(releaseCandidate);
+            log.info("Successfully created release candidate manually for pipeline execution: {}", pipelineExecution.getId());
+
+        } catch (Exception ex) {
+            log.error("Failed to create release candidate manually for pipeline execution: {}", pipelineExecution.getId(), ex);
+        }
+    }
+
+    private String extractParamValue(Map<String, Template.Step.TemplateStepParam> params, String key) {
+        if (params == null || !StringUtils.hasText(key)) {
+            return null;
+        }
+        // First try direct map key lookup (e.g., "repoURL", "commitId")
+        Template.Step.TemplateStepParam directMatch = params.get(key);
+        if (directMatch != null && StringUtils.hasText(directMatch.getValue())) {
+            return directMatch.getValue();
+        }
+        // Fallback: search by displayName or affectedKey
+        for (Template.Step.TemplateStepParam param : params.values()) {
+            if (key.equalsIgnoreCase(param.getDisplayName()) || key.equalsIgnoreCase(param.getAffectedKey())) {
+                return param.getValue();
+            }
+        }
+        return null;
+    }
+
     private ReleaseCandidateResponse buildResponse(ReleaseCandidate releaseCandidate) {
 
         String certifiedBy = "N/A";

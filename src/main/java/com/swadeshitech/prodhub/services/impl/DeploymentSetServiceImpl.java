@@ -161,11 +161,14 @@ public class DeploymentSetServiceImpl implements DeploymentSetService {
             deploymentSetResponses.add(DeploymentSetResponse.builder()
                     .id(deploymentSet.getId())
                     .status(deploymentSet.getStatus().getMessage())
-                    .deploymentProfileName(deploymentSet.getDeploymentProfile().getName().split("::")[0])
+                    .deploymentProfileName(deploymentSet.getDeploymentProfile() != null ?
+                        deploymentSet.getDeploymentProfile().getName().split("::")[0] : "N/A")
                     .serviceName(deploymentSet.getApplication().getName())
                     .createdTime(deploymentSet.getCreatedTime())
                     .metaData(Map.of("COMMIT_ID",
-                                    deploymentSet.getReleaseCandidate().getMetaData().get("commitId")))
+                                    deploymentSet.getReleaseCandidate() != null && deploymentSet.getReleaseCandidate().getMetaData() != null &&
+                                    deploymentSet.getReleaseCandidate().getMetaData().containsKey("commitId") ?
+                                    deploymentSet.getReleaseCandidate().getMetaData().get("commitId") : "N/A"))
                     .build());
         }
 
@@ -240,10 +243,15 @@ public class DeploymentSetServiceImpl implements DeploymentSetService {
                 .id(deploymentSet.getId())
                 .status(deploymentSet.getStatus().getMessage())
                 .serviceName(deploymentSet.getApplication().getName())
-                .deploymentProfileName(deploymentSet.getDeploymentProfile().getName().split("::")[0])
-                .buildProfileName(deploymentSet.getReleaseCandidate().getBuildProfile().getName())
-                .approvalId(deploymentSet.getApprovals().getId())
-                .metaData(Map.of("COMMIT_ID", deploymentSet.getReleaseCandidate().getMetaData().get("commitId")))
+                .deploymentProfileName(deploymentSet.getDeploymentProfile() != null ?
+                        deploymentSet.getDeploymentProfile().getName().split("::")[0] : "N/A")
+                .buildProfileName(deploymentSet.getReleaseCandidate() != null && deploymentSet.getReleaseCandidate().getBuildProfile() != null ?
+                        deploymentSet.getReleaseCandidate().getBuildProfile().getName() : "N/A")
+                .approvalId(deploymentSet.getApprovals() != null ? deploymentSet.getApprovals().getId() : null)
+                .metaData(Map.of("COMMIT_ID", 
+                        deploymentSet.getReleaseCandidate() != null && deploymentSet.getReleaseCandidate().getMetaData() != null &&
+                        deploymentSet.getReleaseCandidate().getMetaData().containsKey("commitId") ?
+                        deploymentSet.getReleaseCandidate().getMetaData().get("commitId") : "N/A"))
                 .pipelineExecutions(pipelineExecutionResponses)
                 .createdBy(deploymentSet.getCreatedBy())
                 .createdTime(deploymentSet.getCreatedTime())
@@ -260,7 +268,9 @@ public class DeploymentSetServiceImpl implements DeploymentSetService {
             
             // Extract service name and commit ID
             String serviceName = deploymentSet.getApplication().getName();
-            String commitId = deploymentSet.getReleaseCandidate().getMetaData().get("commitId");
+            String commitId = (deploymentSet.getReleaseCandidate() != null && deploymentSet.getReleaseCandidate().getMetaData() != null)
+                    ? deploymentSet.getReleaseCandidate().getMetaData().getOrDefault("commitId", "unknown")
+                    : "unknown";
             
             // Get metadataId from deployment set's metadata
             Object metadataIdObj = deploymentSet.getMetaData() != null 
