@@ -13,4 +13,5 @@ public class TabResponse extends BaseResponse {
     private Integer sortOrder;
     private List<TabResponse> children;
     private Boolean isActive;
+    private List<RoleResponse> roles;
 }

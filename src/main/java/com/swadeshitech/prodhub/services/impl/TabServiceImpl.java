@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
+import com.swadeshitech.prodhub.dto.RoleResponse;
 import com.swadeshitech.prodhub.dto.TabRequest;
 import com.swadeshitech.prodhub.dto.TabResponse;
 import com.swadeshitech.prodhub.entity.Role;
@@ -244,6 +245,17 @@ public class TabServiceImpl implements TabService {
             });
         }
 
+        List<RoleResponse> roleResponses = new ArrayList<>();
+        if (tab.getRoles() != null) {
+            for (Role role : tab.getRoles()) {
+                roleResponses.add(RoleResponse.builder()
+                        .id(role.getId())
+                        .name(role.getName())
+                        .isDefault(role.isDefault())
+                        .build());
+            }
+        }
+
         return TabResponse.builder()
                 .id(tab.getId())
                 .link(tab.getLink())
@@ -255,6 +267,7 @@ public class TabServiceImpl implements TabService {
                 .lastModifiedBy(tab.getLastModifiedBy())
                 .lastModifiedTime(tab.getLastModifiedTime())
                 .children(childrenResponses)
+                .roles(roleResponses)
                 .build();
     }
 
@@ -281,6 +294,17 @@ public class TabServiceImpl implements TabService {
             return null;
         }
 
+        List<RoleResponse> roleResponses = new ArrayList<>();
+        if (tab.getRoles() != null) {
+            for (Role role : tab.getRoles()) {
+                roleResponses.add(RoleResponse.builder()
+                        .id(role.getId())
+                        .name(role.getName())
+                        .isDefault(role.isDefault())
+                        .build());
+            }
+        }
+
         return TabResponse.builder()
                 .id(tab.getId())
                 .link(tab.getLink())
@@ -292,6 +316,7 @@ public class TabServiceImpl implements TabService {
                 .lastModifiedBy(tab.getLastModifiedBy())
                 .lastModifiedTime(tab.getLastModifiedTime())
                 .children(childrenResponses)
+                .roles(roleResponses)
                 .build();
     }
 
