@@ -1,3 +1,5 @@
+package com.swadeshitech.prodhub.controller;
+
 import com.swadeshitech.prodhub.dto.UserOrganizationRequest;
 import com.swadeshitech.prodhub.entity.User;
 import com.swadeshitech.prodhub.entity.UserApproval;
@@ -6,6 +8,7 @@ import com.swadeshitech.prodhub.service.UserApprovalService;
 import com.swadeshitech.prodhub.services.UserOrganizationService;
 import com.swadeshitech.prodhub.dto.UserOrganizationResponse;
 import com.swadeshitech.prodhub.utils.UserContextUtil;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -17,7 +20,7 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/user-approvals")
-@CrossOrigin(origins = "*")
+@Slf4j
 public class UserApprovalController {
 
     @Autowired
@@ -116,7 +119,9 @@ public class UserApprovalController {
 
     @GetMapping("/{userId}/is-approved")
     public ResponseEntity<Boolean> isUserApproved(@PathVariable String userId) {
+        log.info("Received is-approved request for userId: {}", userId);
         boolean approved = userApprovalService.isUserApproved(userId);
+        log.info("Response for is-approved request for userId {}: {}", userId, approved);
         return ResponseEntity.ok(approved);
     }
 
