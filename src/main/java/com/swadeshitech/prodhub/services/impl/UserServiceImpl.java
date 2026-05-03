@@ -61,6 +61,9 @@ public class UserServiceImpl implements UserService {
     @Autowired
     private DepartmentRepository departmentRepository;
 
+    @Autowired
+    private UserApprovalService userApprovalService;
+
     @Override
     public UserResponse getUserDetail(String uuid) {
         if (StringUtils.isEmpty(uuid)) {
@@ -128,6 +131,9 @@ public class UserServiceImpl implements UserService {
         user.setDepartments(getDefaultDepartments());
 
         saveUserDetailToRepository(user);
+
+        // Automatically create pending approval entry
+        userApprovalService.createOrUpdatePendingApproval(user);
 
         return modelMapper.map(user, UserResponse.class);
     }

@@ -187,6 +187,9 @@ public class AuthServiceImpl implements AuthService {
 
         User savedUser = userRepository.save(user);
 
+        // Automatically create pending approval entry
+        userApprovalService.createOrUpdatePendingApproval(savedUser);
+
         Map<String, Object> response = new HashMap<>();
         String actualUuid = savedUser.getUuid() != null ? savedUser.getUuid() : savedUser.getId();
         response.put("uuid", actualUuid);

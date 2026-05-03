@@ -27,6 +27,31 @@ public class UserApprovalServiceImpl implements UserApprovalService {
     }
 
     @Override
+    public UserApproval createOrUpdatePendingApproval(User user) {
+        Optional<UserApproval> existing = userApprovalRepository.findByUserId(user.getId());
+        if (existing.isPresent()) {
+            UserApproval approval = existing.get();
+            // If already approved or blocked, don't reset it
+            if (approval.isApproved() || approval.isBlocked()) {
+                return approval;
+            }
+            return approval;
+        }
+
+        UserApproval pending = UserApproval.builder()
+                .userId(user.getId())
+                .userName(user.getName())
+                .userEmail(user.getEmailId())
+                .approved(false)
+                .blocked(false)
+                .build();
+        pending.setCreatedAt(LocalDateTime.now());
+        pending.setUpdatedAt(LocalDateTime.now());
+        
+        return userApprovalRepository.save(pending);
+    }
+
+    @Override
     public UserApproval approveUser(String userId, String approvedBy) {
         Optional<UserApproval> existingApproval = userApprovalRepository.findByUserId(userId);
         UserApproval approval;

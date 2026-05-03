@@ -1,7 +1,10 @@
-package com.swadeshitech.prodhub.controller;
-
+import com.swadeshitech.prodhub.dto.UserOrganizationRequest;
+import com.swadeshitech.prodhub.entity.User;
 import com.swadeshitech.prodhub.entity.UserApproval;
+import com.swadeshitech.prodhub.repository.UserRepository;
 import com.swadeshitech.prodhub.service.UserApprovalService;
+import com.swadeshitech.prodhub.services.UserOrganizationService;
+import com.swadeshitech.prodhub.dto.UserOrganizationResponse;
 import com.swadeshitech.prodhub.utils.UserContextUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -10,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/user-approvals")
@@ -18,6 +22,12 @@ public class UserApprovalController {
 
     @Autowired
     private UserApprovalService userApprovalService;
+
+    @Autowired
+    private UserOrganizationService userOrganizationService;
+
+    @Autowired
+    private UserRepository userRepository;
 
     @PostMapping
     public ResponseEntity<UserApproval> createUserApproval(@RequestBody UserApproval userApproval) {
@@ -29,6 +39,23 @@ public class UserApprovalController {
     public ResponseEntity<UserApproval> approveUser(@PathVariable String userId) {
         String approvedBy = UserContextUtil.getUserIdFromRequestContext();
         UserApproval approval = userApprovalService.approveUser(userId, approvedBy);
+
+        // Automatically add user to the admin's organization
+        try {
+            var adminOrgs = userOrganizationService.getOrganizationsForUser(approvedBy);
+            if (adminOrgs != null && !adminOrgs.isEmpty()) {
+                String orgId = adminOrgs.get(0).getOrganizationId();
+                UserOrganizationRequest request = UserOrganizationRequest.builder()
+                        .userId(approval.getUserEmail()) // Service expects email here
+                        .organizationId(orgId)
+                        .build();
+                userOrganizationService.addUserToOrganization(request);
+            }
+        } catch (Exception e) {
+            // Log but don't fail approval if organization linking fails
+            System.err.println("Failed to automatically link user to organization: " + e.getMessage());
+        }
+
         return ResponseEntity.ok(approval);
     }
 

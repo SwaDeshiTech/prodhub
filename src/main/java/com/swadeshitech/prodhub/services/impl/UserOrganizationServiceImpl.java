@@ -98,11 +98,22 @@ public class UserOrganizationServiceImpl implements UserOrganizationService {
     }
 
     @Override
-    public List<UserOrganizationResponse> getOrganizationsForUser(String userId) {
-        log.info("Fetching organizations for user {}", userId);
+    public List<UserOrganizationResponse> getOrganizationsForUser(String identifier) {
+        log.info("Fetching organizations for user {}", identifier);
 
+        // Try by identifier first (could be UUID or ID depending on how it was created)
         List<UserOrganization> userOrganizations = userOrganizationRepository
-                .findByUserIdAndIsActiveTrue(userId);
+                .findByUserIdAndIsActiveTrue(identifier);
+
+        if (CollectionUtils.isEmpty(userOrganizations)) {
+            // Try finding user by UUID first, then use their MongoDB ID
+            List<User> users = readTransactionService.findUserDetailsByFilters(
+                    java.util.Map.of("uuid", identifier));
+            if (!CollectionUtils.isEmpty(users)) {
+                userOrganizations = userOrganizationRepository
+                        .findByUserIdAndIsActiveTrue(users.get(0).getId());
+            }
+        }
 
         return userOrganizations.stream()
                 .map(this::mapToResponse)

@@ -7,6 +7,7 @@ import java.util.Optional;
 
 public interface UserApprovalService {
     UserApproval createUserApproval(UserApproval userApproval);
+    UserApproval createOrUpdatePendingApproval(User user);
     UserApproval approveUser(String userId, String approvedBy);
     UserApproval blockUser(String userId, String blockedBy, String reason);
     UserApproval unblockUser(String userId, String unblockedBy);
