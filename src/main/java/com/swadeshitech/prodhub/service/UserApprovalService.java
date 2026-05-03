@@ -1,5 +1,6 @@
 package com.swadeshitech.prodhub.service;
 
+import com.swadeshitech.prodhub.entity.User;
 import com.swadeshitech.prodhub.entity.UserApproval;
 
 import java.util.List;

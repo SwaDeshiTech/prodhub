@@ -45,7 +45,7 @@ public class UserApprovalServiceImpl implements UserApprovalService {
                 .approved(false)
                 .blocked(false)
                 .build();
-        pending.setCreatedAt(LocalDateTime.now());
+        pending.setCreatedTime(LocalDateTime.now());
         pending.setUpdatedAt(LocalDateTime.now());
         
         return userApprovalRepository.save(pending);

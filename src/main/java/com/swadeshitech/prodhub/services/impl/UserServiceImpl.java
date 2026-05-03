@@ -28,6 +28,7 @@ import com.swadeshitech.prodhub.repository.RoleRepository;
 import com.swadeshitech.prodhub.repository.TeamRepository;
 import com.swadeshitech.prodhub.repository.UserRepository;
 import com.swadeshitech.prodhub.service.FeatureFlagService;
+import com.swadeshitech.prodhub.service.UserApprovalService;
 import com.swadeshitech.prodhub.services.UserService;
 import com.swadeshitech.prodhub.transaction.read.ReadTransactionService;
 import com.swadeshitech.prodhub.utils.UserContextUtil;
