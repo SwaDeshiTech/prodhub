@@ -97,7 +97,9 @@ public class AuthServiceImpl implements AuthService {
 
         // Return user details for token generation by gateway
         Map<String, Object> userResponse = new HashMap<>();
-        userResponse.put("uuid", user.getId());
+        String actualUuid = user.getUuid() != null ? user.getUuid() : user.getId();
+        userResponse.put("uuid", actualUuid);
+        userResponse.put("id", user.getId()); // Also send id for clarity
         userResponse.put("name", user.getName());
         userResponse.put("userName", user.getUserName());
         userResponse.put("emailId", user.getEmailId());
@@ -141,8 +143,10 @@ public class AuthServiceImpl implements AuthService {
         }
 
         // Create new user
+        String newId = UUID.randomUUID().toString();
         User user = new User();
-        user.setId(UUID.randomUUID().toString());
+        user.setId(newId);
+        user.setUuid(newId); // Set uuid to match id for new internal users
         user.setName(name);
         user.setUserName(username);
         user.setEmailId(email);
@@ -184,7 +188,9 @@ public class AuthServiceImpl implements AuthService {
         User savedUser = userRepository.save(user);
 
         Map<String, Object> response = new HashMap<>();
-        response.put("uuid", savedUser.getId());
+        String actualUuid = savedUser.getUuid() != null ? savedUser.getUuid() : savedUser.getId();
+        response.put("uuid", actualUuid);
+        response.put("id", savedUser.getId());
         response.put("name", savedUser.getName());
         response.put("userName", savedUser.getUserName());
         response.put("emailId", savedUser.getEmailId());

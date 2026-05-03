@@ -134,18 +134,48 @@ public class UserApprovalServiceImpl implements UserApprovalService {
     }
 
     @Override
-    public boolean isUserApproved(String userId) {
-        Optional<UserApproval> approval = userApprovalRepository.findByUserId(userId);
-        if (!approval.isPresent()) {
+    public boolean isUserApproved(String identifier) {
+        // 1. Try by userId (which refers to User.id)
+        Optional<UserApproval> approval = userApprovalRepository.findByUserId(identifier);
+        
+        // 2. Try by userEmail
+        if (approval.isEmpty()) {
+            approval = userApprovalRepository.findByUserEmail(identifier);
+        }
+        
+        // 3. Try by finding user by uuid first, then checking approval by User.id
+        if (approval.isEmpty()) {
+            Optional<User> user = userRepository.findByUuid(identifier);
+            if (user.isPresent()) {
+                approval = userApprovalRepository.findByUserId(user.get().getId());
+            }
+        }
+        
+        if (approval.isEmpty()) {
             return false;
         }
         return approval.get().isApproved() && !approval.get().isBlocked();
     }
 
     @Override
-    public boolean isUserBlocked(String userId) {
-        Optional<UserApproval> approval = userApprovalRepository.findByUserId(userId);
-        if (!approval.isPresent()) {
+    public boolean isUserBlocked(String identifier) {
+        // 1. Try by userId
+        Optional<UserApproval> approval = userApprovalRepository.findByUserId(identifier);
+        
+        // 2. Try by userEmail
+        if (approval.isEmpty()) {
+            approval = userApprovalRepository.findByUserEmail(identifier);
+        }
+        
+        // 3. Try by uuid
+        if (approval.isEmpty()) {
+            Optional<User> user = userRepository.findByUuid(identifier);
+            if (user.isPresent()) {
+                approval = userApprovalRepository.findByUserId(user.get().getId());
+            }
+        }
+        
+        if (approval.isEmpty()) {
             return false;
         }
         return approval.get().isBlocked();
