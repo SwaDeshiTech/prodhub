@@ -185,6 +185,9 @@ public class DeploymentUpdateConsumer {
         boolean hasFailedSteps = false;
 
         for (Template.Step step : stageExecution.getTemplate().getSteps()) {
+            if (step.isSkipStep()) {
+                continue;
+            }
             if (step.getStatus() == StepExecutionStatus.CREATED || step.getStatus() == StepExecutionStatus.IN_PROGRESS) {
                 nextStep = step;
                 hasPendingSteps = true;

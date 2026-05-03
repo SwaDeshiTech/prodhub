@@ -21,4 +21,5 @@ public class PipelineExecutionDetailsDTO {
     private java.time.LocalDateTime createdTime;
     private String commitId;
     private String serviceName;
+    private String pipelineTemplateName;
 }

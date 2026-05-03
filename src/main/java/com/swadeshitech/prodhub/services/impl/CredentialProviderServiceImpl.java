@@ -206,6 +206,30 @@ public class CredentialProviderServiceImpl implements CredentialProviderService 
         }
     }
 
+    @Override
+    public String extractRegistryURL(String credentialId) {
+        if (!StringUtils.isNotBlank(credentialId)) {
+            return null;
+        }
+        try {
+            List<CredentialProvider> providers = readTransactionService.findByDynamicOrFilters(
+                    Map.of("_id", new ObjectId(credentialId)), CredentialProvider.class);
+            if (CollectionUtils.isEmpty(providers)) {
+                return null;
+            }
+            CredentialProvider provider = providers.getFirst();
+            Map<String, Object> vaultResponse = vaultService.getSecret(provider.getCredentialPath());
+            if (vaultResponse == null || vaultResponse.get("secret") == null) {
+                return null;
+            }
+            JsonNode node = objectMapper.readTree(vaultResponse.get("secret").toString());
+            return node.path("registry_url").asText(null);
+        } catch (Exception e) {
+            log.error("Failed to extract registry URL for id {}", credentialId, e);
+            return null;
+        }
+    }
+
     private String extractURLKey(CredentialProvider credentialProvider, JsonNode scmData) {
         if (Objects.requireNonNull(credentialProvider.getCredentialProvider()) == com.swadeshitech.prodhub.enums.CredentialProvider.GITHUB) {
             if (org.springframework.util.StringUtils.hasText(scmData.path("github_org").asText())) {

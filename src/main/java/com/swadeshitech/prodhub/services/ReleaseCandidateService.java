@@ -5,6 +5,7 @@ import java.util.List;
 import com.swadeshitech.prodhub.dto.DropdownDTO;
 import com.swadeshitech.prodhub.dto.PaginatedResponse;
 import com.swadeshitech.prodhub.entity.PipelineExecution;
+import com.swadeshitech.prodhub.entity.ReleaseCandidate;
 import org.springframework.stereotype.Component;
 
 import com.swadeshitech.prodhub.dto.ReleaseCandidateRequest;
@@ -29,5 +30,5 @@ public interface ReleaseCandidateService {
 
     ReleaseCandidateResponse certifyReleaseCandidateForProduction(String id);
 
-    void handleReleaseCandidateCreation(PipelineExecution pipelineExecution, String buildStatus);
+    ReleaseCandidate handleReleaseCandidateCreation(PipelineExecution pipelineExecution, String buildStatus);
 }

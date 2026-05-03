@@ -13,6 +13,7 @@ import com.swadeshitech.prodhub.dto.TemplateResponse;
 import com.swadeshitech.prodhub.entity.Application;
 import com.swadeshitech.prodhub.entity.CredentialProvider;
 import com.swadeshitech.prodhub.entity.Metadata;
+import com.swadeshitech.prodhub.entity.ReleaseCandidate;
 import com.swadeshitech.prodhub.entity.SyncedCredential;
 import com.swadeshitech.prodhub.entity.PipelineExecution;
 import com.swadeshitech.prodhub.entity.PipelineTemplate;
@@ -112,14 +113,15 @@ public class PipelineServiceImpl implements PipelineService {
         pipelineExecution.setStageExecutions(createStages(request, pipelineTemplate, request.getMetaDataID(), null));
         pipelineExecution.setPipelineTemplate(pipelineTemplate);
         pipelineExecution.setStatus(PipelineStatus.PENDING);
-        pipelineExecution.setMetaData(new HashMap<>(Map.of(
+        Map<String, Object> pipelineMeta = new HashMap<>(Map.of(
                 "metaDataId", request.getMetaDataID(),
                 "serviceId", metadata.getApplication().getId()
-        )));
-        // Merge additional metadata from the request (e.g., deploymentSetId, releaseCandidateId)
+        ));
         if (request.getMetaData() != null) {
-            pipelineExecution.getMetaData().putAll(request.getMetaData());
+            pipelineMeta.putAll(request.getMetaData());
         }
+        enrichPipelineMetaData(pipelineMeta, metadata.getApplication());
+        pipelineExecution.setMetaData(pipelineMeta);
 
         return writeTransactionService.savePipelineExecutionToRepository(pipelineExecution);
     }
@@ -194,6 +196,7 @@ public class PipelineServiceImpl implements PipelineService {
         if (request.getMetaData() != null) {
             metaData.putAll(request.getMetaData());
         }
+        enrichPipelineMetaData(metaData, metadata.getApplication());
         pipelineExecution.setMetaData(metaData);
 
         PipelineExecution savedPipelineExecution = writeTransactionService.savePipelineExecutionToRepository(pipelineExecution);
@@ -280,6 +283,35 @@ public class PipelineServiceImpl implements PipelineService {
         return stages;
     }
 
+    private void enrichPipelineMetaData(Map<String, Object> metaData, Application application) {
+        if (metaData == null) {
+            return;
+        }
+
+        if (application != null) {
+            metaData.putIfAbsent("serviceName", application.getName());
+            metaData.putIfAbsent("applicationName", application.getName());
+        }
+
+        String envName = null;
+        Object envMeta = metaData.get("ephemeralEnvironmentName");
+        if (envMeta instanceof String env && StringUtils.hasText(env)) {
+            envName = env;
+        }
+        if (!StringUtils.hasText(envName)) {
+            Object envId = metaData.get("ephemeralEnvironmentId");
+            if (envId instanceof String env && StringUtils.hasText(env)) {
+                envName = env;
+            }
+        }
+
+        if (StringUtils.hasText(envName) && application != null && StringUtils.hasText(application.getName())) {
+            String releaseName = envName.toLowerCase() + "-" + application.getName().toLowerCase();
+            metaData.put("releaseName", releaseName);
+        }
+    }
+
+
     private List<PipelineExecution.StageExecution> createStagesWithProfileMap(
             PipelineExecutionRequest request,
             PipelineTemplate pipelineTemplate,
@@ -365,18 +397,48 @@ public class PipelineServiceImpl implements PipelineService {
                         handleParamGenerationForBuildStep(request, step, profileConfig, metadata);
                     } else {
                         Map<String, Object> configs = new HashMap<>();
+                        String registryId = null;
                         for (Map.Entry<String, Template.Step.TemplateStepParam> itr : step.getParams().entrySet()) {
+                            String key = itr.getKey();
                             // Override namespace with ephemeral environment name if available
-                            if ("namespace".equalsIgnoreCase(itr.getKey()) 
+                            if ("namespace".equalsIgnoreCase(key) 
                                     && request.getMetaData() != null 
-                                    && request.getMetaData().containsKey("ephemeralEnvironmentName")) {
-                                configs.put(itr.getKey(), request.getMetaData().get("ephemeralEnvironmentName"));
-                            } else if (ObjectUtils.isEmpty(profileConfig.path(itr.getKey()))) {
-                                configs.put(itr.getKey(), "");
+                                    && (request.getMetaData().containsKey("ephemeralEnvironmentName") || request.getMetaData().containsKey("ephemeralEnvironmentId"))) {
+                                String envName = (String) request.getMetaData().get("ephemeralEnvironmentName");
+                                if (!StringUtils.hasText(envName)) {
+                                    envName = (String) request.getMetaData().get("ephemeralEnvironmentId");
+                                }
+                                configs.put(key, envName);
+                            } else if ("name".equalsIgnoreCase(key) 
+                                    && request.getMetaData() != null 
+                                    && (request.getMetaData().containsKey("ephemeralEnvironmentName") || request.getMetaData().containsKey("ephemeralEnvironmentId"))) {
+                                // For ephemeral environments, use env-app as the release name
+                                String appName = metadata.getApplication().getName();
+                                String envName = (String) request.getMetaData().get("ephemeralEnvironmentName");
+                                if (!StringUtils.hasText(envName)) {
+                                    envName = (String) request.getMetaData().get("ephemeralEnvironmentId");
+                                }
+                                configs.put(key, envName.toLowerCase() + "-" + appName.toLowerCase());
+                            } else if ("dockerContainerRegistry".equalsIgnoreCase(key)) {
+                                registryId = profileConfig.path(key).asText();
+                                configs.put(key, registryId);
+                            } else if ("applicationName".equalsIgnoreCase(key) || "serviceName".equalsIgnoreCase(key)) {
+                                configs.put(key, metadata.getApplication().getName().toLowerCase());
+                            } else if (ObjectUtils.isEmpty(profileConfig.path(key))) {
+                                configs.put(key, "");
                             } else {
-                                configs.put(itr.getKey(), profileConfig.path(itr.getKey()).asText());
+                                configs.put(key, profileConfig.path(key).asText());
                             }
                         }
+                        
+                        // Resolve registry URL if ID was found
+                        if (StringUtils.hasText(registryId) && step.getParams().containsKey("registryURL")) {
+                            String registryURL = credentialProviderService.extractRegistryURL(registryId);
+                            if (StringUtils.hasText(registryURL)) {
+                                configs.put("registryURL", registryURL);
+                            }
+                        }
+                        
                         step.setValues(configs);
                         step.setMetadata(new HashMap<>());
                         step.setStatus(StepExecutionStatus.IN_PROGRESS);
@@ -571,18 +633,160 @@ public class PipelineServiceImpl implements PipelineService {
         writeTransactionService.savePipelineExecutionToRepository(pipelineExecution);
         
         // Create Release Candidate if missing
-        releaseCandidateService.handleReleaseCandidateCreation(pipelineExecution, buildStatus);
+        ReleaseCandidate releaseCandidate = releaseCandidateService.handleReleaseCandidateCreation(pipelineExecution, buildStatus);
 
         // Trigger next stage if current stage succeeded
         if ("SUCCESS".equalsIgnoreCase(buildStatus)) {
+            boolean metadataUpdated = ensureImageTagMetadata(pipelineExecution, releaseCandidate);
+            if (metadataUpdated) {
+                writeTransactionService.savePipelineExecutionToRepository(pipelineExecution);
+            }
             triggerNextStage(pipelineExecution);
         }
+    }
+
+    private boolean ensureImageTagMetadata(PipelineExecution pipelineExecution, ReleaseCandidate releaseCandidate) {
+        if (pipelineExecution == null) {
+            return false;
+        }
+
+        String imageTag = resolveImageTag(pipelineExecution, releaseCandidate);
+        if (!StringUtils.hasText(imageTag)) {
+            log.warn("Unable to resolve docker image tag for pipeline execution {} after successful build", pipelineExecution.getId());
+            return false;
+        }
+
+        if (pipelineExecution.getMetaData() == null) {
+            pipelineExecution.setMetaData(new HashMap<>());
+        }
+
+        Object existing = pipelineExecution.getMetaData().get("dockerImageHashValue");
+        if (imageTag.equals(existing)) {
+            return false;
+        }
+
+        pipelineExecution.getMetaData().put("imageTag", imageTag);
+        pipelineExecution.getMetaData().put("dockerImageHashValue", imageTag);
+        log.info("Stored docker image tag {} in pipeline metadata for execution {}", imageTag, pipelineExecution.getId());
+        return true;
+    }
+
+    private String resolveImageTag(PipelineExecution pipelineExecution, ReleaseCandidate releaseCandidate) {
+        if (releaseCandidate != null && releaseCandidate.getMetaData() != null) {
+            String rcTag = releaseCandidate.getMetaData().get("dockerImageHashValue");
+            if (StringUtils.hasText(rcTag)) {
+                return rcTag;
+            }
+        }
+
+        if (pipelineExecution != null && pipelineExecution.getMetaData() != null) {
+            Object existing = pipelineExecution.getMetaData().get("dockerImageHashValue");
+            if (existing instanceof String str && StringUtils.hasText(str)) {
+                return str;
+            }
+            existing = pipelineExecution.getMetaData().get("imageTag");
+            if (existing instanceof String str && StringUtils.hasText(str)) {
+                return str;
+            }
+        }
+
+        return extractImageTagFromBuildStage(pipelineExecution);
+    }
+
+    private String extractImageTagFromBuildStage(PipelineExecution pipelineExecution) {
+        if (pipelineExecution == null || CollectionUtils.isEmpty(pipelineExecution.getStageExecutions())) {
+            return null;
+        }
+
+        for (PipelineExecution.StageExecution stage : pipelineExecution.getStageExecutions()) {
+            if (!"build".equalsIgnoreCase(stage.getStageName())
+                    || stage.getTemplate() == null
+                    || CollectionUtils.isEmpty(stage.getTemplate().getSteps())) {
+                continue;
+            }
+
+            for (Template.Step step : stage.getTemplate().getSteps()) {
+                if (!"build".equalsIgnoreCase(step.getStepName())) {
+                    continue;
+                }
+                String fromParams = extractImageTagFromParams(step.getParams());
+                if (StringUtils.hasText(fromParams)) {
+                    return fromParams;
+                }
+                if (step.getValues() != null) {
+                    Object fromValues = step.getValues().get("dockerImageHashValue");
+                    if (fromValues instanceof String str && StringUtils.hasText(str)) {
+                        return str;
+                    }
+                    fromValues = step.getValues().get("imageTag");
+                    if (fromValues instanceof String str && StringUtils.hasText(str)) {
+                        return str;
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    private String extractImageTagFromParams(Map<String, Template.Step.TemplateStepParam> params) {
+        if (CollectionUtils.isEmpty(params)) {
+            return null;
+        }
+
+        Template.Step.TemplateStepParam direct = params.get("dockerImageHashValue");
+        if (direct != null && StringUtils.hasText(direct.getValue())) {
+            return direct.getValue();
+        }
+
+        Template.Step.TemplateStepParam imageTagParam = params.get("imageTag");
+        if (imageTagParam != null && StringUtils.hasText(imageTagParam.getValue())) {
+            return imageTagParam.getValue();
+        }
+
+        for (Map.Entry<String, Template.Step.TemplateStepParam> entry : params.entrySet()) {
+            Template.Step.TemplateStepParam param = entry.getValue();
+            if (param == null || !StringUtils.hasText(param.getValue())) {
+                continue;
+            }
+            if ("dockerImageHashValue".equalsIgnoreCase(entry.getKey())
+                    || "dockerImageHashValue".equalsIgnoreCase(param.getDisplayName())
+                    || "dockerImageHashValue".equalsIgnoreCase(param.getAffectedKey())
+                    || "imageTag".equalsIgnoreCase(entry.getKey())
+                    || "imageTag".equalsIgnoreCase(param.getDisplayName())
+                    || "imageTag".equalsIgnoreCase(param.getAffectedKey())) {
+                return param.getValue();
+            }
+        }
+        return null;
     }
 
     @Override
     public void triggerNextStage(PipelineExecution pipelineExecution) {
         pipelineExecution.getStageExecutions().sort((o1, o2) -> o1.getOrder() - o2.getOrder());
         
+        // Find the current running stage and check if it's actually done
+        for (PipelineExecution.StageExecution stage : pipelineExecution.getStageExecutions()) {
+            if (stage.getStatus() == PipelineStepExecutionStatus.IN_PROGRESS) {
+                boolean allStepsDone = true;
+                if (stage.getTemplate() != null && stage.getTemplate().getSteps() != null) {
+                    allStepsDone = stage.getTemplate().getSteps().stream()
+                            .filter(step -> !step.isSkipStep())
+                            .allMatch(step -> step.getStatus() == StepExecutionStatus.COMPLETED);
+                }
+                if (allStepsDone) {
+                    log.info("Marking stage {} as SUCCESS for pipeline execution: {}", stage.getStageName(), pipelineExecution.getId());
+                    stage.setStatus(PipelineStepExecutionStatus.SUCCESS);
+                    if (stage.getEndTime() == null) {
+                        stage.setEndTime(LocalDateTime.now());
+                    }
+                } else {
+                    // Stage is still truly in progress
+                    log.info("Stage {} is still in progress for pipeline execution: {}", stage.getStageName(), pipelineExecution.getId());
+                    return;
+                }
+            }
+        }
+
         // Find the next pending stage
         for (PipelineExecution.StageExecution stageExecution : pipelineExecution.getStageExecutions()) {
             if (stageExecution.getStatus() == PipelineStepExecutionStatus.PENDING) {
@@ -612,9 +816,14 @@ public class PipelineServiceImpl implements PipelineService {
         }
         
         // All stages completed
-        pipelineExecution.setStatus(PipelineStatus.SUCCESS);
-        writeTransactionService.savePipelineExecutionToRepository(pipelineExecution);
-        log.info("Pipeline execution {} completed successfully", pipelineExecution.getId());
+        boolean allStagesSuccess = pipelineExecution.getStageExecutions().stream()
+                .allMatch(s -> s.getStatus() == PipelineStepExecutionStatus.SUCCESS || s.getStatus() == PipelineStepExecutionStatus.SKIPPED);
+        
+        if (allStagesSuccess) {
+            pipelineExecution.setStatus(PipelineStatus.SUCCESS);
+            writeTransactionService.savePipelineExecutionToRepository(pipelineExecution);
+            log.info("Pipeline execution {} completed successfully", pipelineExecution.getId());
+        }
     }
 
     private PipelineTemplate fetchPipelineTemplate(Map<String, Object> filters) {
@@ -652,7 +861,7 @@ public class PipelineServiceImpl implements PipelineService {
         } else if (commitId != null && !commitId.equals("null")) {
             commitIdShort = commitId;
         }
-        
+
         String dockerImageHashValue = buildProfile.getApplication().getName().toLowerCase() + "-"
                 + Base64Util.generate7DigitHash(decodedData) + ":" + commitIdShort;
 
@@ -877,8 +1086,12 @@ public class PipelineServiceImpl implements PipelineService {
                     });
                 }
 
-                // Create Release Candidate if missing
-                releaseCandidateService.handleReleaseCandidateCreation(pipelineExecution, response.status());
+                // Create Release Candidate if missing and store docker image tag
+                ReleaseCandidate rc = releaseCandidateService.handleReleaseCandidateCreation(pipelineExecution, response.status());
+                boolean metadataUpdated = ensureImageTagMetadata(pipelineExecution, rc);
+                if (metadataUpdated) {
+                    writeTransactionService.savePipelineExecutionToRepository(pipelineExecution);
+                }
                 
                 // Check if all stages are completed
                 boolean allStagesCompleted = pipelineExecution.getStageExecutions().stream()
@@ -1030,7 +1243,16 @@ public class PipelineServiceImpl implements PipelineService {
 
         // Extract commitId and serviceName from metadata
         String commitId = (String) pipelineExecution.getMetaData().get("commitId");
+        if (!StringUtils.hasText(commitId)) {
+            commitId = (String) pipelineExecution.getMetaData().get("commit_id");
+        }
         String serviceName = (String) responseMetaData.get("serviceName");
+
+        // Extract pipeline template name
+        String pipelineTemplateName = null;
+        if (pipelineExecution.getPipelineTemplate() != null) {
+            pipelineTemplateName = pipelineExecution.getPipelineTemplate().getName();
+        }
 
         return PipelineExecutionDetailsDTO.builder()
                 .id(pipelineExecution.getId())
@@ -1043,6 +1265,7 @@ public class PipelineServiceImpl implements PipelineService {
                 .releaseCandidateCertified(releaseCandidateCertified)
                 .commitId(commitId)
                 .serviceName(serviceName)
+                .pipelineTemplateName(pipelineTemplateName)
                 .build();
     }
 }

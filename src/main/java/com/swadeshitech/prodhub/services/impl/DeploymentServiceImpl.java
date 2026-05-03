@@ -14,6 +14,7 @@ import com.swadeshitech.prodhub.exception.CustomException;
 import com.swadeshitech.prodhub.integration.deplorch.DeplOrchClient;
 import com.swadeshitech.prodhub.integration.deplorch.DeploymentPodResponse;
 import com.swadeshitech.prodhub.integration.kafka.producer.KafkaProducer;
+import com.swadeshitech.prodhub.services.CredentialProviderService;
 import com.swadeshitech.prodhub.services.DeploymentService;
 import com.swadeshitech.prodhub.services.MetadataService;
 import com.swadeshitech.prodhub.transaction.read.ReadTransactionService;
@@ -59,6 +60,9 @@ public class DeploymentServiceImpl implements DeploymentService {
 
     @Autowired
     MetadataService metadataService;
+
+    @Autowired
+    CredentialProviderService credentialProviderService;
 
     @Override
     public DeploymentRequestResponse triggerDeployment(String deploymentSetID) {
@@ -218,7 +222,7 @@ public class DeploymentServiceImpl implements DeploymentService {
 
         if (StringUtils.hasText(ephemeralEnvironment)) {
             // For ephemeral environments, fetch ephemeral environment to get k8s cluster ID
-            /*List<com.swadeshitech.prodhub.entity.EphemeralEnvironment> ephemeralEnvironments =
+            List<com.swadeshitech.prodhub.entity.EphemeralEnvironment> ephemeralEnvironments =
                 readTransactionService.findByDynamicOrFilters(
                     Map.of("name", ephemeralEnvironment),
                     com.swadeshitech.prodhub.entity.EphemeralEnvironment.class
@@ -237,9 +241,8 @@ public class DeploymentServiceImpl implements DeploymentService {
                 throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
             }
             
-            k8sClusterId = parseObjectIdToHex(ephemeralEnv.getMetaData().get("k8sClusterId"));
-            namespace = ephemeralEnvironment;*/
-            return null;
+            k8sClusterId = String.valueOf(ephemeralEnv.getMetaData().get("k8sClusterId"));
+            namespace = ephemeralEnvironment;
         } else {
             PipelineExecution pipelineExecution = findPipelineExecutionById(deploymentId);
             if (pipelineExecution == null) {
@@ -351,8 +354,11 @@ public class DeploymentServiceImpl implements DeploymentService {
         Map<String, Object> configMap = new HashMap<>();
         configMap.put("runtimeEnvironment", deploymentProfile.getRunTimeEnvironment().getRunTimeEnvironment());
         configMap.put("deploymentTemplate", deploymentProfile.getRunTimeEnvironment().getDeploymentTemplate());
-        configMap.put("releaseName",
-                deploymentProfile.getApplication().getName() + "-" + deploymentProfile.extractMetaDataName());
+        
+        String appName = deploymentProfile.getApplication().getName().toLowerCase();
+        String envName = ephemeralEnvironment.getName().toLowerCase();
+        configMap.put("releaseName", envName + "-" + appName);
+        
         configMap.put("imageTag", releaseCandidate.getMetaData().get("dockerImageHashValue"));
         configMap.put("ephemeralEnvironment", releaseCandidate.getEphemeralEnvironmentId());
 
@@ -363,24 +369,46 @@ public class DeploymentServiceImpl implements DeploymentService {
                 .metaData(configMap)
                 .build();
 
-        for (Template.Step deploymentStep : clonedTemplate.getSteps()) {
-            if (!CollectionUtils.isEmpty(deploymentStep.getParams()) && !deploymentStep.isSkipStep()) {
+        if (!CollectionUtils.isEmpty(clonedTemplate.getSteps())) {
+            for (Template.Step deploymentStep : clonedTemplate.getSteps()) {
+                if (deploymentStep.isSkipStep()) {
+                    continue;
+                }
+                
                 Map<String, Object> configs = new HashMap<>();
-                for (Map.Entry<String, Template.Step.TemplateStepParam> key : deploymentStep.getParams().entrySet()) {
-                    if (ObjectUtils.isEmpty(deploymentProfileConfig.path(key.getKey()))) {
-                        configs.put(key.getKey(), "");
+                String registryId = null;
+                
+                for (Map.Entry<String, Template.Step.TemplateStepParam> entry : deploymentStep.getParams().entrySet()) {
+                    String key = entry.getKey();
+                    if ("namespace".equalsIgnoreCase(key)) {
+                        configs.put(key, ephemeralEnvironment.getName().toLowerCase());
+                    } else if ("name".equalsIgnoreCase(key)) {
+                        configs.put(key, envName + "-" + appName);
+                    } else if ("imageTag".equalsIgnoreCase(key)) {
+                        configs.put(key, releaseCandidate.getMetaData().get("dockerImageHashValue"));
+                    } else if ("applicationName".equalsIgnoreCase(key) || "serviceName".equalsIgnoreCase(key)) {
+                        configs.put(key, appName);
+                    } else if ("dockerContainerRegistry".equalsIgnoreCase(key)) {
+                        registryId = deploymentProfileConfig.path(key).asText();
+                        configs.put(key, registryId);
+                    } else if (ObjectUtils.isEmpty(deploymentProfileConfig.path(key))) {
+                        configs.put(key, "");
                     } else {
-                        if (NAMESPACE_KEY.equals(key)) {
-                            configs.put(key.getKey(), ephemeralEnvironment.getName());
-                        } else {
-                            configs.put(key.getKey(), deploymentProfileConfig.path(key.getKey()).asText());
-                        }
+                        configs.put(key, deploymentProfileConfig.path(key).asText());
                     }
                 }
+                
+                // Resolve registry URL
+                if (StringUtils.hasText(registryId)) {
+                    String registryURL = credentialProviderService.extractRegistryURL(registryId);
+                    if (StringUtils.hasText(registryURL)) {
+                        configs.put("registryURL", registryURL);
+                    }
+                }
+                
                 deploymentStep.setValues(configs);
+                deploymentStep.setStatus(StepExecutionStatus.IN_PROGRESS);
             }
-            deploymentStep.setMetadata(new HashMap<>());
-            deploymentStep.setStatus(StepExecutionStatus.IN_PROGRESS);
         }
 
         if (RunTimeEnvironment.K8s.getRunTimeEnvironment()

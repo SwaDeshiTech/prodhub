@@ -282,10 +282,10 @@ public class ReleaseCandidateServiceImpl implements ReleaseCandidateService {
     }
 
     @Override
-    public void handleReleaseCandidateCreation(PipelineExecution pipelineExecution, String buildStatus) {
+    public ReleaseCandidate handleReleaseCandidateCreation(PipelineExecution pipelineExecution, String buildStatus) {
         if (!"SUCCESS".equalsIgnoreCase(buildStatus)) {
             log.info("Build status is not SUCCESS for pipeline execution {}, skipping release candidate creation", pipelineExecution.getId());
-            return;
+            return null;
         }
 
         // Check if release candidate already exists for this pipeline execution
@@ -295,8 +295,8 @@ public class ReleaseCandidateServiceImpl implements ReleaseCandidateService {
         );
 
         if (!CollectionUtils.isEmpty(existingRCs)) {
-            log.info("Release candidate already exists for pipeline execution {}, skipping creation", pipelineExecution.getId());
-            return;
+            log.info("Release candidate already exists for pipeline execution {}, returning existing one", pipelineExecution.getId());
+            return existingRCs.getFirst();
         }
 
         log.info("Release candidate missing for successful build in pipeline execution {}. Creating manually...", pipelineExecution.getId());
@@ -306,12 +306,12 @@ public class ReleaseCandidateServiceImpl implements ReleaseCandidateService {
             String serviceId = (String) pipelineExecution.getMetaData().get("serviceId");
             if (!StringUtils.hasText(serviceId)) {
                 log.error("serviceId not found in pipeline execution metadata {}", pipelineExecution.getId());
-                return;
+                return null;
             }
             List<Application> applications = readTransactionService.findApplicationByFilters(Map.of("_id", new ObjectId(serviceId)));
             if (CollectionUtils.isEmpty(applications)) {
                 log.error("Application not found for serviceId {}", serviceId);
-                return;
+                return null;
             }
             Application application = applications.getFirst();
 
@@ -319,12 +319,12 @@ public class ReleaseCandidateServiceImpl implements ReleaseCandidateService {
             String metaDataId = (String) pipelineExecution.getMetaData().get("metaDataId");
             if (!StringUtils.hasText(metaDataId)) {
                 log.error("metaDataId not found in pipeline execution metadata {}", pipelineExecution.getId());
-                return;
+                return null;
             }
             List<Metadata> buildProfiles = readTransactionService.findMetaDataByFilters(Map.of("_id", new ObjectId(metaDataId)));
             if (CollectionUtils.isEmpty(buildProfiles)) {
                 log.error("Build profile not found for metaDataId {}", metaDataId);
-                return;
+                return null;
             }
             Metadata buildProfile = buildProfiles.getFirst();
 
@@ -392,9 +392,11 @@ public class ReleaseCandidateServiceImpl implements ReleaseCandidateService {
 
             writeTransactionService.saveReleaseCandidateToRepository(releaseCandidate);
             log.info("Successfully created release candidate manually for pipeline execution: {}", pipelineExecution.getId());
+            return releaseCandidate;
 
         } catch (Exception ex) {
             log.error("Failed to create release candidate manually for pipeline execution: {}", pipelineExecution.getId(), ex);
+            return null;
         }
     }
 
