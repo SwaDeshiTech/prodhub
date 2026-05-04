@@ -10,4 +10,5 @@ import java.util.List;
 public interface TemplateService {
     TemplateResponse createTemplate(TemplateRequest request);
     List<TemplateResponse> getAllTemplates();
+    TemplateResponse getTemplateDetails(String id);
 }

@@ -38,6 +38,7 @@ public class PipelineTemplateServiceImpl implements PipelineTemplateService {
         PipelineTemplate pipelineTemplate = PipelineTemplate.builder()
                 .name(request.getName())
                 .version(request.getVersion())
+                .pipelineTemplateType(request.getPipelineTemplateType() != null ? PipelineTemplateType.valueOf(request.getPipelineTemplateType()) : null)
                 .stages(generatePipelineTemplateSteps(request.getStages()))
                 .isActive(true)
                 .build();
@@ -52,6 +53,19 @@ public class PipelineTemplateServiceImpl implements PipelineTemplateService {
                 PipelineTemplate.class);
         if(pipelineTemplates.isEmpty()) {
             log.error("Pipeline templates could be fetched with version {}", version);
+            throw new CustomException(ErrorCode.PIPELINE_TEMPLATE_COULD_NOT_BE_FOUND);
+        }
+
+        return PipelineTemplateResponse.mapEntityToDTO(pipelineTemplates.getFirst());
+    }
+
+    @Override
+    public PipelineTemplateResponse getPipelineTemplateDetails(String id) {
+        List<PipelineTemplate> pipelineTemplates = readTransactionService.findByDynamicOrFilters(Map.of(
+                        "isActive", true, "_id", new ObjectId(id)),
+                PipelineTemplate.class);
+        if(pipelineTemplates.isEmpty()) {
+            log.error("Pipeline templates could be fetched with id {}", id);
             throw new CustomException(ErrorCode.PIPELINE_TEMPLATE_COULD_NOT_BE_FOUND);
         }
 

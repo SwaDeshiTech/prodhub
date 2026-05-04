@@ -3,12 +3,14 @@ package com.swadeshitech.prodhub.dto;
 import com.swadeshitech.prodhub.entity.Template;
 import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.experimental.SuperBuilder;
 
 import java.util.*;
 
 @Data
 @SuperBuilder
+@EqualsAndHashCode(callSuper = false)
 public class TemplateResponse extends BaseResponse {
     private String id;
     private String templateName;
@@ -25,7 +27,7 @@ public class TemplateResponse extends BaseResponse {
         private boolean wait;
         private int timeoutSeconds;
         private Map<String, Object> values;
-        private List<String> params;
+        private Map<String, Template.Step.TemplateStepParam> params;
         private String status;
         private Map<String, Object> metaData;
 
@@ -75,7 +77,7 @@ public class TemplateResponse extends BaseResponse {
                     .stepName(step.getStepName())
                     .wait(step.isWait())
                     .timeoutSeconds(step.getTimeoutSeconds())
-                    //.params(step.getParams())
+                    .params(step.getParams())
                     .order(step.getOrder())
                     .chartDetails(generateChartDetailsResponse(step.getChartDetails()))
                     .metaData(cleanedMetaData)

@@ -15,6 +15,8 @@ public interface PipelineTemplateService {
 
     PipelineTemplateResponse getPipelineTemplateDetails(String id, String version);
 
+    PipelineTemplateResponse getPipelineTemplateDetails(String id);
+
     PipelineTemplate getPipelineTemplateByVersion(String version);
 
     List<DropdownDTO> getAllPipelineTemplatesForDropdown();

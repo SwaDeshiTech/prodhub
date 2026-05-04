@@ -33,9 +33,14 @@ public class PipelineTemplate {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Response> getPipelineTemplateDetails(@PathVariable String id, @RequestParam String version) {
+    public ResponseEntity<Response> getPipelineTemplateDetails(@PathVariable String id, @RequestParam(required = false) String version) {
 
-        PipelineTemplateResponse pipelineTemplateResponse = pipelineTemplateService.getPipelineTemplateDetails(id, version);
+        PipelineTemplateResponse pipelineTemplateResponse;
+        if (version != null) {
+            pipelineTemplateResponse = pipelineTemplateService.getPipelineTemplateDetails(id, version);
+        } else {
+            pipelineTemplateResponse = pipelineTemplateService.getPipelineTemplateDetails(id);
+        }
 
         Response response = Response.builder()
                 .httpStatus(HttpStatus.OK)

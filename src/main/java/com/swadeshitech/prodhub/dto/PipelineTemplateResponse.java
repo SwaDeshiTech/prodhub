@@ -3,6 +3,7 @@ package com.swadeshitech.prodhub.dto;
 import com.swadeshitech.prodhub.entity.PipelineTemplate;
 import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.experimental.SuperBuilder;
 
 import java.util.ArrayList;
@@ -10,10 +11,12 @@ import java.util.List;
 
 @Data
 @SuperBuilder
+@EqualsAndHashCode(callSuper = false)
 public class PipelineTemplateResponse extends BaseResponse {
     private String id;
     private String name;
     private String version;
+    private String pipelineTemplateType;
     private List<PipelineTemplateStageResponse> stages;
 
     @Data
@@ -30,6 +33,7 @@ public class PipelineTemplateResponse extends BaseResponse {
                 .id(pipelineTemplate.getId())
                 .name(pipelineTemplate.getName())
                 .version(pipelineTemplate.getVersion())
+                .pipelineTemplateType(pipelineTemplate.getPipelineTemplateType() != null ? pipelineTemplate.getPipelineTemplateType().name() : null)
                 .stages(buildPipelineTemplateStageResponse(pipelineTemplate.getStages()))
                 .createdBy(pipelineTemplate.getCreatedBy())
                 .createdTime(pipelineTemplate.getCreatedTime())

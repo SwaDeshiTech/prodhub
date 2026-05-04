@@ -48,6 +48,16 @@ public class TemplateServiceImpl implements TemplateService {
         return templateResponses;
     }
 
+    @Override
+    public TemplateResponse getTemplateDetails(String id) {
+        Optional<Template> template = templateRepository.findById(id);
+        if (template.isEmpty()) {
+            log.error("Template not found for id: {}", id);
+            throw new RuntimeException("Template not found");
+        }
+        return TemplateResponse.mapDTOToEntity(template.get());
+    }
+
     private Set<Template.Step> generateStep(List<TemplateRequest.TemplateStepRequest> stepRequests) {
         Set<Template.Step> steps = new HashSet<>();
         for (TemplateRequest.TemplateStepRequest itr : stepRequests) {
