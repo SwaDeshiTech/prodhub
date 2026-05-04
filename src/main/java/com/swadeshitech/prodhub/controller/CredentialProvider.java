@@ -45,10 +45,38 @@ public class CredentialProvider {
         return ResponseEntity.ok().body(response);
     }
 
+    @GetMapping("/ui-details/{credentialId}")
+    public ResponseEntity<Response> uiCredentialProviderDetails(@PathVariable String credentialId) {
+
+        CredentialProviderResponse credentialProviderResponse = credentialProviderService.uiCredentialProviderDetails(credentialId);
+
+        Response response = Response.builder()
+                .httpStatus(HttpStatus.OK)
+                .message("Credential details has been fetched")
+                .response(credentialProviderResponse)
+                .build();
+
+        return ResponseEntity.ok().body(response);
+    }
+
     @GetMapping("/{serviceId}/{credentialId}")
     public ResponseEntity<Response> credentialProviderDetails(@PathVariable String serviceId, @PathVariable String credentialId) {
 
         CredentialProviderResponse credentialProviderResponse = credentialProviderService.credentialProviderDetails(serviceId, credentialId);
+
+        Response response = Response.builder()
+                .httpStatus(HttpStatus.OK)
+                .message("Credential details has been fetched")
+                .response(credentialProviderResponse)
+                .build();
+
+        return ResponseEntity.ok().body(response);
+    }
+
+    @GetMapping("/ui-details/{serviceId}/{credentialId}")
+    public ResponseEntity<Response> uiCredentialProviderDetails(@PathVariable String serviceId, @PathVariable String credentialId) {
+
+        CredentialProviderResponse credentialProviderResponse = credentialProviderService.uiCredentialProviderDetails(serviceId, credentialId);
 
         Response response = Response.builder()
                 .httpStatus(HttpStatus.OK)

@@ -146,6 +146,34 @@ public class CredentialProviderServiceImpl implements CredentialProviderService 
     }
 
     @Override
+    public CredentialProviderResponse uiCredentialProviderDetails(String serviceId, String credentialId) {
+        List<Application> applications = readTransactionService.findApplicationByFilters(
+                Map.of("_id", new ObjectId(serviceId)));
+        if (applications.isEmpty()) {
+            log.error("No application found for id: {}", serviceId);
+            throw new CustomException(ErrorCode.APPLICATION_NOT_FOUND);
+        }
+
+        Application application = applications.getFirst();
+        List<CredentialProvider> credentialProviders = readTransactionService.findCredentialProviderByFilters(Map.of("_id", new ObjectId(credentialId), "application", application));
+        if(credentialProviders.isEmpty()) {
+            log.error("No credential provider found for serviceId: {} and credentialId: {}", serviceId, credentialId);
+            throw new CustomException(ErrorCode.CREDENTIAL_PROVIDER_NOT_FOUND);
+        }
+        return mapEntityToDTO(credentialProviders.getFirst());
+    }
+
+    @Override
+    public CredentialProviderResponse uiCredentialProviderDetails(String credentialId) {
+        List<CredentialProvider> credentialProviders = readTransactionService.findByDynamicOrFilters(Map.of("_id", new ObjectId(credentialId)), CredentialProvider.class);
+        if(CollectionUtils.isEmpty(credentialProviders)) {
+            log.info("Fail to fetch credential providers list {}", credentialId);
+            throw new CustomException(ErrorCode.CREDENTIAL_PROVIDER_LIST_NOT_FOUND);
+        }
+        return mapEntityToDTO(credentialProviders.getFirst());
+    }
+
+    @Override
     public List<CredentialProviderResponse> credentialProviders(CredentialProviderFilter credentialProviderFilter) {
 
         Map<String, Object> filters = createFilterObject(credentialProviderFilter);

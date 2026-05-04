@@ -18,6 +18,10 @@ public interface CredentialProviderService {
 
     CredentialProviderResponse credentialProviderDetails(String credentialId);
 
+    CredentialProviderResponse uiCredentialProviderDetails(String serviceId, String credentialId);
+
+    CredentialProviderResponse uiCredentialProviderDetails(String credentialId);
+
     List<CredentialProviderResponse> credentialProviders(CredentialProviderFilter credentialProviderFilter);
 
     List<DropdownDTO> getCredentialProvidersByType(String type);
