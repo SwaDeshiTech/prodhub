@@ -294,20 +294,17 @@ public class PipelineServiceImpl implements PipelineService {
         }
 
         String envName = null;
-        Object envMeta = metaData.get("ephemeralEnvironmentName");
-        if (envMeta instanceof String env && StringUtils.hasText(env)) {
-            envName = env;
-        }
-        if (!StringUtils.hasText(envName)) {
-            Object envId = metaData.get("ephemeralEnvironmentId");
-            if (envId instanceof String env && StringUtils.hasText(env)) {
-                envName = env;
-            }
+        if(metaData.containsKey("ephemeralEnvironmentName")) {
+            envName = String.valueOf(metaData.get("ephemeralEnvironmentName"));
         }
 
-        if (StringUtils.hasText(envName) && application != null && StringUtils.hasText(application.getName())) {
-            String releaseName = envName.toLowerCase() + "-" + application.getName().toLowerCase();
+        if (!StringUtils.hasText(envName) && application != null && StringUtils.hasText(application.getName())) {
+            String releaseName = envName + "-" + application.getName();
             metaData.put("releaseName", releaseName);
+        }
+
+        if (!StringUtils.hasText(envName)) {
+            metaData.put("releaseName", application.getName());
         }
     }
 
@@ -346,7 +343,6 @@ public class PipelineServiceImpl implements PipelineService {
             } catch (Exception e) {
                 log.error("Failed to create stage {} with template {}: {}", 
                         stageDefinition.getName(), stageDefinition.getTemplateName(), e.getMessage());
-                // Skip this stage but continue with others
             }
         }
 
