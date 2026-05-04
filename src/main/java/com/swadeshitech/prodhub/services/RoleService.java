@@ -18,7 +18,7 @@ public interface RoleService {
 
     List<DropdownDTO> getRoleeDropdown();
 
-    List<RoleResponse> getUserRoleDetails(String uuid);
+    List<RoleResponse> getUserRoleDetails(String userId);
 
-    List<RoleResponse> updateRoles(String uuid, UserRoleRequest request);
+    List<RoleResponse> updateRoles(String userId, UserRoleRequest request);
 }

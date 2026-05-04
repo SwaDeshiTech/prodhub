@@ -9,9 +9,10 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.swadeshitech.prodhub.dto.DropdownDTO;
@@ -40,10 +41,18 @@ public class Role {
     }
 
     @PutMapping("/user")
-    public ResponseEntity<Response> updateUserRoles(@RequestHeader(name = "uuid") String uuid,
+    public ResponseEntity<Response> updateUserRoles(@RequestParam(name = "userId", required = false) String userId,
             @RequestBody UserRoleRequest request) {
 
-        List<RoleResponse> roleResponse = roleService.updateRoles(uuid, request);
+        if (!StringUtils.hasText(userId)) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Response.builder()
+                    .httpStatus(HttpStatus.BAD_REQUEST)
+                    .message("userId query parameter is required")
+                    .response(null)
+                    .build());
+        }
+
+        List<RoleResponse> roleResponse = roleService.updateRoles(userId, request);
 
         Response response = Response.builder().httpStatus(HttpStatus.CREATED)
                 .message("Successfully updated the roles of the user").response(roleResponse).build();
@@ -52,9 +61,17 @@ public class Role {
     }
 
     @GetMapping("/user/details")
-    public ResponseEntity<Response> getUserRoleDetails(@RequestHeader(name = "uuid") String uuid) {
+    public ResponseEntity<Response> getUserRoleDetails(@RequestParam(name = "userId", required = false) String userId) {
 
-        List<RoleResponse> roleDetails = roleService.getUserRoleDetails(uuid);
+        if (!StringUtils.hasText(userId)) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Response.builder()
+                    .httpStatus(HttpStatus.BAD_REQUEST)
+                    .message("userId query parameter is required")
+                    .response(null)
+                    .build());
+        }
+
+        List<RoleResponse> roleDetails = roleService.getUserRoleDetails(userId);
 
         Response response = Response.builder().httpStatus(HttpStatus.OK)
                 .message("Successfully fetched the role details").response(roleDetails).build();

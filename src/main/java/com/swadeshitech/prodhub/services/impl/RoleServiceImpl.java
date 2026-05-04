@@ -84,10 +84,10 @@ public class RoleServiceImpl implements RoleService {
     }
 
     @Override
-    public List<RoleResponse> getUserRoleDetails(String uuid) {
+    public List<RoleResponse> getUserRoleDetails(String userId) {
 
         Map<String, Object> filters = new HashMap<>();
-        filters.put("uuid", uuid);
+        filters.put("uuid", userId);
 
         List<User> userDetails = readTransactionService.findUserDetailsByFilters(filters);
         if (CollectionUtils.isEmpty(userDetails.get(0).getRoles())) {
@@ -108,9 +108,9 @@ public class RoleServiceImpl implements RoleService {
     }
 
     @Override
-    public List<RoleResponse> updateRoles(String uuid, UserRoleRequest request) {
+    public List<RoleResponse> updateRoles(String userId, UserRoleRequest request) {
         Map<String, Object> filters = new HashMap<>();
-        filters.put("uuid", uuid);
+        filters.put("uuid", userId);
 
         List<User> userDetails = readTransactionService.findUserDetailsByFilters(filters);
         if (CollectionUtils.isEmpty(userDetails)) {
