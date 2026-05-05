@@ -14,7 +14,7 @@ springdoc:
 spring:
   data:
     mongodb:
-      host: 10.128.0.2
+      host: mongodb.prodhub.in
       port: 27017
       database: prodhub
       pool:
@@ -27,7 +27,7 @@ spring:
         maintenance-frequency: 1000
         max-connection-idle-time: 5
   kafka:
-    bootstrap-servers: 10.128.0.2:29092
+    bootstrap-servers: kafka.prodhub.in:29092
     topic:
       buildStatus: buildStatus
       deploymentConfigAndSubmit: deployment-config-and-submit
@@ -51,7 +51,7 @@ management:
       show-details: always
 
 vault:
-  uri: http://10.128.0.2:8200
+  uri: http://vault.prodhub.in:8200
   token:
 
 cicaptain:
